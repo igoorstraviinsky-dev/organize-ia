@@ -5,13 +5,9 @@ export function useProjects() {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return []
-
       const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .or(`owner_id.eq.${session.user.id},id.in.(select project_id from project_members where user_id.eq.${session.user.id})`)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data

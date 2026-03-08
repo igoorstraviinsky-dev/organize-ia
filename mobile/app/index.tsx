@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, useColorScheme } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useSSE } from '../src/hooks/useSSE';
 import { CheckCircle, Circle, MessageSquare, Layout, Bell, User, Zap, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '../src/constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -11,17 +12,17 @@ export default function App() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [integration, setIntegration] = useState<any>(null);
+  const [loading, setLoading] = useState(true); // New state for loading
+  const [refreshing, setRefreshing] = useState(false); // New state for refreshing
   const { status } = useSSE(integration?.id);
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
+  // Function to fetch profile and integration data (kept separate from tasks/projects for clarity)
+  async function fetchProfileAndIntegration() {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
 
-    // Buscar perfil
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
@@ -30,16 +31,6 @@ export default function App() {
     
     setProfile(profileData);
 
-    // Buscar tarefas
-    const { data: tasksData } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('creator_id', userData.user.id)
-      .order('created_at', { ascending: false });
-    
-    setTasks(tasksData || []);
-
-    // Buscar integração UazAPI ativa
     const { data: intData } = await supabase
       .from('integrations')
       .select('*')
@@ -50,50 +41,98 @@ export default function App() {
     setIntegration(intData);
   }
 
+  // New function to fetch tasks and projects
+  const fetchTasksAndProjects = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Buscar todos os projetos que este usuário tem acesso (RLS cuida do filtro)
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (projectsError) throw projectsError;
+      setProjects(projectsData || []);
+
+      // Buscar todas as tarefas que este usuário tem acesso (RLS cuida do filtro)
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('due_date', { ascending: true });
+
+      if (tasksError) throw tasksError;
+      setTasks(tasksData || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      Alert.alert('Erro', 'Não foi possível carregar as tarefas');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileAndIntegration(); // Fetch profile and integration once
+    fetchTasksAndProjects(); // Fetch tasks and projects
+  }, []);
+
   const renderTask = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.taskCard} activeOpacity={0.7}>
+    <TouchableOpacity 
+      style={[styles.taskCard, { backgroundColor: theme.card, borderColor: theme.border }]} 
+      activeOpacity={0.7}
+    >
       <View style={styles.taskIconContainer}>
         {item.status === 'completed' ? (
           <CheckCircle size={22} color="#10b981" />
         ) : (
-          <Circle size={22} color="#475569" />
+          <Circle size={22} color={theme.subtext} />
         )}
       </View>
       <View style={styles.taskInfo}>
-        <Text style={[styles.taskText, item.status === 'completed' && styles.completedText]}>
+        <Text style={[styles.taskText, { color: theme.text }, item.status === 'completed' && { textDecorationLine: 'line-through', color: theme.subtext }]}>
           {item.title}
         </Text>
-        <Text style={styles.taskTime}>
+        <Text style={[styles.taskTime, { color: theme.subtext }]}>
           {new Date(item.created_at).toLocaleDateString('pt-BR')}
         </Text>
       </View>
-      <ChevronRight size={18} color="#475569" />
+      <ChevronRight size={18} color={theme.subtext} />
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#020617', '#0f172a']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {colorScheme === 'dark' ? (
+        <LinearGradient
+          colors={['#020617', '#0f172a']}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        <LinearGradient
+          colors={['#f8fafc', '#f1f5f9']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       
       {/* Background Decorative Blur */}
-      <View style={[styles.blurSphere, { top: -100, right: -100, backgroundColor: 'rgba(99, 102, 241, 0.1)' }]} />
+      <View style={[styles.blurSphere, { top: -100, right: -100, backgroundColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)' }]} />
 
       <SafeAreaView style={{ flex: 1 }}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcomeText}>Bem-vindo de volta,</Text>
-            <Text style={styles.userName}>{profile?.full_name?.split(' ')[0] || 'Produtivo'}</Text>
+            <Text style={[styles.welcomeText, { color: theme.subtext }]}>Bem-vindo de volta,</Text>
+            <Text style={[styles.userName, { color: theme.text }]}>{profile?.full_name?.split(' ')[0] || 'Produtivo'}</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-              <Bell size={20} color="#f8fafc" />
-              <View style={styles.notifBadge} />
+            <TouchableOpacity style={[styles.iconButton, { backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: theme.border }]} activeOpacity={0.7}>
+              <Bell size={20} color={theme.text} />
+              <View style={[styles.notifBadge, { borderColor: theme.background }]} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8}>
               <LinearGradient
@@ -109,37 +148,37 @@ export default function App() {
         {/* Stats Section */}
         <View style={styles.statsWrapper}>
           <LinearGradient
-            colors={['rgba(30, 41, 59, 0.5)', 'rgba(15, 23, 42, 0.5)']}
-            style={styles.statsCard}
+            colors={colorScheme === 'dark' ? ['rgba(30, 41, 59, 0.5)', 'rgba(15, 23, 42, 0.5)'] : ['#ffffff', '#f1f5f9']}
+            style={[styles.statsCard, { borderColor: theme.border }]}
           >
             <View style={styles.statItem}>
-              <View style={[styles.statIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
-                <Zap size={22} color="#818cf8" />
+              <View style={[styles.statIconCircle, { backgroundColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }]}>
+                <Zap size={22} color={theme.tint} />
               </View>
               <View>
-                <Text style={styles.statValue}>{tasks.length}</Text>
-                <Text style={styles.statLabel}>Foco</Text>
+                <Text style={[styles.statValue, { color: theme.text }]}>{tasks.length}</Text>
+                <Text style={[styles.statLabel, { color: theme.subtext }]}>Foco</Text>
               </View>
             </View>
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
             <View style={styles.statItem}>
               <View style={[styles.statIconCircle, { backgroundColor: status === 'online' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)' }]}>
                 <MessageSquare size={22} color={status === 'online' ? '#10b981' : '#f43f5e'} />
               </View>
               <View>
-                <Text style={styles.statValue}>{status === 'online' ? 'Online' : 'Off'}</Text>
-                <Text style={styles.statLabel}>Status WA</Text>
+                <Text style={[styles.statValue, { color: theme.text }]}>{status === 'online' ? 'Online' : 'Off'}</Text>
+                <Text style={[styles.statLabel, { color: theme.subtext }]}>Status WA</Text>
               </View>
             </View>
           </LinearGradient>
         </View>
 
         {/* Tasks List */}
-        <View style={styles.listSection}>
+        <View style={[styles.listSection, { backgroundColor: colorScheme === 'dark' ? 'rgba(15, 23, 42, 0.4)' : '#ffffff', borderColor: theme.border }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Sua Jornada</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Sua Jornada</Text>
             <TouchableOpacity onPress={fetchData} activeOpacity={0.6}>
-              <Text style={styles.viewAllText}>Recarregar</Text>
+              <Text style={[styles.viewAllText, { color: theme.tint }]}>Recarregar</Text>
             </TouchableOpacity>
           </View>
           
@@ -151,11 +190,11 @@ export default function App() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <View style={styles.emptyIconContainer}>
-                  <Layout size={40} color="#334155" />
+                <View style={[styles.emptyIconContainer, { backgroundColor: theme.inputBg }]}>
+                  <Layout size={40} color={theme.subtext} />
                 </View>
-                <Text style={styles.emptyText}>Tudo limpo por aqui.</Text>
-                <Text style={styles.emptySubtext}>Crie uma nova tarefa para começar.</Text>
+                <Text style={[styles.emptyText, { color: theme.text }]}>Tudo limpo por aqui.</Text>
+                <Text style={[styles.emptySubtext, { color: theme.subtext }]}>Crie uma nova tarefa para começar.</Text>
               </View>
             }
           />
@@ -171,7 +210,7 @@ export default function App() {
           >
             <Text style={styles.fabIcon}>+</Text>
           </LinearGradient>
-          <View style={styles.fabGlow} />
+          <View style={[styles.fabGlow, { backgroundColor: theme.tint }]} />
         </TouchableOpacity>
       </SafeAreaView>
     </View>

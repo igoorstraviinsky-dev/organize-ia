@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Dimensions, useColorScheme } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useRouter } from 'expo-router';
-import { Lock, Mail, ChevronRight } from 'lucide-react-native';
+import { Lock, Mail, ChevronRight, Zap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '../src/constants/Colors';
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 
@@ -12,6 +14,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
 
   async function handleLogin() {
     if (!email || !password) {
@@ -34,15 +38,22 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={['#020617', '#1e1b4b', '#020617']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {colorScheme === 'dark' ? (
+        <LinearGradient
+          colors={['#020617', '#1e1b4b', '#020617']}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        <LinearGradient
+          colors={['#f8fafc', '#e0e7ff', '#f8fafc']}
+          style={StyleSheet.absoluteFill}
+        />
+      )}
       
       {/* Decorative Blur Spheres */}
-      <View style={[styles.blurSphere, { top: -50, left: -50, backgroundColor: 'rgba(99, 102, 241, 0.15)' }]} />
-      <View style={[styles.blurSphere, { bottom: -50, right: -50, backgroundColor: 'rgba(168, 85, 247, 0.15)' }]} />
+      <View style={[styles.blurSphere, { top: -50, left: -50, backgroundColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }]} />
+      <View style={[styles.blurSphere, { bottom: -50, right: -50, backgroundColor: colorScheme === 'dark' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.1)' }]} />
 
       <SafeAreaView style={{ flex: 1 }}>
         <KeyboardAvoidingView 
@@ -57,22 +68,22 @@ export default function LoginScreen() {
               >
                 <Zap size={32} color="#fff" />
               </LinearGradient>
-              <View style={styles.logoGlow} />
+              <View style={[styles.logoGlow, { backgroundColor: theme.tint }]} />
             </View>
-            <Text style={styles.title}>ORGANIZADOR</Text>
-            <Text style={styles.subtitle}>Sua produtividade elevada ao máximo</Text>
+            <Text style={[styles.title, { color: theme.text, textShadowColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)' }]}>ORGANIZADOR</Text>
+            <Text style={[styles.subtitle, { color: theme.subtext }]}>Sua produtividade elevada ao máximo</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
             <View style={styles.form}>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputLabel}>E-mail</Text>
-                <View style={styles.inputContainer}>
-                  <Mail size={18} color="#94a3b8" style={styles.icon} />
+                <Text style={[styles.inputLabel, { color: theme.subtext }]}>E-mail</Text>
+                <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                  <Mail size={18} color={theme.subtext} style={styles.icon} />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.text }]}
                     placeholder="Seu e-mail profissional"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={colorScheme === 'dark' ? '#475569' : '#94a3b8'}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -82,13 +93,13 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputLabel}>Senha</Text>
-                <View style={styles.inputContainer}>
-                  <Lock size={18} color="#94a3b8" style={styles.icon} />
+                <Text style={[styles.inputLabel, { color: theme.subtext }]}>Senha</Text>
+                <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                  <Lock size={18} color={theme.subtext} style={styles.icon} />
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: theme.text }]}
                     placeholder="Sua senha secreta"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={colorScheme === 'dark' ? '#475569' : '#94a3b8'}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -122,9 +133,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Novo por aqui?</Text>
+            <Text style={[styles.footerText, { color: theme.subtext }]}>Novo por aqui?</Text>
             <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.linkText}>Crie sua conta</Text>
+              <Text style={[styles.linkText, { color: theme.tint }]}>Crie sua conta</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

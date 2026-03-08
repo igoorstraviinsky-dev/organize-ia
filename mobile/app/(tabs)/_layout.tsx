@@ -1,23 +1,27 @@
 import { Tabs } from 'expo-router';
 import { Layout, Calendar, CalendarRange, Hash, Settings } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
-import { Platform, View } from 'react-native';
+import { Platform, View, useColorScheme } from 'react-native';
+import { Colors } from '../../src/constants/Colors';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
+
   return (
     <Tabs screenOptions={{
       headerShown: false,
       tabBarStyle: {
-        backgroundColor: '#0f172a',
+        backgroundColor: theme.background,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.05)',
+        borderTopColor: theme.border,
         height: Platform.OS === 'ios' ? 88 : 68,
         paddingBottom: Platform.OS === 'ios' ? 30 : 12,
         paddingTop: 12,
         position: 'absolute',
       },
-      tabBarActiveTintColor: '#818cf8',
-      tabBarInactiveTintColor: '#64748b',
+      tabBarActiveTintColor: theme.tint,
+      tabBarInactiveTintColor: theme.tabIconDefault,
       tabBarLabelStyle: {
         fontSize: 11,
         fontWeight: '600',
