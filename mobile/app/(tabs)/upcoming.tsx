@@ -26,7 +26,6 @@ export default function UpcomingScreen() {
     const { data, error } = await supabase
       .from('tasks')
       .select('*, project:projects(id, name, color)')
-      .eq('creator_id', userData.user.id)
       .gt('due_date', today)
       .order('due_date', { ascending: true });
     

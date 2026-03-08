@@ -30,7 +30,6 @@ export default function DashboardScreen() {
     const { data: tasksData } = await supabase
       .from('tasks')
       .select('*, project:projects(id, name, color)')
-      .eq('creator_id', userData.user.id)
       .is('parent_id', null)
       .order('created_at', { ascending: false })
       .limit(10);
@@ -40,8 +39,7 @@ export default function DashboardScreen() {
     // Calculate stats
     const { data: allTasks } = await supabase
       .from('tasks')
-      .select('due_date, status')
-      .eq('creator_id', userData.user.id);
+      .select('due_date, status');
     
     if (allTasks) {
       const todayCount = allTasks.filter(t => t.due_date === today && t.status !== 'completed').length;

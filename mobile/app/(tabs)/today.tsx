@@ -29,7 +29,6 @@ export default function TodayScreen() {
     const { data, error } = await supabase
       .from('tasks')
       .select('*, project:projects(id, name, color)')
-      .eq('creator_id', userData.user.id)
       .eq('due_date', today)
       .order('position', { ascending: true });
     

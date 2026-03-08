@@ -24,7 +24,6 @@ export default function ProjectsScreen() {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('owner_id', userData.user.id)
       .order('name', { ascending: true });
     
     if (data) setProjects(data);

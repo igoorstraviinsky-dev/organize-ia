@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, useColorScheme } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, useColorScheme, Alert } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useSSE } from '../src/hooks/useSSE';
 import { CheckCircle, Circle, MessageSquare, Layout, Bell, User, Zap, ChevronRight } from 'lucide-react-native';
@@ -10,6 +10,7 @@ const { width } = Dimensions.get('window');
 
 export default function App() {
   const [tasks, setTasks] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [integration, setIntegration] = useState<any>(null);
   const [loading, setLoading] = useState(true); // New state for loading
@@ -177,7 +178,7 @@ export default function App() {
         <View style={[styles.listSection, { backgroundColor: colorScheme === 'dark' ? 'rgba(15, 23, 42, 0.4)' : '#ffffff', borderColor: theme.border }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Sua Jornada</Text>
-            <TouchableOpacity onPress={fetchData} activeOpacity={0.6}>
+            <TouchableOpacity onPress={fetchTasksAndProjects} activeOpacity={0.6}>
               <Text style={[styles.viewAllText, { color: theme.tint }]}>Recarregar</Text>
             </TouchableOpacity>
           </View>
