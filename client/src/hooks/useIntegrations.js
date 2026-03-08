@@ -5,10 +5,15 @@ export function useIntegrations() {
   return useQuery({
     queryKey: ['integrations'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+      
       const { data, error } = await supabase
         .from('integrations')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: true })
+        
       if (error) throw error
       return data || []
     },

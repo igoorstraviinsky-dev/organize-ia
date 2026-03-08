@@ -74,26 +74,34 @@ export default function App() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0f172a', '#1e1b4b']}
+        colors={['#020617', '#0f172a']}
         style={StyleSheet.absoluteFill}
       />
       
+      {/* Background Decorative Blur */}
+      <View style={[styles.blurSphere, { top: -100, right: -100, backgroundColor: 'rgba(99, 102, 241, 0.1)' }]} />
+
       <SafeAreaView style={{ flex: 1 }}>
         <StatusBar barStyle="light-content" />
         
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.welcomeText}>Olá,</Text>
-            <Text style={styles.userName}>{profile?.full_name?.split(' ')[0] || 'Usuário'}</Text>
+            <Text style={styles.welcomeText}>Bem-vindo de volta,</Text>
+            <Text style={styles.userName}>{profile?.full_name?.split(' ')[0] || 'Produtivo'}</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Bell size={22} color="#f8fafc" />
+            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
+              <Bell size={20} color="#f8fafc" />
               <View style={styles.notifBadge} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.avatarContainer}>
-              <User size={20} color="#f8fafc" />
+            <TouchableOpacity style={styles.avatarContainer} activeOpacity={0.8}>
+              <LinearGradient
+                colors={['#6366f1', '#a855f7']}
+                style={styles.avatarGradient}
+              >
+                <User size={20} color="#f8fafc" />
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -101,26 +109,26 @@ export default function App() {
         {/* Stats Section */}
         <View style={styles.statsWrapper}>
           <LinearGradient
-            colors={['rgba(99, 102, 241, 0.15)', 'rgba(168, 85, 247, 0.05)']}
+            colors={['rgba(30, 41, 59, 0.5)', 'rgba(15, 23, 42, 0.5)']}
             style={styles.statsCard}
           >
             <View style={styles.statItem}>
-              <View style={[styles.statIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
-                <Zap size={20} color="#818cf8" />
+              <View style={[styles.statIconCircle, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                <Zap size={22} color="#818cf8" />
               </View>
               <View>
                 <Text style={styles.statValue}>{tasks.length}</Text>
-                <Text style={styles.statLabel}>Tarefas</Text>
+                <Text style={styles.statLabel}>Foco</Text>
               </View>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <View style={[styles.statIconCircle, { backgroundColor: status === 'online' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)' }]}>
-                <MessageSquare size={20} color={status === 'online' ? '#10b981' : '#f59e0b'} />
+              <View style={[styles.statIconCircle, { backgroundColor: status === 'online' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)' }]}>
+                <MessageSquare size={22} color={status === 'online' ? '#10b981' : '#f43f5e'} />
               </View>
               <View>
-                <Text style={styles.statValue}>{status === 'online' ? 'Ativo' : 'Off'}</Text>
-                <Text style={styles.statLabel}>WhatsApp</Text>
+                <Text style={styles.statValue}>{status === 'online' ? 'Online' : 'Off'}</Text>
+                <Text style={styles.statLabel}>Status WA</Text>
               </View>
             </View>
           </LinearGradient>
@@ -129,9 +137,9 @@ export default function App() {
         {/* Tasks List */}
         <View style={styles.listSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tarefas Recentes</Text>
-            <TouchableOpacity onPress={fetchData}>
-              <Text style={styles.viewAllText}>Atualizar</Text>
+            <Text style={styles.sectionTitle}>Sua Jornada</Text>
+            <TouchableOpacity onPress={fetchData} activeOpacity={0.6}>
+              <Text style={styles.viewAllText}>Recarregar</Text>
             </TouchableOpacity>
           </View>
           
@@ -143,21 +151,27 @@ export default function App() {
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
               <View style={styles.emptyState}>
-                <Layout size={48} color="#334155" />
-                <Text style={styles.emptyText}>Nenhuma tarefa para hoje.</Text>
+                <View style={styles.emptyIconContainer}>
+                  <Layout size={40} color="#334155" />
+                </View>
+                <Text style={styles.emptyText}>Tudo limpo por aqui.</Text>
+                <Text style={styles.emptySubtext}>Crie uma nova tarefa para começar.</Text>
               </View>
             }
           />
         </View>
 
         {/* FAB */}
-        <TouchableOpacity style={styles.fabContainer} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.fabContainer} activeOpacity={0.9}>
           <LinearGradient
-            colors={['#6366f1', '#4f46e5']}
+            colors={['#6366f1', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.fab}
           >
             <Text style={styles.fabIcon}>+</Text>
           </LinearGradient>
+          <View style={styles.fabGlow} />
         </TouchableOpacity>
       </SafeAreaView>
     </View>
@@ -167,55 +181,70 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#020617',
+  },
+  blurSphere: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    opacity: 0.5,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   welcomeText: {
-    fontSize: 16,
-    color: '#94a3b8',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   userName: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '900',
     color: '#f8fafc',
     letterSpacing: -0.5,
+    marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
     gap: 12,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   notifBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 14,
+    right: 14,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#f43f5e',
     borderWidth: 2,
-    borderColor: '#0f172a',
+    borderColor: '#020617',
   },
   avatarContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#6366f1',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  avatarGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -225,11 +254,15 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flexDirection: 'row',
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
   },
   statItem: {
     flex: 1,
@@ -238,64 +271,66 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#f8fafc',
   },
   statLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginHorizontal: 16,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginHorizontal: 12,
   },
   listSection: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingTop: 24,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    paddingTop: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    paddingHorizontal: 28,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#f8fafc',
     letterSpacing: -0.5,
   },
   viewAllText: {
     fontSize: 14,
     color: '#818cf8',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   list: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.4)',
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },
@@ -307,49 +342,72 @@ const styles = StyleSheet.create({
   },
   taskText: {
     color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   completedText: {
     textDecorationLine: 'line-through',
-    color: '#64748b',
+    color: '#475569',
   },
   taskTime: {
     fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
+    color: '#475569',
+    marginTop: 4,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
-    gap: 16,
+    marginTop: 80,
+    gap: 8,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 30,
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   emptyText: {
-    color: '#64748b',
-    fontSize: 16,
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  emptySubtext: {
+    color: '#475569',
+    fontSize: 14,
     fontWeight: '500',
   },
   fabContainer: {
     position: 'absolute',
-    bottom: 30,
-    right: 30,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    bottom: 34,
+    right: 28,
+    zIndex: 10,
   },
   fab: {
-    width: 64,
-    height: 64,
-    borderRadius: 22,
+    width: 68,
+    height: 68,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
+  },
+  fabGlow: {
+    position: 'absolute',
+    width: 68,
+    height: 68,
+    borderRadius: 24,
+    backgroundColor: '#6366f1',
+    opacity: 0.4,
+    transform: [{ scale: 1.2 }],
+    zIndex: 1,
   },
   fabIcon: {
     color: '#fff',
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: '300',
   },
 });

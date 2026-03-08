@@ -248,17 +248,17 @@ export function parseWebhookPayload(body) {
         : new Date().toISOString()
 
       // Detecta mensagem de áudio (ptt = nota de voz gravada OU arquivo de áudio)
-      const audioMsg = realMsg.audioMessage || realMsg.pttMessage
+      const audioMsg = realMsg.audioMessage || realMsg.pttMessage || realMsg.audio || null
       if (audioMsg && phone) {
         return {
           phone, fromMe, text: null, messageId, contactName, timestamp,
           messageType: 'audio',
           isPtt: audioMsg.ptt === true,           // true = gravado na hora; false = arquivo encaminhado
           fileSha256: audioMsg.fileSha256 || null, // hash para cache de transcrição
-          audioKey: msg.key,
-          audioUrl: audioMsg.url || null,
+          audioKey: msg.key || { remoteJid, fromMe, id: messageId },
+          audioUrl: audioMsg.url || audioMsg.mediaUrl || null,
           audioMimeType: audioMsg.mimetype || 'audio/ogg; codecs=opus',
-          _rawMsg: msg,
+          rawMsg: msg, // Passa o objeto completo para downloadMediaBase64
           _rawAudio: audioMsg,
         }
       }

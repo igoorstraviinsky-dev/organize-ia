@@ -5,10 +5,15 @@ export function useLabels() {
   return useQuery({
     queryKey: ['labels'],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return []
+
       const { data, error } = await supabase
         .from('labels')
         .select('*')
+        .eq('owner_id', user.id)
         .order('name', { ascending: true })
+        
       if (error) throw error
 
       // Contar tarefas por label separadamente

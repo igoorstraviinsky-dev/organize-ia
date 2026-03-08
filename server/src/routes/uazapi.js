@@ -291,14 +291,15 @@ router.post('/webhook', async (req, res) => {
     }
 
     const direction = parsed.fromMe ? 'out' : 'in'
-    const { phone, text, messageId, contactName, timestamp } = parsed
+    const { phone, text: initialText, messageId, contactName, timestamp, messageType, audioKey, rawMsg, audioUrl } = parsed
+    let text = initialText || ''
 
     if (!phone) {
       logWebhook(body, { step: 'ignored', reason: 'no_phone' })
       return
     }
 
-    // Tenta encontrar a integração (por instance_name ou fallback para única integração)
+    // Tenta encontrar a integração (por instance_name)
     const instanceName = body?.instance || body?.instanceName || body?.instanceId ||
       body?.instanceKey?.instance || body?.key?.remoteJid?.split('@')[0] || null
 
@@ -314,22 +315,46 @@ router.post('/webhook', async (req, res) => {
       integration = data
     }
 
-    // Fallback: usa a única integração uazapi disponível
     if (!integration) {
-      const { data, error: fbErr } = await supabase
-        .from('integrations')
-        .select('id, user_id, api_url, api_token, instance_name')
-        .eq('provider', 'uazapi')
-        .limit(1)
-        .maybeSingle()
-      integration = data
-      if (fbErr) console.error('[UazAPI Webhook] Fallback error:', fbErr.message)
+      logWebhook(body, { step: 'error', reason: 'no_integration_found', context: { instanceName } })
+      console.warn(`[UazAPI Webhook] Nenhuma integração encontrada para a instância: "${instanceName}".`)
+      return
     }
 
-    if (!integration) {
-      logWebhook(body, { step: 'error', reason: 'no_integration_found' })
-      console.error('[UazAPI Webhook] Nenhuma integração encontrada. Verifique SUPABASE_SERVICE_KEY e se existe integração salva.')
-      return
+    // --- SE FOR ÁUDIO, BAIXA E TRANSCREVE ---
+    let mediaUrlToSave = null
+    if (messageType === 'audio' && direction === 'in') {
+      try {
+        console.log(`[UazAPI Webhook] Áudio detectado de ${phone}. Processando...`)
+        const { transcribeAudioBase64 } = await import('../lib/openai.js')
+        const { downloadMediaBase64 } = await import('../lib/uazapi.js')
+        const { data: agentSettings } = await supabase
+          .from('ai_agent_settings')
+          .select('openai_api_key')
+          .eq('user_id', integration.user_id)
+          .maybeSingle()
+
+        if (agentSettings?.openai_api_key) {
+          const media = await downloadMediaBase64({
+            apiUrl: integration.api_url,
+            apiToken: integration.api_token,
+            instanceName: integration.instance_name,
+            key: audioKey,
+            rawMsg,
+            audioUrl
+          })
+
+          if (media?.base64) {
+            const transcription = await transcribeAudioBase64(agentSettings.openai_api_key, media.base64, media.mimetype)
+            if (transcription) {
+              text = transcription
+              console.log(`[UazAPI Webhook] Transcrição de ${phone}: "${text}"`)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[UazAPI Webhook] Erro ao transcrever áudio:', err.message)
+      }
     }
 
     // Salva mensagem (entrada ou saída)
@@ -339,10 +364,12 @@ router.post('/webhook', async (req, res) => {
       phone,
       contact_name: direction === 'in' ? contactName : null,
       direction,
-      body: text || '',
+      body: text || (messageType === 'audio' ? '[Áudio]' : ''),
       message_id: messageId,
       status: direction === 'in' ? 'read' : 'sent',
       created_at: timestamp,
+      message_type: messageType || 'text',
+      media_url: mediaUrlToSave || audioUrl || null
     })
 
     if (insertError) {
