@@ -1,0 +1,139 @@
+{
+  "name": "Organizador Orchestrator Agent (Professional)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "organizador-agent",
+        "options": {}
+      },
+      "id": "1802b79a-77ec-44f2-95f0-621867664687",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Você é o Agente Orquestrador do \"Organizador\", um ecossistema premium de produtividade pessoal e empresarial.\n\nDIRETRIZES:\n- Use ferramentas para buscar contextos antes de responder.\n- Mantenha um tom executivo e eficiente.\n- Confirme sempre as ações realizadas no Organizador."
+        }
+      },
+      "id": "e445353d-2f16-43b9-a9a0-6c70b240167d",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.aiAgent",
+      "typeVersion": 1,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6",
+      "name": "Chat OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        400,
+        500
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "new-openai-cred",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "windowSize": 5
+      },
+      "id": "a3b8d1b6-0b3b-4b1a-9c1a-1a2b3c4d5e6f",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryWindowBuffer",
+      "typeVersion": 1,
+      "position": [
+        550,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "name": "organizador_api",
+        "description": "Call Organizador Tools (list_tasks, create_task, etc)",
+        "method": "POST",
+        "url": "={{$node[\"Webhook\"].json[\"timestamp\"].replace('8001', '8001') + '/agent/tools'}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"action\": \"{{$parameter[\"action\"]}}\",\n  \"user_id\": \"{{$node[\"Webhook\"].json[\"user_id\"]}}\",\n  \"params\": {{$parameter[\"params\"]}}\n}"
+      },
+      "id": "5f1b53e8-5e8a-495c-9c9e-5e55444a499c",
+      "name": "Organizador Tools",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1,
+      "position": [
+        750,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat OpenAI": {
+      "ai_language_model": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_language_model",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organizador Tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

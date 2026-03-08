@@ -1,0 +1,112 @@
+[
+  {
+    "ts": "2026-03-07T16:40:03.532Z",
+    "level": "info",
+    "msg": "Tentando conectar em https://stravauto.uazapi.com/sse?token=b4e736..."
+  },
+  {
+    "ts": "2026-03-07T16:40:04.385Z",
+    "level": "info",
+    "msg": "Conectado em https://stravauto.uazapi.com/sse?token=b4e73607-8f8c-4923-955d-cb96a964be1c&events=messages,chats (instância: Organizador)"
+  },
+  {
+    "ts": "2026-03-07T16:40:04.387Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+  },
+  {
+    "ts": "2026-03-07T16:40:04.388Z",
+    "level": "info",
+    "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+  },
+  {
+    "ts": "2026-03-07T16:40:16.210Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"chats\",\"chat\":{\"chatbot_agentResetMemoryAt\":0,\"chatbot_disableUntil\":0,\"chatbot_lastTriggerAt\":0,\"chatbot_lastTrigger_id\":\"\",\"id\":\"rf55e717918582"
+  },
+  {
+    "ts": "2026-03-07T16:40:16.212Z",
+    "level": "info",
+    "msg": "Payload: chaves=[BaseUrl,EventType,chat,instanceName,owner,token] | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"chats\",\"chat\":{\"chatbot_agentResetMemoryAt\":0,\"chatbot_disableUntil\":0,\"chatbot_lastTriggerAt\":0,\"chatbot_lastTrigger_id\":\"\",\"id\":\"rf55e717918582c\",\"image\":\"\",\"imagePreview\":\"https://pps.whatsapp.net/v/t61.24694-24/637189708_877722851801820_6632"
+  },
+  {
+    "ts": "2026-03-07T16:40:16.214Z",
+    "level": "warn",
+    "msg": "Payload não reconhecido (type=\"N/A\") — formato desconhecido"
+  },
+  {
+    "ts": "2026-03-07T16:40:23.476Z",
+    "level": "info",
+    "msg": "Tentando conectar em https://stravauto.uazapi.com/sse?token=b4e736..."
+  },
+  {
+    "ts": "2026-03-07T16:40:24.206Z",
+    "level": "info",
+    "msg": "Conectado em https://stravauto.uazapi.com/sse?token=b4e73607-8f8c-4923-955d-cb96a964be1c&events=messages,chats (instância: Organizador)"
+  },
+  {
+    "ts": "2026-03-07T16:40:24.207Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+  },
+  {
+    "ts": "2026-03-07T16:40:24.208Z",
+    "level": "info",
+    "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+  },
+  {
+    "ts": "2026-03-07T16:42:18.250Z",
+    "level": "info",
+    "msg": "Tentando conectar em https://stravauto.uazapi.com/sse?token=b4e736..."
+  },
+  {
+    "ts": "2026-03-07T16:42:19.092Z",
+    "level": "info",
+    "msg": "Conectado em https://stravauto.uazapi.com/sse?token=b4e73607-8f8c-4923-955d-cb96a964be1c&events=messages,chats (instância: Organizador)"
+  },
+  {
+    "ts": "2026-03-07T16:42:19.094Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+  },
+  {
+    "ts": "2026-03-07T16:42:19.094Z",
+    "level": "info",
+    "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+  },
+  {
+    "ts": "2026-03-07T16:42:20.807Z",
+    "level": "info",
+    "msg": "Tentando conectar em https://stravauto.uazapi.com/sse?token=b4e736..."
+  },
+  {
+    "ts": "2026-03-07T16:42:21.606Z",
+    "level": "info",
+    "msg": "Conectado em https://stravauto.uazapi.com/sse?token=b4e73607-8f8c-4923-955d-cb96a964be1c&events=messages,chats (instância: Organizador)"
+  },
+  {
+    "ts": "2026-03-07T16:42:21.607Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+  },
+  {
+    "ts": "2026-03-07T16:42:21.608Z",
+    "level": "info",
+    "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+  },
+  {
+    "ts": "2026-03-07T16:42:28.184Z",
+    "level": "info",
+    "msg": "Evento recebido: type=\"N/A\" | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"chats\",\"chat\":{\"chatbot_agentResetMemoryAt\":0,\"chatbot_disableUntil\":0,\"chatbot_lastTriggerAt\":0,\"chatbot_lastTrigger_id\":\"\",\"id\":\"rf55e717918582"
+  },
+  {
+    "ts": "2026-03-07T16:42:28.185Z",
+    "level": "info",
+    "msg": "Payload: chaves=[BaseUrl,EventType,chat,instanceName,owner,token] | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"chats\",\"chat\":{\"chatbot_agentResetMemoryAt\":0,\"chatbot_disableUntil\":0,\"chatbot_lastTriggerAt\":0,\"chatbot_lastTrigger_id\":\"\",\"id\":\"rf55e717918582c\",\"image\":\"\",\"imagePreview\":\"https://pps.whatsapp.net/v/t61.24694-24/637189708_877722851801820_6632"
+  },
+  {
+    "ts": "2026-03-07T16:42:28.185Z",
+    "level": "warn",
+    "msg": "Payload não reconhecido (type=\"N/A\") — formato desconhecido"
+  }
+]

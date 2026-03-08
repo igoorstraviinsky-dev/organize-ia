@@ -1,0 +1,412 @@
+"""
+agent.py
+Núcleo do agente: interpreta mensagens em linguagem natural via OpenAI Function Calling
+e executa as operações correspondentes no Supabase.
+"""
+
+import os
+import json
+from typing import Optional
+from datetime import date, timedelta
+from openai import AsyncOpenAI
+from dotenv import load_dotenv
+
+import supabase_client as db
+import user_registry as registry
+
+load_dotenv()
+
+openai = AsyncOpenAI(api_key=os.environ["OPENAI_API_KEY"])
+MODEL  = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
+# ─── Definição das funções disponíveis ao agente ──────────────────────────────
+
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "criar_tarefa",
+            "description": "Cria uma nova tarefa para o usuário.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "titulo": {"type": "string", "description": "Título da tarefa"},
+                    "descricao": {"type": "string", "description": "Descrição opcional"},
+                    "prioridade": {
+                        "type": "integer",
+                        "description": "1=Urgente, 2=Alta, 3=Média, 4=Baixa (padrão: 4)",
+                        "enum": [1, 2, 3, 4],
+                    },
+                    "data_vencimento": {
+                        "type": "string",
+                        "description": "Data no formato YYYY-MM-DD. Use 'hoje' para data atual.",
+                    },
+                    "hora_vencimento": {
+                        "type": "string",
+                        "description": "Hora no formato HH:MM (opcional)",
+                    },
+                    "nome_projeto": {
+                        "type": "string",
+                        "description": "Nome do projeto onde criar a tarefa (opcional)",
+                    },
+                    "tarefa_pai": {
+                        "type": "string",
+                        "description": "Nome ou ID da tarefa pai (cria uma subtarefa)",
+                    },
+                },
+                "required": ["titulo"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_tarefas",
+            "description": "Lista as tarefas do usuário com filtros opcionais.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed", "cancelled"],
+                        "description": "Filtrar por status (opcional)",
+                    },
+                    "apenas_hoje": {
+                        "type": "boolean",
+                        "description": "Mostrar apenas tarefas com vencimento hoje",
+                    },
+                    "nome_projeto": {
+                        "type": "string",
+                        "description": "Filtrar por projeto (opcional)",
+                    },
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "concluir_tarefa",
+            "description": "Marca uma tarefa como concluída.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {
+                        "type": "string",
+                        "description": "Nome (parcial) da tarefa a concluir",
+                    }
+                },
+                "required": ["nome_tarefa"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "mover_tarefa",
+            "description": "Muda o status de uma tarefa (ex: mover para Em Progresso).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {
+                        "type": "string",
+                        "description": "Nome da tarefa",
+                    },
+                    "novo_status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed", "cancelled"],
+                        "description": "Novo status desejado",
+                    },
+                },
+                "required": ["nome_tarefa", "novo_status"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "apagar_tarefa",
+            "description": "Remove uma tarefa permanentemente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome da tarefa a apagar"}
+                },
+                "required": ["nome_tarefa"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "criar_projeto",
+            "description": "Cria um novo projeto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome": {"type": "string", "description": "Nome do projeto"},
+                    "cor": {"type": "string", "description": "Cor hex (ex: #ef4444), opcional"},
+                },
+                "required": ["nome"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_projetos",
+            "description": "Lista todos os projetos do usuário.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_subtarefas",
+            "description": "Lista subtarefas de uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome da tarefa pai"}
+                },
+                "required": ["nome_tarefa"],
+            },
+        },
+    },
+]
+
+SYSTEM_PROMPT = """Você é o Assistente do Organizador, um agente inteligente de gestão de tarefas 
+integrado ao WhatsApp. Você responde SEMPRE em português brasileiro.
+
+Suas capacidades:
+- Criar tarefas e subtarefas
+- Listar tarefas (filtradas por status, data, projeto)
+- Concluir ou cancelar tarefas
+- Mover tarefas entre status (Pendente → Em Progresso → Concluída)
+- Apagar tarefas
+- Criar e listar projetos
+
+Regras de resposta:
+- Seja conciso e direto. WhatsApp favorece respostas curtas.
+- Use emojis para tornar as respostas mais visuais (✅ ✏️ 📋 🗑️ 🚀 📁)
+- Ao criar/modificar/concluir, sempre confirme o que foi feito.
+- Se não entender o comando, peça esclarecimento de forma simples.
+- Para datas relativas como "amanhã", "semana que vem", calcule com base em hoje: {today}.
+- Status em PT: "pendente"=pending, "em progresso"=in_progress, "concluída"=completed, "cancelada"=cancelled
+- Prioridades: urgente=1, alta=2, média=3, baixa=4
+"""
+
+
+# ─── Executor das funções ─────────────────────────────────────────────────────
+
+async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
+    """Executa uma função do agente e retorna o resultado como string."""
+    today = date.today()
+
+    def resolve_date(raw: Optional[str]) -> Optional[str]:
+        """Converte datas relativas para YYYY-MM-DD."""
+        if not raw:
+            return None
+        raw = raw.strip().lower()
+        if raw in ("hoje", "today"):
+            return today.isoformat()
+        if raw in ("amanhã", "amanha", "tomorrow"):
+            return (today + timedelta(days=1)).isoformat()
+        return raw  # assume já está no formato correto
+
+    try:
+        if tool_name == "criar_tarefa":
+            # Resolver projeto
+            project_id = None
+            if args.get("nome_projeto"):
+                projects = await db.list_projects(user_id)
+                proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
+                if proj:
+                    project_id = proj["id"]
+
+            # Resolver tarefa pai (subtarefa)
+            parent_id = None
+            if args.get("tarefa_pai"):
+                parent = await db.find_task_by_name(user_id, args["tarefa_pai"])
+                if parent:
+                    parent_id = parent["id"]
+
+            task = await db.create_task(
+                user_id=user_id,
+                title=args["titulo"],
+                description=args.get("descricao"),
+                priority=args.get("prioridade", 4),
+                due_date=resolve_date(args.get("data_vencimento")),
+                due_time=args.get("hora_vencimento"),
+                project_id=project_id,
+                parent_id=parent_id,
+            )
+
+            tipo = "Subtarefa" if parent_id else "Tarefa"
+            due = f" para *{task.get('due_date', '')}*" if task.get("due_date") else ""
+            proj_info = f" no projeto *{args.get('nome_projeto')}*" if project_id else ""
+            return f"✅ {tipo} criada com sucesso!\n*{task['title']}*{due}{proj_info}"
+
+        elif tool_name == "listar_tarefas":
+            # Resolver projeto
+            project_id = None
+            if args.get("nome_projeto"):
+                projects = await db.list_projects(user_id)
+                proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
+                if proj:
+                    project_id = proj["id"]
+
+            tasks = await db.list_tasks(
+                user_id=user_id,
+                project_id=project_id,
+                status_filter=args.get("status"),
+                today_only=args.get("apenas_hoje", False),
+            )
+
+            if not tasks:
+                return "📋 Nenhuma tarefa encontrada com esses filtros."
+
+            STATUS_EMOJI = {
+                "pending": "⏳",
+                "in_progress": "🔄",
+                "completed": "✅",
+                "cancelled": "❌",
+            }
+            PRIORITY_LABEL = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}
+
+            lines = ["📋 *Suas tarefas:*\n"]
+            for t in tasks[:15]:
+                emoji = STATUS_EMOJI.get(t["status"], "•")
+                prio  = PRIORITY_LABEL.get(t["priority"], "•")
+                due   = f" _{t['due_date']}_" if t.get("due_date") else ""
+                lines.append(f"{emoji} {prio} {t['title']}{due}")
+
+            if len(tasks) > 15:
+                lines.append(f"\n_...e mais {len(tasks) - 15} tarefas_")
+
+            return "\n".join(lines)
+
+        elif tool_name == "concluir_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            await db.update_task_status(task["id"], user_id, "completed")
+            return f"✅ Tarefa concluída!\n*{task['title']}*"
+
+        elif tool_name == "mover_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            await db.update_task_status(task["id"], user_id, args["novo_status"])
+            STATUS_PT = {
+                "pending": "Pendente ⏳",
+                "in_progress": "Em Progresso 🔄",
+                "completed": "Concluída ✅",
+                "cancelled": "Cancelada ❌",
+            }
+            novo = STATUS_PT.get(args["novo_status"], args["novo_status"])
+            return f"🚀 Tarefa movida para *{novo}*!\n_{task['title']}_"
+
+        elif tool_name == "apagar_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            await db.delete_task(task["id"], user_id)
+            return f"🗑️ Tarefa *{task['title']}* apagada."
+
+        elif tool_name == "criar_projeto":
+            proj = await db.create_project(user_id, args["nome"], args.get("cor", "#6366f1"))
+            return f"📁 Projeto criado: *{proj['name']}*"
+
+        elif tool_name == "listar_projetos":
+            projects = await db.list_projects(user_id)
+            if not projects:
+                return "📁 Nenhum projeto encontrado."
+            lines = ["📁 *Seus projetos:*\n"]
+            for p in projects:
+                lines.append(f"• {p['name']}")
+            return "\n".join(lines)
+
+        elif tool_name == "listar_subtarefas":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            subtasks = await db.list_subtasks(task["id"], user_id)
+            if not subtasks:
+                return f"📋 A tarefa *{task['title']}* não tem subtarefas."
+            lines = [f"📋 *Subtarefas de '{task['title']}':*\n"]
+            for s in subtasks:
+                emoji = "✅" if s["status"] == "completed" else "⏳"
+                lines.append(f"{emoji} {s['title']}")
+            return "\n".join(lines)
+
+        else:
+            return f"Função desconhecida: {tool_name}"
+
+    except Exception as e:
+        return f"⚠️ Erro ao executar a ação: {str(e)}"
+
+
+# ─── Loop principal do agente ─────────────────────────────────────────────────
+
+async def process_message(phone: str, text: str, user_id: str) -> str:
+    """
+    Processa uma mensagem de texto do usuário e retorna a resposta do agente.
+    Usa OpenAI Function Calling para interpretar e executar a intenção.
+    """
+    today = date.today().strftime("%d/%m/%Y (%A)")
+    system = SYSTEM_PROMPT.replace("{today}", today)
+
+    # Busca perfil do usuário
+    profile = await db.get_profile(user_id)
+    nome = profile["full_name"].split()[0] if profile else "você"
+
+    # Monta o histórico de conversa
+    registry.add_to_history(phone, "user", text)
+    messages = [{"role": "system", "content": system}] + registry.get_history(phone)
+
+    # Chamada ao OpenAI com function calling
+    response = await openai.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        tools=TOOLS,
+        tool_choice="auto",
+        max_tokens=1024,
+    )
+
+    msg = response.choices[0].message
+
+    # Se o modelo quer chamar uma função
+    if msg.tool_calls:
+        # Adiciona a resposta do modelo com tool_calls ao histórico
+        messages.append({"role": "assistant", "content": None, "tool_calls": [
+            {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+            for tc in msg.tool_calls
+        ]})
+
+        # Executa todas as funções chamadas
+        tool_results = []
+        for tc in msg.tool_calls:
+            args = json.loads(tc.function.arguments)
+            result = await _execute_tool(tc.function.name, args, user_id)
+            tool_results.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": result,
+            })
+            messages.extend(tool_results)
+
+        # Segunda chamada para gerar a resposta final em linguagem natural
+        final_response = await openai.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            max_tokens=512,
+        )
+        reply = final_response.choices[0].message.content or "✅ Feito!"
+
+    else:
+        # Resposta direta sem chamada de função
+        reply = msg.content or "Não entendi. Pode reformular?"
+
+    registry.add_to_history(phone, "assistant", reply)
+    return reply

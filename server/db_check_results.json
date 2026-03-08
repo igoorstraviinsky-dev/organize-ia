@@ -1,0 +1,120 @@
+--- Checking Profiles ---
+[
+  {
+    "id": "58f4c5a3-5cd4-4642-8614-088601adcc11",
+    "full_name": "teste",
+    "email": "teste@gmail.com",
+    "avatar_url": null,
+    "phone": null,
+    "created_at": "2026-03-06T10:05:40.556632+00:00",
+    "updated_at": "2026-03-07T19:57:26.170699+00:00",
+    "role": "collaborator"
+  },
+  {
+    "id": "daf05167-87f4-4bff-9934-7bd38c21acff",
+    "full_name": "Test User",
+    "email": "tester@gmail.com",
+    "avatar_url": null,
+    "phone": null,
+    "created_at": "2026-03-06T12:28:43.162904+00:00",
+    "updated_at": "2026-03-07T19:57:26.170699+00:00",
+    "role": "collaborator"
+  },
+  {
+    "id": "2e259e8d-7c55-40e4-be2a-39fedc8d793e",
+    "full_name": "Test User",
+    "email": "dev.tester.123@gmail.com",
+    "avatar_url": null,
+    "phone": null,
+    "created_at": "2026-03-06T18:51:45.851955+00:00",
+    "updated_at": "2026-03-07T19:57:26.170699+00:00",
+    "role": "collaborator"
+  },
+  {
+    "id": "1a2cb899-d3d6-489a-9c12-69f884646513",
+    "full_name": "igor",
+    "email": "igor@teste.com",
+    "avatar_url": null,
+    "phone": null,
+    "created_at": "2026-03-07T19:49:57.522475+00:00",
+    "updated_at": "2026-03-07T19:57:26.170699+00:00",
+    "role": "collaborator"
+  },
+  {
+    "id": "357be199-547d-4011-b8a5-3faa1872b5c9",
+    "full_name": "igoorstraviinsky",
+    "email": "igoorstraviinsky@gmail.com",
+    "avatar_url": null,
+    "phone": null,
+    "created_at": "2026-03-06T10:05:40.556632+00:00",
+    "updated_at": "2026-03-07T19:57:26.170699+00:00",
+    "role": "admin"
+  }
+]
+--- Checking Projects ---
+[
+  {
+    "id": "1d300219-116e-4018-85a6-74eaf69b38eb",
+    "name": "Inbox",
+    "color": "#6366f1",
+    "icon": "inbox",
+    "owner_id": "58f4c5a3-5cd4-4642-8614-088601adcc11",
+    "created_at": "2026-03-06T10:05:40.556632+00:00",
+    "updated_at": "2026-03-06T10:05:40.556632+00:00"
+  },
+  {
+    "id": "9520b3db-31c2-4e85-b508-b09e79f38697",
+    "name": "Inbox",
+    "color": "#6366f1",
+    "icon": "inbox",
+    "owner_id": "357be199-547d-4011-b8a5-3faa1872b5c9",
+    "created_at": "2026-03-06T10:05:40.556632+00:00",
+    "updated_at": "2026-03-06T10:05:40.556632+00:00"
+  },
+  {
+    "id": "79c10b47-7f0c-4644-9e64-58b598aa6393",
+    "name": "Inbox",
+    "color": "#6366f1",
+    "icon": "inbox",
+    "owner_id": "daf05167-87f4-4bff-9934-7bd38c21acff",
+    "created_at": "2026-03-06T12:28:43.162904+00:00",
+    "updated_at": "2026-03-06T12:28:43.162904+00:00"
+  },
+  {
+    "id": "467d93d6-3ed8-4bc9-be4d-4a0e12b4cf31",
+    "name": "Inbox",
+    "color": "#6366f1",
+    "icon": "inbox",
+    "owner_id": "2e259e8d-7c55-40e4-be2a-39fedc8d793e",
+    "created_at": "2026-03-06T18:51:45.851955+00:00",
+    "updated_at": "2026-03-06T18:51:45.851955+00:00"
+  },
+  {
+    "id": "dbdd4b17-331b-4f28-8929-92be3acfa7f9",
+    "name": "Coliseu",
+    "color": "#6366f1",
+    "icon": "folder",
+    "owner_id": "357be199-547d-4011-b8a5-3faa1872b5c9",
+    "created_at": "2026-03-07T17:59:34.821706+00:00",
+    "updated_at": "2026-03-07T17:59:34.821706+00:00"
+  },
+  {
+    "id": "9a4e0043-acb1-49f9-be7d-0d175d95a19d",
+    "name": "Inbox",
+    "color": "#6366f1",
+    "icon": "inbox",
+    "owner_id": "1a2cb899-d3d6-489a-9c12-69f884646513",
+    "created_at": "2026-03-07T19:49:57.522475+00:00",
+    "updated_at": "2026-03-07T19:49:57.522475+00:00"
+  }
+]
+--- Checking Project Members ---
+[
+  {
+    "id": "35d05288-548e-4ce3-ac5f-b7fd9f33ad56",
+    "project_id": "dbdd4b17-331b-4f28-8929-92be3acfa7f9",
+    "user_id": "58f4c5a3-5cd4-4642-8614-088601adcc11",
+    "created_at": "2026-03-07T19:19:13.060225+00:00"
+  }
+]
+--- Checking Policies ---
