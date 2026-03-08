@@ -1,13 +1,16 @@
-import { useState } from 'react'
-import { useTasks } from '../../hooks/useTasks'
+import { useState, useEffect } from 'react'
+import { useTasks, TASK_SELECT } from '../../hooks/useTasks'
 import { useSections, useCreateSection } from '../../hooks/useSections'
 import TaskItem from './TaskItem'
 import TaskForm from './TaskForm'
 import SectionGroup from './SectionGroup'
 import { Loader2, ClipboardList, Plus } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
 
 export default function TaskList({ projectId, title, filterToday }) {
   const { data: tasks = [], isLoading } = useTasks(projectId)
+  const queryClient = useQueryClient()
   const { data: sections = [] } = useSections(projectId)
   const createSection = useCreateSection()
   const [newSectionName, setNewSectionName] = useState('')

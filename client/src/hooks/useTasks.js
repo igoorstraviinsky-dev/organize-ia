@@ -17,7 +17,7 @@ async function fetchSubtasksMap(taskIds) {
   return map
 }
 
-function normalizeTasks(tasks, subtasksMap) {
+export function normalizeTasks(tasks, subtasksMap = {}) {
   return tasks.map((task) => ({
     ...task,
     task_labels: (task.task_labels || []).map((tl) => ({ label: tl.labels || tl.label })),
@@ -25,7 +25,7 @@ function normalizeTasks(tasks, subtasksMap) {
   }))
 }
 
-const TASK_SELECT = `
+export const TASK_SELECT = `
   id, title, description, status, priority, due_date, due_time,
   parent_id, section_id, project_id, position, creator_id,
   created_at, updated_at,
@@ -129,7 +129,7 @@ export function useAllTasks() {
       const subtasksMap = await fetchSubtasksMap(data.map((t) => t.id))
       return normalizeTasks(data, subtasksMap)
     },
-    staleTime: 1000 * 30, // 30 segundos de cache para evitar reload constante
+    staleTime: 0, // Realtime se encarrega de invalidar, garantindo o Live Mode
   })
 }
 
