@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }) => {
     },
     enabled: !!session?.user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchInterval: false, // não polling — o perfil só muda quando o usuário edita
   })
 
   const signOut = useCallback(async () => {
