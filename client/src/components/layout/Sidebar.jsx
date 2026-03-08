@@ -18,10 +18,12 @@ import {
   Users,
 } from 'lucide-react'
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../../hooks/useProjects'
+import { useAuth } from '../../hooks/useAuth'
 
 const COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
 
 export default function Sidebar({ currentView, onViewChange, onProjectSelect, currentProjectId, onSignOut, role, userId }) {
+  const { user } = useAuth()
   const { data: projects = [] } = useProjects()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
@@ -89,18 +91,6 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
       onClick: () => { onViewChange('labels'); onProjectSelect(null) },
     },
     isAdmin && {
-      key: 'integrations',
-      icon: Plug2,
-      label: 'Integrações',
-      onClick: () => { onViewChange('integrations'); onProjectSelect(null) },
-    },
-    isAdmin && {
-      key: 'team',
-      icon: Users,
-      label: 'Equipe',
-      onClick: () => { onViewChange('team'); onProjectSelect(null) },
-    },
-    isAdmin && {
       key: 'chat',
       icon: MessageCircle,
       label: 'Chat WhatsApp',
@@ -109,35 +99,41 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
   ].filter(Boolean)
 
   return (
-    <aside className="relative flex h-screen w-64 flex-col border-r border-white/5 bg-[#0A0A0A]/80 backdrop-blur-xl">
-      <div className="flex items-center gap-2 border-b border-white/5 px-6 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 text-white shadow-lg shadow-purple-500/20">
-          <span className="font-bold text-sm tracking-tighter">O</span>
+    <aside 
+      className="relative flex h-screen w-64 flex-col border-r border-white/5 shadow-2xl"
+      style={{ backgroundColor: '#17112E' }}
+    >
+      <div className="flex items-center gap-3 px-6 py-8 border-b border-white/5">
+        <div 
+          className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-xl overflow-hidden border border-white/10"
+          style={{ backgroundColor: '#8E44AD', boxShadow: '0 10px 15px -3px rgba(142, 68, 173, 0.3)' }}
+        >
+          {user?.profile?.avatar_url ? (
+            <img src={user.profile.avatar_url} alt="Logo" className="h-full w-full object-cover" />
+          ) : (
+            <span className="font-black text-xl text-white italic">
+              {user?.profile?.full_name?.charAt(0).toUpperCase() || 'O'}
+            </span>
+          )}
         </div>
-        <span className="text-sm font-bold tracking-tight text-white/90 font-display">Organizador</span>
+        <span className="text-xl font-black tracking-tight text-white font-display uppercase italic">Organizador</span>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 custom-scrollbar">
         {navItems.map((item) => {
           const isActive = currentView === item.key;
           return (
             <button
               key={item.key}
               onClick={item.onClick}
-              className={`group flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm transition-all duration-300 relative overflow-hidden ${
+              className={`group flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-sm transition-all duration-300 relative ${
                 isActive 
-                  ? 'text-white font-semibold' 
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  ? 'bg-[#8E44AD] text-white font-bold shadow-lg shadow-[#8E44AD]/20 scale-[1.02]' 
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              {isActive && (
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20 opacity-100" />
-              )}
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-gradient-to-b from-purple-500 to-blue-500 shadow-[0_0_12px_rgba(139,92,246,0.5)]" />
-              )}
-              <item.icon size={18} className={`relative z-10 transition-colors ${isActive ? 'text-purple-400' : 'group-hover:text-slate-200'}`} />
-              <span className="relative z-10">{item.label}</span>
+              <item.icon size={20} className={`transition-colors ${isActive ? 'text-white' : 'group-hover:text-slate-200'}`} />
+              <span className="uppercase font-black text-[11px] tracking-widest">{item.label}</span>
             </button>
           );
         })}
@@ -190,7 +186,7 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
                         <button type="button" onClick={handleCancelEdit} className="rounded-lg px-2.5 py-1.5 text-xs text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
                           Cancelar
                         </button>
-                        <button type="submit" className="rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-purple-600/20 hover:scale-105 transition-all">
+                        <button type="submit" className="rounded-lg bg-gradient-to-r from-[#8E44AD] to-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-purple-600/20 hover:scale-105 transition-all">
                           Salvar
                         </button>
                       </div>
@@ -202,15 +198,15 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
                   <div key={project.id} className="group flex items-center px-1">
                     <button
                       onClick={() => { onViewChange('project'); onProjectSelect(project.id) }}
-                      className={`flex flex-1 items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all relative overflow-hidden ${
+                      className={`flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all relative overflow-hidden ${
                         isActive
-                          ? 'text-white font-medium'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                          ? 'bg-[#8E44AD]/20 text-white font-bold'
+                          : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
                       }`}
                     >
-                      {isActive && <div className="absolute inset-0 bg-white/5 opacity-100" />}
-                      <Hash size={16} className="relative z-10" style={{ color: project.color }} />
-                      <span className="truncate relative z-10">{project.name}</span>
+                      {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#8E44AD]" />}
+                      <Hash size={14} className="relative z-10" style={{ color: project.color }} />
+                      <span className="truncate relative z-10 font-bold tracking-tight">{project.name}</span>
                     </button>
                     {canEdit && (
                       <button
@@ -275,13 +271,28 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
         </div>
       </nav>
 
-      <div className="border-t border-white/5 p-4">
+      <div className="mt-auto border-t border-white/5 p-4">
         <button
-          onClick={onSignOut}
-          className="group flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400"
+          onClick={() => onViewChange('settings')}
+          className="flex w-full items-center gap-3 px-2 py-3 rounded-2xl transition-all hover:bg-white/5 group border border-transparent hover:border-white/5"
         >
-          <LogOut size={18} className="group-hover:translate-x-0.5 transition-transform" />
-          Sair
+          <div className="h-9 w-9 rounded-full bg-[#8E44AD] flex items-center justify-center overflow-hidden border border-white/10 shadow-sm group-hover:scale-110 transition-transform">
+             {user?.profile?.avatar_url ? (
+               <img 
+                 src={user.profile.avatar_url} 
+                 alt="User Profile" 
+                 className="h-full w-full object-cover"
+               />
+             ) : (
+               <span className="text-sm font-black text-white italic">
+                 {user?.profile?.full_name?.charAt(0).toUpperCase() || 'U'}
+               </span>
+             )}
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-sm font-semibold text-white truncate group-hover:text-[#8E44AD] transition-colors">{user?.profile?.full_name || 'Usuário'}</p>
+            <p className="text-[10px] text-slate-500 truncate uppercase font-black tracking-widest mt-0.5">Configurações</p>
+          </div>
         </button>
       </div>
     </aside>

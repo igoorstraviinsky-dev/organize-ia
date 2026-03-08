@@ -78,4 +78,46 @@ router.post('/create', requireAuth, async (req, res) => {
   }
 })
 
+// DELETE /api/team/delete/:id
+router.delete('/delete/:id', requireAuth, async (req, res) => {
+  const { id } = req.params
+
+  if (!id) {
+    return res.status(400).json({ error: 'User ID is required' })
+  }
+
+  // Prevent admin from deleting themselves
+  if (id === req.user.id) {
+    return res.status(400).json({ error: 'You cannot delete yourself' })
+  }
+
+  try {
+    // 1. Delete user from Supabase Auth via Admin API
+    // This usually cascades to other tables if configured, 
+    // but in some setups profiles might need manual deletion.
+    const { error: authError } = await supabase.auth.admin.deleteUser(id)
+
+    if (authError) {
+      console.error('Error deleting user from auth:', authError)
+      return res.status(400).json({ error: authError.message })
+    }
+
+    // 2. Double check if profile still exists (just in case cascade didn't happen)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', id)
+
+    if (profileError) {
+      console.error('Error deleting profile:', profileError)
+      // We don't necessarily return error here as the auth account is already gone
+    }
+
+    res.json({ message: 'Collaborator deleted successfully' })
+  } catch (err) {
+    console.error('Unexpected error in /api/team/delete:', err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router

@@ -52,11 +52,9 @@ export default function TaskList({ projectId, title, filterToday }) {
   }
 
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-bold text-gray-900">{title}</h1>
-
+    <div className="space-y-6">
       {/* Tarefas sem seção */}
-      <div className="space-y-0.5">
+      <div className="space-y-3">
         {unsectioned.map((task) => (
           <TaskItem key={task.id} task={task} />
         ))}
@@ -67,22 +65,26 @@ export default function TaskList({ projectId, title, filterToday }) {
       </div>
 
       {/* Seções */}
-      {hasSections && sections.map((section) => {
-        const sectionPending = pendingTasks.filter((t) => t.section_id === section.id)
-        const sectionCompleted = completedTasks.filter((t) => t.section_id === section.id)
-        return (
-          <SectionGroup
-            key={section.id}
-            section={section}
-            tasks={[...sectionPending, ...sectionCompleted]}
-            projectId={projectId}
-          />
-        )
-      })}
+      {hasSections && (
+        <div className="space-y-8 mt-10">
+          {sections.map((section) => {
+            const sectionPending = pendingTasks.filter((t) => t.section_id === section.id)
+            const sectionCompleted = completedTasks.filter((t) => t.section_id === section.id)
+            return (
+              <SectionGroup
+                key={section.id}
+                section={section}
+                tasks={[...sectionPending, ...sectionCompleted]}
+                projectId={projectId}
+              />
+            )
+          })}
+        </div>
+      )}
 
       {/* Adicionar seção */}
       {projectId && (
-        <div className="mt-4">
+        <div className="mt-6 pt-4 border-t border-slate-100">
           {showNewSection ? (
             <form onSubmit={handleAddSection} className="flex items-center gap-2">
               <input
@@ -90,20 +92,20 @@ export default function TaskList({ projectId, title, filterToday }) {
                 value={newSectionName}
                 onChange={(e) => setNewSectionName(e.target.value)}
                 placeholder="Nome da seção"
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm outline-none focus:border-brand-purple focus:ring-2 focus:ring-brand-purple/10"
                 onKeyDown={(e) => e.key === 'Escape' && setShowNewSection(false)}
               />
-              <button type="submit" className="rounded bg-indigo-500 px-3 py-1.5 text-xs text-white hover:bg-indigo-600">
+              <button type="submit" className="rounded-xl bg-brand-purple px-4 py-2 text-sm font-bold text-white hover:bg-brand-purple/90 transition-all shadow-md shadow-brand-purple/10">
                 Criar
               </button>
-              <button type="button" onClick={() => setShowNewSection(false)} className="rounded px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100">
+              <button type="button" onClick={() => setShowNewSection(false)} className="rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all">
                 Cancelar
               </button>
             </form>
           ) : (
             <button
               onClick={() => setShowNewSection(true)}
-              className="flex items-center gap-2 text-xs font-medium text-gray-400 hover:text-indigo-500"
+              className="flex items-center gap-2 text-xs font-extrabold text-slate-400 hover:text-brand-purple uppercase tracking-widest transition-all"
             >
               <Plus size={14} />
               Adicionar seção
@@ -114,19 +116,21 @@ export default function TaskList({ projectId, title, filterToday }) {
 
       {/* Estado vazio */}
       {pendingTasks.length === 0 && completedTasks.length === 0 && (
-        <div className="mt-8 flex flex-col items-center text-gray-400">
-          <ClipboardList size={48} strokeWidth={1} />
-          <p className="mt-2 text-sm">Nenhuma tarefa ainda</p>
+        <div className="mt-20 flex flex-col items-center text-slate-300">
+          <ClipboardList size={64} strokeWidth={1} />
+          <p className="mt-4 text-sm font-semibold tracking-wide uppercase">Nenhuma tarefa ainda</p>
         </div>
       )}
 
       {/* Concluídas */}
       {(completedUnsectioned.length > 0 || (hasSections && completedTasks.length > 0)) && (
-        <details className="mt-6">
-          <summary className="cursor-pointer text-xs font-medium text-gray-400 hover:text-gray-600">
+        <details className="mt-10 group">
+          <summary className="cursor-pointer text-xs font-extrabold text-slate-400 hover:text-slate-600 uppercase tracking-widest list-none flex items-center gap-2">
+            <div className="h-px bg-slate-100 flex-1 group-open:hidden" />
             Concluídas ({completedTasks.length})
+            <div className="h-px bg-slate-100 flex-1 group-open:hidden" />
           </summary>
-          <div className="mt-2 space-y-0.5">
+          <div className="mt-4 space-y-3">
             {completedUnsectioned.map((task) => (
               <TaskItem key={task.id} task={task} />
             ))}

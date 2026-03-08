@@ -31,7 +31,7 @@ export const TASK_SELECT = `
   created_at, updated_at,
   project:projects(id, name, color),
   section:sections(id, name),
-  assignments(user_id, profiles:profiles(full_name, email)),
+  assignments(user_id, profiles:profiles(full_name, email, avatar_url)),
   task_labels(label_id, labels(id, name, color))
 `
 

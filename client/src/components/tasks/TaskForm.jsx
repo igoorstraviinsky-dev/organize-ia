@@ -86,18 +86,18 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-400 transition-colors hover:text-indigo-500"
+        className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-400 transition-all hover:bg-slate-50 hover:text-brand-purple border border-dashed border-slate-200"
       >
-        <Plus size={18} className="text-indigo-500" />
+        <Plus size={18} className="text-brand-purple" />
         <span>Adicionar tarefa</span>
       </button>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-white/10 bg-[#0A0A0A]/80 p-4 backdrop-blur-xl shadow-xl">
+    <form onSubmit={handleSubmit} className="premium-card p-5 border border-slate-200">
       {error && (
-        <div className="mb-3 rounded-xl bg-red-500/10 px-3 py-2 text-[11px] font-medium text-red-400 border border-red-500/20">{error}</div>
+        <div className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-xs font-bold text-red-500 border border-red-100">{error}</div>
       )}
 
       <input
@@ -105,110 +105,79 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="O que precisa ser feito?"
-        className="w-full bg-transparent text-[13px] font-semibold text-white outline-none placeholder:text-white/20"
+        className="w-full bg-transparent text-base font-bold text-slate-800 outline-none placeholder:text-slate-300"
         onKeyDown={(e) => e.key === 'Escape' && (onClose ? onClose() : setExpanded(false))}
       />
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Adicionar descrição..."
-        className="mt-1.5 w-full bg-transparent text-[11px] font-medium text-slate-400 outline-none placeholder:text-white/10"
+        className="mt-2 w-full bg-transparent text-sm font-semibold text-slate-500 outline-none placeholder:text-slate-300"
       />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2 py-1 transition-all hover:bg-white/10">
-          <CalendarDays size={12} className="text-slate-400" />
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
+          <CalendarDays size={14} className="text-slate-400" />
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="bg-transparent text-[10px] font-bold text-slate-300 outline-none uppercase tracking-tighter"
-            style={{ colorScheme: 'dark' }}
+            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2 py-1 transition-all hover:bg-white/10">
-          <Clock size={12} className="text-slate-400" />
+        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
+          <Clock size={14} className="text-slate-400" />
           <input
             type="time"
             value={dueTime}
             onChange={(e) => setDueTime(e.target.value)}
-            className="bg-transparent text-[10px] font-bold text-slate-300 outline-none uppercase tracking-tighter"
-            style={{ colorScheme: 'dark' }}
+            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2 py-1 transition-all hover:bg-white/10">
-          <Flag size={12} className="text-slate-400" />
+        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
+          <Flag size={14} className="text-slate-400" />
           <select
             value={priority}
             onChange={(e) => setPriority(Number(e.target.value))}
-            className="bg-transparent text-[10px] font-bold text-slate-300 outline-none uppercase tracking-tighter cursor-pointer"
+            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide cursor-pointer"
           >
             {PRIORITIES.map((p) => (
-              <option key={p.value} value={p.value} className="bg-slate-900 text-white">{p.label}</option>
+              <option key={p.value} value={p.value} className="bg-white text-slate-800">{p.label}</option>
             ))}
           </select>
         </div>
-
-        {!projectId && (
-          <select
-            value={selectedProjectId}
-            onChange={(e) => { setSelectedProjectId(e.target.value); setSelectedSectionId('') }}
-            className="rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-indigo-500"
-          >
-            <option value="">Sem projeto</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        )}
-
-        {sections.length > 0 && !sectionId && (
-          <select
-            value={selectedSectionId}
-            onChange={(e) => setSelectedSectionId(e.target.value)}
-            className="rounded border border-gray-200 px-2 py-1 text-xs outline-none focus:border-indigo-500"
-          >
-            <option value="">Sem seção</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        )}
 
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowLabels(!showLabels)}
-            className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold uppercase tracking-tighter transition-all hover:bg-white/10 ${
+            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all ${
               selectedLabelIds.length > 0 
-                ? 'border-purple-500/30 bg-purple-500/10 text-purple-400' 
-                : 'border-white/5 bg-white/5 text-slate-400'
+                ? 'border-brand-purple/20 bg-brand-purple/5 text-brand-purple' 
+                : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
             }`}
           >
-            <Tag size={12} />
+            <Tag size={14} />
             {selectedLabelIds.length > 0 ? `${selectedLabelIds.length} etiquetas` : 'Etiquetas'}
           </button>
+          
           {showLabels && labels.length > 0 && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowLabels(false)} />
-              <div className="absolute left-0 z-20 mt-2 w-56 rounded-[20px] border border-white/10 bg-[#0A0A0A]/95 p-2 backdrop-blur-xl shadow-2xl">
+              <div className="absolute left-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                 <div className="max-h-48 custom-scrollbar overflow-y-auto">
                   {labels.map((label) => (
                     <button
                       key={label.id}
                       type="button"
                       onClick={() => toggleLabel(label.id)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[11px] font-semibold text-slate-300 transition-all hover:bg-white/5"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 transition-all hover:bg-slate-50"
                     >
                       <span
-                        className={`h-3 w-3 rounded-full border-2 transition-transform ${selectedLabelIds.includes(label.id) ? 'scale-110 border-transparent shadow-[0_0_8px]' : 'border-white/20'}`}
-                        style={{ 
-                          backgroundColor: selectedLabelIds.includes(label.id) ? label.color : 'transparent',
-                          borderColor: selectedLabelIds.includes(label.id) ? 'transparent' : undefined,
-                          boxShadow: selectedLabelIds.includes(label.id) ? `0 0 12px ${label.color}60` : undefined
-                        }}
+                        className={`h-3 w-3 rounded-full border-2 transition-transform ${selectedLabelIds.includes(label.id) ? 'scale-110 border-transparent' : 'border-slate-200'}`}
+                        style={{ backgroundColor: selectedLabelIds.includes(label.id) ? label.color : 'transparent' }}
                       />
                       <span>{label.name}</span>
                     </button>
@@ -220,39 +189,18 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
         </div>
       </div>
 
-      {selectedLabelIds.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {selectedLabelIds.map((id) => {
-            const label = labels.find((l) => l.id === id)
-            if (!label) return null
-            return (
-              <span
-                key={id}
-                className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
-                style={{ backgroundColor: label.color }}
-              >
-                {label.name}
-                <button type="button" onClick={() => toggleLabel(id)}>
-                  <X size={10} />
-                </button>
-              </span>
-            )
-          })}
-        </div>
-      )}
-
-      <div className="mt-5 flex justify-end gap-2.5">
+      <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-50">
         <button
           type="button"
           onClick={() => (onClose ? onClose() : setExpanded(false))}
-          className="rounded-xl px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 transition-all hover:bg-white/5 hover:text-white"
+          className="rounded-xl px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-widest text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-600"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={!title.trim() || createTask.isPending}
-          className="rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 px-5 py-2 text-[11px] font-bold uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+          className="rounded-xl bg-brand-purple px-6 py-2.5 text-[11px] font-extrabold uppercase tracking-widest text-white shadow-lg shadow-brand-purple/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
         >
           {createTask.isPending ? 'Criando...' : 'Adicionar'}
         </button>

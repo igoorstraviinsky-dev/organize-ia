@@ -59,36 +59,36 @@ export default function TaskItem({ task }) {
     <>
       <div
         onClick={() => setShowDetail(true)}
-        className={`group relative flex cursor-pointer items-start gap-4 rounded-[24px] p-5 transition-all duration-300 border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-md hover:scale-[1.01] hover:shadow-2xl hover:shadow-purple-500/5 ${isCompleted ? 'opacity-50' : ''}`}
+        className={`group relative flex cursor-pointer items-start gap-4 rounded-xl p-4 transition-all duration-300 border border-slate-100 bg-white hover:border-brand-purple/30 hover:shadow-md ${isCompleted ? 'opacity-60 bg-slate-50' : ''}`}
       >
         <button
           onClick={toggleComplete}
-          className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${PRIORITY_COLORS[task.priority]} ${isCompleted ? 'bg-current shadow-[0_0_10px_currentColor]' : 'hover:bg-current/10'}`}
+          className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${PRIORITY_COLORS[task.priority]} ${isCompleted ? 'bg-current' : 'hover:bg-current/10'}`}
         >
           {isCompleted && (
-            <svg width="12" height="12" viewBox="0 0 12 12" className="text-white">
-              <path d="M2.5 6l2.5 2.5L9.5 3.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="10" height="10" viewBox="0 0 12 12" className="text-white">
+              <path d="M2.5 6l2.5 2.5L9.5 3.5" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
         </button>
 
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className={`text-base font-medium tracking-tight ${isCompleted ? 'line-through text-slate-500' : 'text-slate-100'}`}>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <p className={`text-base font-semibold tracking-tight ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
             {task.title}
           </p>
 
           {task.description && (
-            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">{task.description}</p>
+            <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{task.description}</p>
           )}
 
-          <div className="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-2.5 pt-1">
             {dateInfo && (
-              <span className={`flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1 text-xs font-medium ${dateInfo.className}`}>
-                <CalendarDays size={14} />
+              <span className={`flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${dateInfo.className}`}>
+                <CalendarDays size={13} />
                 {dateInfo.text}
                 {time && (
-                  <span className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
-                    <Clock size={12} />
+                  <span className="flex items-center gap-1 ml-1 border-l border-slate-200 pl-2">
+                    <Clock size={11} />
                     {time}
                   </span>
                 )}
@@ -96,26 +96,50 @@ export default function TaskItem({ task }) {
             )}
 
             {task.priority < 4 && (
-              <span className={`flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1 text-xs font-medium ${PRIORITY_COLORS[task.priority].split(' ')[1]}`}>
-                <Flag size={14} />
+              <span className={`flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${PRIORITY_COLORS[task.priority].split(' ')[1]}`}>
+                <Flag size={13} />
                 {PRIORITY_LABELS[task.priority]}
               </span>
             )}
 
             {task.project && (
-              <span className="flex items-center gap-1.5 rounded-lg bg-white/5 px-2 py-1 text-xs text-slate-400">
-                <Hash size={14} style={{ color: task.project.color }} />
+              <span className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                <Hash size={13} style={{ color: task.project.color }} />
                 {task.project.name}
               </span>
             )}
 
+            {/* Avatares dos Designados */}
+            {task.assignments && task.assignments.length > 0 && (
+              <div className="flex -space-x-2 ml-1">
+                {task.assignments.map((asg) => (
+                  <div 
+                    key={asg.user_id}
+                    title={asg.profiles?.full_name}
+                    className="h-6 w-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden transition-transform hover:scale-110"
+                  >
+                    {asg.profiles?.avatar_url ? (
+                      <img src={asg.profiles.avatar_url} alt={asg.profiles.full_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-black text-slate-500">
+                        {asg.profiles?.full_name?.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {labels.length > 0 && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 {labels.map((label) => (
                   <span
                     key={label.id}
-                    className="rounded-lg px-2 py-1 text-[10px] font-bold text-white uppercase tracking-wider"
-                    style={{ backgroundColor: label.color, boxShadow: `0 0 10px ${label.color}40` }}
+                    className="rounded-lg px-2.5 py-1 text-[9px] font-black text-white uppercase tracking-widest ring-1 ring-black/5"
+                    style={{ 
+                      backgroundColor: label.color,
+                      textShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                    }}
                   >
                     {label.name}
                   </span>
@@ -126,21 +150,21 @@ export default function TaskItem({ task }) {
 
           {/* Lista de subtarefas inline */}
           {hasSubtasks && (
-            <div className="mt-4 rounded-2xl bg-black/20 p-3 space-y-2">
+            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-2">
               <div className="flex items-center gap-3">
-                <div className="h-1.5 flex-1 rounded-full bg-white/5">
+                <div className="h-1.5 flex-1 rounded-full bg-slate-200">
                   <div
-                    className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 shadow-[0_0_8px_rgba(16,185,129,0.3)] transition-all duration-500"
+                    className="h-1.5 rounded-full bg-brand-purple transition-all duration-500"
                     style={{ width: `${(completedSubs / subtasks.length) * 100}%` }}
                   />
                 </div>
                 <span className={`text-[10px] font-bold tracking-widest uppercase ${
-                  completedSubs === subtasks.length ? 'text-emerald-400' : 'text-slate-500'
+                  completedSubs === subtasks.length ? 'text-brand-green' : 'text-slate-500'
                 }`}>
                   {completedSubs}/{subtasks.length}
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-1">
+              <div className="grid grid-cols-1 gap-0.5">
                 {subtasks.map((sub) => {
                   const done = sub.status === 'completed'
                   return (
@@ -153,15 +177,15 @@ export default function TaskItem({ task }) {
                           status: done ? 'pending' : 'completed',
                         })
                       }}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 transition-all hover:bg-white/5"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-all hover:bg-slate-200/50"
                     >
                       {done ? (
-                        <CheckCircle2 size={14} className="flex-shrink-0 text-emerald-400" />
+                        <CheckCircle2 size={14} className="flex-shrink-0 text-brand-green" />
                       ) : (
-                        <Circle size={14} className="flex-shrink-0 text-slate-600" />
+                        <Circle size={14} className="flex-shrink-0 text-slate-300 group-hover:text-slate-400" />
                       )}
-                      <span className={`text-xs font-medium ${
-                        done ? 'text-slate-500 line-through' : 'text-slate-300'
+                      <span className={`text-xs font-semibold ${
+                        done ? 'text-slate-400 line-through' : 'text-slate-600'
                       }`}>
                         {sub.title}
                       </span>

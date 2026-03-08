@@ -20,60 +20,61 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#020617] px-4 font-sans relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 font-sans relative overflow-hidden">
       {/* Decorative Background Elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[120px] rounded-full" />
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-purple/5 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-navy/5 blur-[120px] rounded-full" />
 
       <div className="w-full max-w-md relative z-10">
-        <div className="glass-surface bg-[#0A0A0A]/60 backdrop-blur-2xl rounded-[32px] border border-white/10 p-10 shadow-2xl shadow-purple-500/5">
-          <div className="mb-10 text-center">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg shadow-purple-500/20">
-              <CheckSquare size={32} className="text-white" />
+        <div className="premium-card bg-white rounded-[32px] border border-slate-100 p-12 shadow-2xl shadow-slate-200/50">
+          <div className="mb-12 text-center" style={{ color: '#17112E' }}>
+            <div 
+              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl"
+              style={{ background: 'linear-gradient(to bottom right, #17112E, #8E44AD)', boxShadow: '0 20px 25px -5px rgba(142, 68, 173, 0.2)' }}
+            >
+              <CheckSquare size={32} className="text-white" strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-white font-display uppercase">Organizador</h1>
-            <p className="mt-2 text-slate-400 font-medium tracking-wide">Faça login para continuar</p>
+            <h1 className="text-2xl font-black tracking-tight font-display uppercase italic" style={{ color: '#17112E' }}>Organizador</h1>
+            <p className="mt-2 text-slate-400 text-xs font-black uppercase tracking-widest">Painel de Acesso</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
-              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-300 text-center">
+              <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-2 duration-300 text-center">
                 {error}
               </div>
             )}
             
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Email</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</label>
               <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-purple-500 transition-colors">
-                  <Mail size={18} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-purple transition-colors">
+                  <Mail size={18} strokeWidth={2.5} />
                 </div>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-2xl border border-white/5 bg-white/5 px-12 py-4 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all placeholder:text-slate-600 autofill:bg-transparent autofill:text-white"
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-12 py-4 text-sm font-bold text-slate-800 outline-none focus:border-brand-purple focus:bg-white focus:ring-4 focus:ring-brand-purple/5 transition-all placeholder:text-slate-300"
                   placeholder="seu@email.com"
-                  style={{ colorScheme: 'dark' }}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-slate-500 ml-1">Senha</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Senha</label>
               <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-purple-500 transition-colors">
-                  <Lock size={18} />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-purple transition-colors">
+                  <Lock size={18} strokeWidth={2.5} />
                 </div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-white/5 bg-white/5 px-12 py-4 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all placeholder:text-slate-600 autofill:bg-transparent autofill:text-white"
+                  className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-12 py-4 text-sm font-bold text-slate-800 outline-none focus:border-brand-purple focus:bg-white focus:ring-4 focus:ring-brand-purple/5 transition-all placeholder:text-slate-300"
                   placeholder="••••••••"
-                  style={{ colorScheme: 'dark' }}
                 />
               </div>
             </div>
@@ -81,19 +82,19 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 p-4 text-sm font-bold uppercase tracking-widest text-white shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl p-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-brand-navy/20 transition-all hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              style={{ backgroundColor: '#17112E' }}
             >
-              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <LogIn size={20} className="relative z-10" />
+              <LogIn size={18} className="relative z-10" strokeWidth={3} />
               <span className="relative z-10">{loading ? 'Entrando...' : 'Entrar'}</span>
             </button>
           </form>
 
-          <div className="mt-10 text-center">
-            <p className="text-sm text-slate-500 font-medium">
+          <div className="mt-12 text-center">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Não tem conta?{' '}
-              <Link to="/register" className="font-bold text-white hover:text-purple-400 transition-colors underline decoration-purple-500/30 underline-offset-4">
-                Criar conta agora
+              <Link to="/register" className="font-black text-brand-purple hover:text-brand-navy transition-colors">
+                Criar conta
               </Link>
             </p>
           </div>

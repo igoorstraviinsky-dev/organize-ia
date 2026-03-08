@@ -21,9 +21,9 @@ import KanbanCard from './KanbanCard'
 import TaskForm from './TaskForm'
 
 const STATUS_COLUMNS = [
-  { key: 'pending', label: 'Pendente', gradient: 'from-slate-500/50 to-slate-600/50', iconColor: 'bg-slate-500' },
-  { key: 'in_progress', label: 'Em Progresso', gradient: 'from-purple-500/50 to-blue-600/50', iconColor: 'bg-purple-500' },
-  { key: 'completed', label: 'Concluída', gradient: 'from-emerald-500/50 to-teal-600/50', iconColor: 'bg-emerald-500' },
+  { key: 'pending', label: 'Pendente', gradient: 'bg-slate-100 text-slate-500', iconColor: 'bg-slate-400' },
+  { key: 'in_progress', label: 'Em Progresso', gradient: 'bg-brand-purple/10 text-brand-purple', iconColor: 'bg-brand-purple' },
+  { key: 'completed', label: 'Concluída', gradient: 'bg-emerald-50 text-emerald-600', iconColor: 'bg-emerald-500' },
 ]
 
 // Prefixo para IDs das colunas — evita conflito com UUIDs de tasks
@@ -52,7 +52,7 @@ function SortableCard({ task }) {
       <div
         ref={setNodeRef}
         style={style}
-        className="rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 opacity-40"
+        className="rounded-2xl border-2 border-dashed border-brand-purple/20 bg-brand-purple/5 opacity-40"
       >
         <KanbanCard task={task} isPlaceholder />
       </div>
@@ -89,41 +89,41 @@ function DroppableColumn({
   return (
     <div className="flex w-[320px] flex-shrink-0 flex-col">
       {/* Header da coluna */}
-      <div className="mb-4 flex items-center gap-3 px-2">
+      <div className="mb-5 flex items-center gap-3 px-3">
         <div
-          className={`flex h-6 w-6 items-center justify-center rounded-lg shadow-lg ${gradient} backdrop-blur-md`}
+          className={`flex h-6 w-6 items-center justify-center rounded-lg font-bold text-[10px] ${gradient}`}
         >
-          <span className="text-[10px] font-bold text-white leading-none">{count}</span>
+          {count}
         </div>
-        <h3 className="text-xs font-bold tracking-[0.1em] text-white/70 uppercase">
+        <h3 className="text-xs font-extrabold tracking-widest text-slate-800 uppercase">
           {title}
         </h3>
         <button
           onClick={onAddClick}
-          className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-white/30 transition-all hover:bg-white/5 hover:text-purple-400"
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-slate-100 hover:text-brand-purple"
         >
-          <Plus size={16} strokeWidth={2.5} />
+          <Plus size={18} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* Corpo da coluna — ref do droppable aqui */}
       <div
         ref={setNodeRef}
-        className={`flex flex-1 flex-col gap-3 rounded-[24px] p-3 border transition-all duration-300 ${
+        className={`flex flex-1 flex-col gap-4 rounded-[24px] p-3 transition-all duration-300 ${
           isOver
-            ? 'bg-purple-500/10 border-purple-500/30'
-            : 'glass-surface bg-[#0A0A0A]/40 border-white/5 shadow-2xl shadow-black/20'
+            ? 'bg-brand-purple/5 ring-1 ring-brand-purple/20'
+            : 'bg-transparent'
         }`}
         style={{ minHeight: '150px' }}
       >
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
             {children}
           </SortableContext>
         </div>
 
         {isAdding && (
-          <div className="mt-1 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-1">
             <TaskForm
               projectId={projectId}
               sectionId={sectionId}
@@ -135,12 +135,12 @@ function DroppableColumn({
         {!isAdding && count === 0 && (
           <button
             onClick={onAddClick}
-            className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-white/5 bg-white/[0.02] px-4 py-10 text-sm text-white/20 transition-all hover:border-purple-500/40 hover:bg-purple-500/5 hover:text-white/40"
+            className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-4 py-12 text-sm text-slate-400 transition-all hover:border-brand-purple/30 hover:bg-brand-purple/5 hover:text-brand-purple"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 group-hover:bg-purple-500/20 group-hover:text-purple-400 transition-colors">
-              <Plus size={16} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-brand-purple/20 transition-all">
+              <Plus size={20} className="text-slate-400 group-hover:text-brand-purple" />
             </div>
-            <span className="font-medium">Adicionar tarefa</span>
+            <span className="font-bold">Adicionar tarefa</span>
           </button>
         )}
       </div>
@@ -302,7 +302,7 @@ export default function KanbanBoard({ projectId }) {
               key={col.id}
               columnId={col.id}
               title={col.name}
-              gradient="from-indigo-500 to-indigo-600"
+              gradient="bg-brand-purple/10 text-brand-purple"
               count={col.tasks.length}
               taskIds={col.tasks.map((t) => t.id)}
               isOver={overColumnId === col.id}
@@ -321,12 +321,12 @@ export default function KanbanBoard({ projectId }) {
           ))}
 
           <div className="w-[320px] flex-shrink-0">
-            <form onSubmit={handleAddSection} className="px-2">
+            <form onSubmit={handleAddSection} className="px-3 pt-1">
               <input
                 value={newSectionName}
                 onChange={(e) => setNewSectionName(e.target.value)}
                 placeholder="+ Nova seção..."
-                className="w-full rounded-2xl border-2 border-dashed border-white/5 bg-white/[0.02] px-5 py-4 text-sm font-semibold tracking-wide text-white/40 outline-none transition-all placeholder:text-white/20 focus:border-purple-500/40 focus:bg-purple-500/5 focus:text-white/70"
+                className="w-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-5 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400 outline-none transition-all placeholder:text-slate-300 focus:border-brand-purple/30 focus:bg-brand-purple/5 focus:text-brand-purple"
               />
             </form>
           </div>

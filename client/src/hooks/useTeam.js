@@ -121,6 +121,28 @@ export const useTeam = () => {
     assignToProject: (projectId, userId) => assignMutation.mutateAsync({ projectId, userId }),
     unassignFromProject: (projectId, userId) => unassignMutation.mutateAsync({ projectId, userId }),
     createCollaborator,
-    updateCollaborator: (userId, updates) => updateCollaboratorMutation.mutateAsync({ userId, updates })
+    updateCollaborator: (userId, updates) => updateCollaboratorMutation.mutateAsync({ userId, updates }),
+    deleteCollaborator: async (userId) => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error('Not authenticated')
+
+        const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/team/delete/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
+
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Failed to delete collaborator')
+
+        queryClient.invalidateQueries({ queryKey: ['team-profiles'] })
+        return { success: true }
+      } catch (err) {
+        console.error('Error deleting collaborator:', err)
+        return { success: false, error: err.message }
+      }
+    }
   }
 }

@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
 
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
 
   // 1. Gerenciar Sessão e Listener
   useEffect(() => {
@@ -18,12 +18,11 @@ export const AuthProvider = ({ children }) => {
         const { data: { session: s } } = await supabase.auth.getSession()
         if (mounted) {
           setSession(s)
-          // Se não houver sessão, o carregamento inicial termina aqui
-          if (!s) setLoading(false)
+          setIsSessionLoading(false)
         }
       } catch (err) {
         console.error('Initial session check error:', err)
-        if (mounted) setLoading(false)
+        if (mounted) setIsSessionLoading(false)
       }
     }
 
@@ -34,8 +33,7 @@ export const AuthProvider = ({ children }) => {
       if (mounted) {
         setSession(s)
         if (event === 'SIGNED_OUT') {
-          setProfile(null)
-          setLoading(false)
+          setIsSessionLoading(false)
         }
       }
     })
@@ -46,56 +44,50 @@ export const AuthProvider = ({ children }) => {
     }
   }, [])
 
-  // 2. Carregar Perfil quando o ID do usuário mudar
-  useEffect(() => {
-    if (!session?.user?.id) return
-
-    let mounted = true
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        if (mounted) {
-          if (error) {
-            console.warn('Could not fetch profile:', error.message)
-          } else {
-            setProfile(data)
-          }
-          // Independente de sucesso ou erro, terminamos o loading se temos uma sessão
-          setLoading(false)
-        }
-      } catch (err) {
-        console.error('Fetch profile catch block:', err)
-        if (mounted) setLoading(false)
+  // 2. Carregar Perfil usando React Query
+  const { 
+    data: profile, 
+    isLoading: isProfileLoading,
+    refetch: refetchProfile 
+  } = useQuery({
+    queryKey: ['profile', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+      
+      if (error) {
+        console.warn('Could not fetch profile:', error.message)
+        return null
       }
-    }
-
-    fetchProfile()
-    return () => { mounted = false }
-  }, [session?.user?.id])
+      return data
+    },
+    enabled: !!session?.user?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  })
 
   const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut()
       setSession(null)
-      setProfile(null)
-      setLoading(false)
     } catch (err) {
       console.error('Sign out error:', err)
     }
   }, [])
+
+  const loading = isSessionLoading || (!!session?.user?.id && isProfileLoading)
 
   const value = useMemo(() => ({
     session,
     user: session?.user ? { ...session.user, profile } : null,
     profile,
     loading,
-    signOut
-  }), [session, profile, loading, signOut])
+    signOut,
+    refetchProfile
+  }), [session, profile, loading, signOut, refetchProfile])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

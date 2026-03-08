@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Shield, ShieldAlert, Key, FolderOpen, X, Phone } from 'lucide-react'
+import { Plus, Shield, ShieldAlert, Key, FolderOpen, X, Phone, Trash2 } from 'lucide-react'
 import { useTeam } from '../hooks/useTeam'
 import { useProjects } from '../hooks/useProjects'
 
 export default function TeamPage() {
-  const { profiles, projectMembers, loading, error, fetchProfiles, fetchProjectMembers, createCollaborator, assignToProject, unassignFromProject, updateCollaborator } = useTeam()
+  const { profiles, projectMembers, loading, error, deleteCollaborator, createCollaborator, assignToProject, unassignFromProject, updateCollaborator } = useTeam()
   const { data: projects = [] } = useProjects()
 
   const [isCreating, setIsCreating] = useState(false)
@@ -16,6 +16,7 @@ export default function TeamPage() {
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '', phone: '' })
   const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(null)
 
   useEffect(() => {
     if (managingUser) {
@@ -49,22 +50,36 @@ export default function TeamPage() {
     }
   }
 
+  const handleDeleteUser = async (profile) => {
+    if (!window.confirm(`Tem certeza que deseja remover ${profile.full_name || 'este usuário'} da equipe? Esta ação não pode ser desfeita.`)) {
+      return
+    }
+
+    setIsDeleting(profile.id)
+    const result = await deleteCollaborator(profile.id)
+    setIsDeleting(null)
+
+    if (!result.success) {
+      alert(result.error || 'Erro ao deletar colaborador')
+    }
+  }
+
   if (loading && profiles.length === 0) {
     return <div className="flex justify-center p-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" /></div>
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="w-full max-w-6xl mx-auto space-y-8">
+      <div className="flex items-end justify-between border-b border-slate-100 pb-6">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Gerenciar Equipe</h2>
-          <p className="text-sm text-gray-500 mt-1">Adicione colaboradores e gerencie o acesso aos seus projetos.</p>
+          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Gerenciar Equipe</h2>
+          <p className="text-sm font-semibold text-slate-400 mt-1">Adicione colaboradores e gerencie o acesso aos seus projetos de forma simplificada.</p>
         </div>
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors text-sm"
+          className="flex items-center gap-2 bg-brand-purple hover:bg-brand-purple/90 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-brand-purple/20 text-xs uppercase tracking-widest"
         >
-          <Plus size={16} />
+          <Plus size={16} strokeWidth={3} />
           Novo Colaborador
         </button>
       </div>
@@ -260,63 +275,84 @@ export default function TeamPage() {
       )}
 
       {/* Team List */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+      <div className="premium-card overflow-hidden border border-slate-100 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+          <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <thead className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-widest text-[10px] border-b border-slate-100">
               <tr>
-                <th className="px-6 py-4">Usuário</th>
-                <th className="px-6 py-4">Telefone</th>
-                <th className="px-6 py-4">Cargo</th>
-                <th className="px-6 py-4 text-right">Acesso a Projetos</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-8 py-5">Usuário</th>
+                <th className="px-6 py-5">Telefone</th>
+                <th className="px-6 py-5">Cargo</th>
+                <th className="px-6 py-5 text-right">Acessos</th>
+                <th className="px-8 py-5 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-50">
               {profiles.map(profile => {
                 const isAdmin = profile.role === 'admin'
                 const assignedCount = projectMembers.filter(pm => pm.user_id === profile.id).length
                 
                 return (
-                  <tr key={profile.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="font-semibold text-gray-900">{profile.full_name || 'Usuário'}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">{profile.email || 'Email oculto'}</p>
+                  <tr key={profile.id} className="hover:bg-slate-50/30 transition-colors group">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm border border-slate-200">
+                          {profile.full_name?.charAt(0) || 'U'}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{profile.full_name || 'Usuário'}</p>
+                          <p className="text-slate-400 text-xs font-semibold">{profile.email || 'Email oculto'}</p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-gray-600 text-sm font-medium">
+                    <td className="px-6 py-5">
+                      <span className="text-slate-600 text-xs font-bold tracking-tight">
                         {profile.phone || '-'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-5">
                       {isAdmin ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                          <Shield size={12} /> Admin
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          <Shield size={12} strokeWidth={3} /> Admin
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                          Colaborador
+                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200">
+                          Membro
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-5 text-right">
                       {isAdmin ? (
-                        <span className="text-gray-500 text-xs italic">Acesso total</span>
+                        <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest italic">Acesso total</span>
                       ) : (
-                        <span className="text-gray-700 font-medium">
+                        <span className="text-slate-700 font-bold text-xs">
                           {assignedCount} {assignedCount === 1 ? 'projeto' : 'projetos'}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-8 py-5 text-right">
                       {!isAdmin && (
-                        <button
-                          onClick={() => setManagingUser(profile)}
-                          className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-medium text-sm transition-colors"
-                        >
-                          <Key size={14} />
-                          Gerenciar Acesso
-                        </button>
+                        <div className="flex items-center justify-end gap-4">
+                          <button
+                            onClick={() => setManagingUser(profile)}
+                            className="inline-flex items-center gap-2 text-brand-purple hover:text-brand-purple/80 font-bold text-xs uppercase tracking-widest transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Key size={14} strokeWidth={3} />
+                            Acessos
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(profile)}
+                            disabled={isDeleting === profile.id}
+                            className={`inline-flex items-center gap-2 text-red-500 hover:text-red-600 font-bold text-xs uppercase tracking-widest transition-all opacity-0 group-hover:opacity-100 ${isDeleting === profile.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            {isDeleting === profile.id ? (
+                              <div className="h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 size={14} strokeWidth={3} />
+                            )}
+                            Remover
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

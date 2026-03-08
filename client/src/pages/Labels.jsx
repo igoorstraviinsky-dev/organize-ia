@@ -17,13 +17,15 @@ export default function LabelsPage() {
       <div className="flex-1">
         {selectedLabelId ? (
           <div>
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            <h2 className="mb-6 text-xl font-extrabold text-slate-800 tracking-tight">
               Tarefas com esta etiqueta
             </h2>
             {tasks.length === 0 ? (
-              <p className="text-sm text-gray-400">Nenhuma tarefa com esta etiqueta</p>
+              <div className="p-12 text-center rounded-2xl bg-white border border-slate-100 shadow-sm">
+                <p className="text-sm font-semibold text-slate-400">Nenhuma tarefa encontrada com esta etiqueta.</p>
+              </div>
             ) : (
-              <div className="space-y-0.5">
+              <div className="space-y-3">
                 {tasks.map((task) => (
                   <TaskItem key={task.id} task={task} />
                 ))}
@@ -31,9 +33,9 @@ export default function LabelsPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center py-16 text-gray-400">
-            <Tag size={40} strokeWidth={1} />
-            <p className="mt-2 text-sm">Selecione uma etiqueta para ver as tarefas</p>
+          <div className="flex flex-col items-center justify-center py-32 rounded-3xl bg-white/50 border-2 border-dashed border-slate-200">
+            <Tag size={48} strokeWidth={1.5} className="text-slate-300" />
+            <p className="mt-4 text-sm font-bold text-slate-400">Selecione uma etiqueta ao lado para ver as tarefas associadas.</p>
           </div>
         )}
       </div>
