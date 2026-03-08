@@ -7,7 +7,7 @@
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+The objective is to ensure strict data isolation between users and a clean initial state for new accounts. This involves fixing a critical vulnerability where new users are granted `admin` privileges by default and can escalate their own roles. We will also finalize the removal of automatic "Inbox" creation to ensure a truly empty start.
 
 ## Technical Context
 
@@ -17,88 +17,53 @@
   the iteration process.
 -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: JavaScript (Node.js), SQL (PostgreSQL/Supabase)
+**Primary Dependencies**: Supabase RLS, Express.js
+**Storage**: PostgreSQL (Supabase)
+**Testing**: Manual validation via registration and role switching
+**Target Platform**: Web (Supabase)
+**Project Type**: Web Service / Database Fix
+**Performance Goals**: N/A
+**Constraints**: Zero-trust access model
+**Scale/Scope**: All current and future users
 
-## Constitution Check
+## Phases
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+### Phase 0: Outline & Research
 
-[Gates determined based on constitution file]
+- [x] Audit database for default roles and RLS gaps.
+- [x] Document vulnerabilities in `research.md`.
+- [x] Clarify source of "auto-tasks" (likely due to global visibility as admin).
+
+### Phase 1: Design & Contracts
+
+- [x] Define RLS policies in `data-model.md`.
+- [ ] Create `quickstart.md` for security deployment.
+- [ ] Update `plan.md` tasks below.
+
+### Phase 2: Implementation
+
+- **Step 1**: SQL migration to change default role in `profiles`.
+- **Step 2**: SQL migration to harden RLS on `profiles`.
+- **Step 3**: SQL migration to enforce project-based isolation on `tasks` and `projects`.
+- **Step 4**: Drop all "auto-task" triggers if found.
 
 ## Project Structure
 
-### Documentation (this feature)
-
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+specs/main/
+├── plan.md
+├── spec.md
+├── research.md
+├── data-model.md
+└── tasks.md (to be generated)
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+## Verification Plan
 
-```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+### Automated/Manual Tests
 
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
-```
-
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
-
-## Complexity Tracking
-
-> **Fill ONLY if Constitution Check has violations that must be justified**
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+- [ ] **Registration**: Register a new user -> verify role is 'collaborator' via SQL or Admin dashboard.
+- [ ] **Escalation**: Try to update role to 'admin' via frontend/API -> verify it fails.
+- [ ] **Visibility**: Login as collaborator -> verify admin tasks are NOT returned.
+- [ ] **Inbox**: Verify new user starts with 0 tasks.
