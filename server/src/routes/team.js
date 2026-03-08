@@ -67,15 +67,8 @@ router.post('/create', requireAuth, async (req, res) => {
 
     if (profileError) {
       console.error('Error updating profile role:', profileError)
-      // Note: User was created in auth, but profile update failed.
       return res.status(500).json({ error: 'User created, but failed to set role' })
     }
-
-    // Remove the auto-created Inbox project — collaborators start with no projects
-    await supabase
-      .from('projects')
-      .delete()
-      .eq('owner_id', newUserId)
 
     res.json({ message: 'Collaborator created successfully', user_id: newUserId })
   } catch (err) {

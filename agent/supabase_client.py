@@ -66,26 +66,75 @@ async def list_tasks(
     status_filter: Optional[str] = None,
     today_only: bool = False,
 ) -> list[dict]:
-    """Lista tarefas do usuário com filtros opcionais."""
-    query = (
-        _supabase.table("tasks")
-        .select("id, title, status, priority, due_date, due_time, project_id, parent_id")
-        .eq("creator_id", user_id)
-        .is_("parent_id", None)  # apenas tarefas raiz
-        .order("priority", desc=False)
-        .order("due_date", desc=False, nullsfirst=False)
-    )
+    """Lista tarefas do usuário com filtros opcionais, incluindo projetos atribuídos."""
+    today_str = date.today().isoformat()
+
+    def apply_filters(q):
+        q = q.is_("parent_id", None)
+        if status_filter:
+            q = q.eq("status", status_filter)
+        if today_only:
+            q = q.lte("due_date", today_str)
+        return q
 
     if project_id:
-        query = query.eq("project_id", project_id)
-    if status_filter:
-        query = query.eq("status", status_filter)
-    if today_only:
-        today = date.today().isoformat()
-        query = query.lte("due_date", today)
+        # Filtro de projeto específico: busca tasks desse projeto
+        res = (
+            apply_filters(
+                _supabase.table("tasks")
+                .select("id, title, status, priority, due_date, due_time, project_id, parent_id")
+                .eq("project_id", project_id)
+            )
+            .order("priority", desc=False)
+            .order("due_date", desc=False, nullsfirst=False)
+            .limit(20)
+            .execute()
+        )
+        return res.data or []
 
-    res = query.limit(20).execute()
-    return res.data or []
+    # Sem filtro de projeto: tarefas criadas pelo usuário
+    res_own = (
+        apply_filters(
+            _supabase.table("tasks")
+            .select("id, title, status, priority, due_date, due_time, project_id, parent_id")
+            .eq("creator_id", user_id)
+        )
+        .order("priority", desc=False)
+        .order("due_date", desc=False, nullsfirst=False)
+        .limit(20)
+        .execute()
+    )
+    tasks = res_own.data or []
+    seen_ids = {t["id"] for t in tasks}
+
+    # Tarefas de projetos atribuídos (não criadas pelo usuário)
+    memberships = (
+        _supabase.table("project_members")
+        .select("project_id")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    project_ids = [m["project_id"] for m in (memberships.data or [])]
+    if project_ids:
+        res_member = (
+            apply_filters(
+                _supabase.table("tasks")
+                .select("id, title, status, priority, due_date, due_time, project_id, parent_id")
+                .in_("project_id", project_ids)
+            )
+            .order("priority", desc=False)
+            .order("due_date", desc=False, nullsfirst=False)
+            .limit(20)
+            .execute()
+        )
+        for t in (res_member.data or []):
+            if t["id"] not in seen_ids:
+                tasks.append(t)
+                seen_ids.add(t["id"])
+
+    # Re-ordena o resultado unificado
+    tasks.sort(key=lambda t: (t.get("priority") or 4, t.get("due_date") or "9999"))
+    return tasks[:20]
 
 
 async def update_task_status(task_id: str, user_id: str, new_status: str) -> dict:
@@ -139,7 +188,8 @@ async def list_subtasks(parent_id: str, user_id: str) -> list[dict]:
 
 
 async def find_task_by_name(user_id: str, name: str) -> Optional[dict]:
-    """Busca uma tarefa pelo nome (parcial, case-insensitive)."""
+    """Busca tarefa pelo nome: primeiro como criador, depois em projetos atribuídos."""
+    # 1) Tarefas criadas pelo usuário
     res = (
         _supabase.table("tasks")
         .select("id, title, status, priority, project_id")
@@ -148,7 +198,30 @@ async def find_task_by_name(user_id: str, name: str) -> Optional[dict]:
         .limit(1)
         .execute()
     )
-    return res.data[0] if res.data else None
+    if res.data:
+        return res.data[0]
+
+    # 2) Tarefas em projetos onde o usuário é membro (mas não criador)
+    memberships = (
+        _supabase.table("project_members")
+        .select("project_id")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    project_ids = [m["project_id"] for m in (memberships.data or [])]
+    if project_ids:
+        res = (
+            _supabase.table("tasks")
+            .select("id, title, status, priority, project_id")
+            .in_("project_id", project_ids)
+            .ilike("title", f"%{name}%")
+            .limit(1)
+            .execute()
+        )
+        if res.data:
+            return res.data[0]
+
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,6 +287,20 @@ async def list_sections(project_id: str) -> list[dict]:
     return res.data or []
 
 
+async def create_section(project_id: str, name: str) -> dict:
+    """Cria uma nova seção no projeto, posicionada após a última existente."""
+    existing = await list_sections(project_id)
+    position = (max((s.get("position") or 0) for s in existing) + 1) if existing else 1
+    res = (
+        _supabase.table("sections")
+        .insert({"project_id": project_id, "name": name, "position": position})
+        .execute()
+    )
+    if not res.data:
+        raise ValueError("Erro ao criar seção.")
+    return res.data[0]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PERFIL
 # ─────────────────────────────────────────────────────────────────────────────
@@ -255,7 +342,20 @@ async def find_user_by_email(email: str) -> Optional[dict]:
 
 
 async def find_user_by_name(name: str) -> Optional[dict]:
-    """Busca usuário pelo nome (parcial, case-insensitive)."""
+    """Busca usuário pelo nome (parcial, case-insensitive) ou e-mail exato."""
+    # Se parecer um e-mail, tenta busca exata por e-mail primeiro
+    if "@" in name:
+        res = (
+            _supabase.table("profiles")
+            .select("id, full_name, email")
+            .eq("email", name.strip().lower())
+            .limit(1)
+            .execute()
+        )
+        if res.data:
+            return res.data[0]
+
+    # Fallback: busca por nome
     res = (
         _supabase.table("profiles")
         .select("id, full_name, email")

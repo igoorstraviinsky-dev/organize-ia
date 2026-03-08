@@ -176,6 +176,37 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "editar_tarefa",
+            "description": "Edita o título e/ou a descrição de uma tarefa existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa a editar"},
+                    "novo_titulo": {"type": "string", "description": "Novo título da tarefa (opcional)"},
+                    "nova_descricao": {"type": "string", "description": "Nova descrição da tarefa (opcional)"},
+                },
+                "required": ["nome_tarefa"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "criar_secao",
+            "description": "Cria uma nova seção dentro de um projeto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Nome (parcial) do projeto"},
+                    "nome_secao": {"type": "string", "description": "Nome da seção a criar"},
+                },
+                "required": ["nome_projeto", "nome_secao"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "listar_subtarefas",
             "description": "Lista subtarefas de uma tarefa.",
             "parameters": {
@@ -196,7 +227,7 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
-                    "nome_usuario": {"type": "string", "description": "Nome (parcial) do colaborador a designar"},
+                    "nome_usuario": {"type": "string", "description": "Nome (parcial) ou e-mail do colaborador a designar"},
                     "nome_projeto": {"type": "string", "description": "Nome do projeto para filtrar a tarefa (opcional)"},
                 },
                 "required": ["nome_tarefa", "nome_usuario"],
@@ -296,11 +327,14 @@ Suas capacidades:
 - Mover tarefas entre status (Pendente → Em Progresso → Concluída)
 - Apagar tarefas
 - Criar, listar e apagar projetos
-- Designar colaboradores a tarefas (avulsas ou dentro de projetos)
+- Editar título e descrição de tarefas existentes
+- Criar seções dentro de projetos
+- Designar colaboradores a tarefas (avulsas ou dentro de projetos) — por nome ou e-mail
 - Remover designados de tarefas
 - Adicionar/remover membros de projetos
 - Listar designados de uma tarefa ou membros de um projeto
 - Listar a equipe disponível para designação
+- Ver tarefas de projetos nos quais você foi adicionado como membro
 
 Regras de resposta:
 - Seja conciso e direto. WhatsApp favorece respostas curtas.
@@ -310,6 +344,8 @@ Regras de resposta:
 - Para datas relativas como "amanhã", "semana que vem", calcule com base em hoje: {today}.
 - Status em PT: "pendente"=pending, "em progresso"=in_progress, "concluída"=completed, "cancelada"=cancelled
 - Prioridades: urgente=1, alta=2, média=3, baixa=4
+
+Usuário atual: {user_info}
 """
 
 
@@ -559,6 +595,27 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
                 lines.append(f"• {m['full_name']}")
             return "\n".join(lines)
 
+        elif tool_name == "editar_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            updates = {}
+            if args.get("novo_titulo"):
+                updates["title"] = args["novo_titulo"]
+            if args.get("nova_descricao"):
+                updates["description"] = args["nova_descricao"]
+            if not updates:
+                return "⚠️ Informe pelo menos um campo para editar (título ou descrição)."
+            updated = await db.update_task(task["id"], user_id, updates)
+            return f"✏️ Tarefa atualizada!\n*{updated['title']}*"
+
+        elif tool_name == "criar_secao":
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            if not proj:
+                return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
+            secao = await db.create_section(proj["id"], args["nome_secao"])
+            return f"📂 Seção *{secao['name']}* criada no projeto *{proj['name']}*!"
+
         else:
             return f"Função desconhecida: {tool_name}"
 
@@ -574,7 +631,12 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
     Usa OpenAI Function Calling para interpretar e executar a intenção.
     """
     today = date.today().strftime("%d/%m/%Y (%A)")
-    system = SYSTEM_PROMPT.replace("{today}", today)
+    profile = await db.get_profile(user_id)
+    if profile:
+        user_info = f"{profile.get('full_name', 'Desconhecido')} ({profile.get('email', '')})"
+    else:
+        user_info = "Não identificado"
+    system = SYSTEM_PROMPT.replace("{today}", today).replace("{user_info}", user_info)
 
     # Monta o histórico de conversa
     registry.add_to_history(phone, "user", text)
