@@ -167,6 +167,25 @@ async def list_projects(user_id: str) -> list[dict]:
     return res.data or []
 
 
+async def delete_project(project_id: str, user_id: str) -> bool:
+    """Remove um projeto (e suas tarefas por cascade no banco)."""
+    _supabase.table("projects").delete().eq("id", project_id).eq("owner_id", user_id).execute()
+    return True
+
+
+async def find_project_by_name(user_id: str, name: str) -> Optional[dict]:
+    """Busca um projeto pelo nome (parcial, case-insensitive)."""
+    res = (
+        _supabase.table("projects")
+        .select("id, name, color")
+        .eq("owner_id", user_id)
+        .ilike("name", f"%{name}%")
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
 async def create_project(user_id: str, name: str, color: str = "#6366f1") -> dict:
     """Cria um novo projeto."""
     res = (

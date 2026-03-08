@@ -9,10 +9,11 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos — Realtime cuida das atualizações
+      staleTime: 1000 * 10, // 10 segundos — fallback para quando Realtime não entrega
       retry: 1,
-      refetchOnWindowFocus: false, // evita reload ao trocar de aba
-      refetchOnReconnect: false,   // Realtime reconecta sozinho
+      refetchOnWindowFocus: true,  // atualiza ao voltar para a aba
+      refetchOnReconnect: true,    // atualiza ao reconectar
+      refetchInterval: 1000 * 15, // polling a cada 15s como fallback do Realtime
     },
   },
 })

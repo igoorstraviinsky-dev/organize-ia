@@ -162,6 +162,20 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "apagar_projeto",
+            "description": "Remove um projeto permanentemente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Nome do projeto a apagar"}
+                },
+                "required": ["nome_projeto"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "listar_subtarefas",
             "description": "Lista subtarefas de uma tarefa.",
             "parameters": {
@@ -184,7 +198,7 @@ Suas capacidades:
 - Concluir ou cancelar tarefas
 - Mover tarefas entre status (Pendente → Em Progresso → Concluída)
 - Apagar tarefas
-- Criar e listar projetos
+- Criar, listar e apagar projetos
 
 Regras de resposta:
 - Seja conciso e direto. WhatsApp favorece respostas curtas.
@@ -313,6 +327,13 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             await db.delete_task(task["id"], user_id)
             return f"🗑️ Tarefa *{task['title']}* apagada."
+
+        elif tool_name == "apagar_projeto":
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            if not proj:
+                return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
+            await db.delete_project(proj["id"], user_id)
+            return f"🗑️ Projeto *{proj['name']}* apagado."
 
         elif tool_name == "criar_projeto":
             proj = await db.create_project(user_id, args["nome"], args.get("cor", "#6366f1"))

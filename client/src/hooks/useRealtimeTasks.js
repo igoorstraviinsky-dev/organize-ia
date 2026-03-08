@@ -1,15 +1,16 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 export function useRealtimeTasks() {
   const queryClient = useQueryClient()
+  const channelName = useRef(`realtime-sync-${Math.random().toString(36).slice(2)}`)
 
   useEffect(() => {
     console.log('[Realtime] Inicializando canais de sincronização...')
 
     const channel = supabase
-      .channel('realtime-dashboard-sync')
+      .channel(channelName.current)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks' },
@@ -68,8 +69,19 @@ export function useRealtimeTasks() {
           queryClient.invalidateQueries({ queryKey: ['projects'] })
         }
       )
-      .subscribe((status) => {
-        console.log(`[Realtime] Status da conexão: ${status}`)
+      .subscribe((status, err) => {
+        if (err) {
+          console.error('[Realtime] ERRO na conexão:', err)
+        } else {
+          console.log(`[Realtime] Status da conexão: ${status}`)
+          if (status === 'SUBSCRIBED') {
+            console.log('[Realtime] ✅ Conectado! Aguardando eventos do banco...')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('[Realtime] ❌ Falha ao conectar. Verifique as políticas RLS e a publicação supabase_realtime.')
+          } else if (status === 'TIMED_OUT') {
+            console.error('[Realtime] ❌ Timeout ao conectar. Verifique a URL e chave do Supabase.')
+          }
+        }
       })
 
     return () => {
