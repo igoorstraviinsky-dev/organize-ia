@@ -61,8 +61,8 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
     setEditingProjectId(null)
   }
 
-  const inboxProject = projects.find((p) => p.name === 'Inbox')
-  const otherProjects = projects.filter((p) => p.name !== 'Inbox')
+  const inboxProject = projects.find((p) => p.name?.trim().toLowerCase() === 'inbox')
+  const otherProjects = projects.filter((p) => p.name?.trim().toLowerCase() !== 'inbox')
 
   const isAdmin = role !== 'collaborator'
   const navItems = [
