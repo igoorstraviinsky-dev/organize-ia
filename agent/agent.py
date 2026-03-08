@@ -315,7 +315,76 @@ TOOLS = [
             "parameters": {"type": "object", "properties": {}},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "alterar_prioridade",
+            "description": "Altera a prioridade de uma tarefa existente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                    "nova_prioridade": {
+                        "type": "integer",
+                        "description": "1=Urgente, 2=Alta, 3=Média, 4=Baixa",
+                        "enum": [1, 2, 3, 4],
+                    },
+                },
+                "required": ["nome_tarefa", "nova_prioridade"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_urgentes",
+            "description": "Lista tarefas urgentes ou de alta prioridade (prioridade 1 ou 2).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Filtrar por projeto (opcional)"},
+                },
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "buscar_tarefas",
+            "description": "Busca avançada de tarefas com múltiplos filtros combinados.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "texto": {"type": "string", "description": "Texto para busca no título"},
+                    "status": {
+                        "type": "string",
+                        "enum": ["pending", "in_progress", "completed", "cancelled"],
+                        "description": "Filtrar por status",
+                    },
+                    "prioridade": {
+                        "type": "integer",
+                        "enum": [1, 2, 3, 4],
+                        "description": "Filtrar por prioridade",
+                    },
+                    "nome_projeto": {"type": "string", "description": "Filtrar por projeto"},
+                    "data_inicio": {"type": "string", "description": "Data inicial YYYY-MM-DD"},
+                    "data_fim": {"type": "string", "description": "Data final YYYY-MM-DD"},
+                    "apenas_atrasadas": {"type": "boolean", "description": "Apenas tarefas com prazo vencido"},
+                },
+            },
+        },
+    },
 ]
+
+# ─── Tools por perfil ─────────────────────────────────────────────────────────
+# Colaboradores não têm acesso a tools de gestão de equipe/projetos
+_ADMIN_ONLY_TOOLS = {
+    "designar_projeto", "remover_membro_projeto",
+    "listar_membros_projeto", "listar_equipe",
+    "apagar_projeto", "criar_secao",
+}
+TOOLS_ADMIN = TOOLS
+TOOLS_COLLABORATOR = [t for t in TOOLS if t["function"]["name"] not in _ADMIN_ONLY_TOOLS]
 
 SYSTEM_PROMPT = """Você é o Assistente do Organizador, um agente inteligente de gestão de tarefas 
 integrado ao WhatsApp. Você responde SEMPRE em português brasileiro.
@@ -345,7 +414,7 @@ Regras de resposta:
 - Status em PT: "pendente"=pending, "em progresso"=in_progress, "concluída"=completed, "cancelada"=cancelled
 - Prioridades: urgente=1, alta=2, média=3, baixa=4
 
-Usuário atual: {user_info}
+Usuário atual: {user_info} | Perfil: {user_role}
 """
 
 
@@ -616,6 +685,65 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             secao = await db.create_section(proj["id"], args["nome_secao"])
             return f"📂 Seção *{secao['name']}* criada no projeto *{proj['name']}*!"
 
+        elif tool_name == "alterar_prioridade":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            nova = args["nova_prioridade"]
+            await db.update_task(task["id"], user_id, {"priority": nova})
+            PRIO_PT = {1: "🔴 Urgente", 2: "🟠 Alta", 3: "🟡 Média", 4: "⚪ Baixa"}
+            return f"✏️ Prioridade de *{task['title']}* alterada para {PRIO_PT.get(nova, nova)}!"
+
+        elif tool_name == "listar_urgentes":
+            project_id = None
+            if args.get("nome_projeto"):
+                projects = await db.list_projects(user_id)
+                proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
+                if proj:
+                    project_id = proj["id"]
+            tasks = await db.list_tasks(user_id, project_id=project_id)
+            urgentes = [t for t in tasks if (t.get("priority") or 4) <= 2 and t.get("status") not in ("completed", "cancelled")]
+            if not urgentes:
+                return "✅ Nenhuma tarefa urgente ou de alta prioridade no momento."
+            PRIO_EMOJI = {1: "🔴", 2: "🟠"}
+            lines = ["🚨 *Tarefas urgentes/alta prioridade:*\n"]
+            for t in urgentes:
+                emoji = PRIO_EMOJI.get(t.get("priority"), "🟠")
+                due = f" _{t['due_date']}_" if t.get("due_date") else ""
+                lines.append(f"{emoji} {t['title']}{due}")
+            return "\n".join(lines)
+
+        elif tool_name == "buscar_tarefas":
+            project_id = None
+            if args.get("nome_projeto"):
+                projects = await db.list_projects(user_id)
+                proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
+                if proj:
+                    project_id = proj["id"]
+            tasks = await db.search_tasks(
+                user_id=user_id,
+                texto=args.get("texto"),
+                status=args.get("status"),
+                prioridade=args.get("prioridade"),
+                project_id=project_id,
+                data_inicio=args.get("data_inicio"),
+                data_fim=args.get("data_fim"),
+                apenas_atrasadas=args.get("apenas_atrasadas", False),
+            )
+            if not tasks:
+                return "📋 Nenhuma tarefa encontrada com esses critérios."
+            STATUS_EMOJI = {"pending": "⏳", "in_progress": "🔄", "completed": "✅", "cancelled": "❌"}
+            PRIO_LABEL = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}
+            lines = ["🔍 *Resultado da busca:*\n"]
+            for t in tasks[:15]:
+                emoji = STATUS_EMOJI.get(t["status"], "•")
+                prio = PRIO_LABEL.get(t.get("priority"), "•")
+                due = f" _{t['due_date']}_" if t.get("due_date") else ""
+                lines.append(f"{emoji} {prio} {t['title']}{due}")
+            if len(tasks) > 15:
+                lines.append(f"\n_...e mais {len(tasks) - 15} tarefas_")
+            return "\n".join(lines)
+
         else:
             return f"Função desconhecida: {tool_name}"
 
@@ -634,9 +762,18 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
     profile = await db.get_profile(user_id)
     if profile:
         user_info = f"{profile.get('full_name', 'Desconhecido')} ({profile.get('email', '')})"
+        role = profile.get("role", "collaborator")
     else:
         user_info = "Não identificado"
-    system = SYSTEM_PROMPT.replace("{today}", today).replace("{user_info}", user_info)
+        role = "collaborator"
+    user_role = "Administrador" if role == "admin" else "Colaborador"
+    tools = TOOLS_ADMIN if role == "admin" else TOOLS_COLLABORATOR
+    system = (
+        SYSTEM_PROMPT
+        .replace("{today}", today)
+        .replace("{user_info}", user_info)
+        .replace("{user_role}", user_role)
+    )
 
     # Monta o histórico de conversa
     registry.add_to_history(phone, "user", text)
@@ -646,7 +783,7 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
     response = await openai.chat.completions.create(
         model=MODEL,
         messages=messages,
-        tools=TOOLS,
+        tools=tools,
         tool_choice="auto",
         max_tokens=1024,
     )

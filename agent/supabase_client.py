@@ -306,10 +306,10 @@ async def create_section(project_id: str, name: str) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def get_profile(user_id: str) -> Optional[dict]:
-    """Retorna perfil do usuário."""
+    """Retorna perfil do usuário incluindo role."""
     res = (
         _supabase.table("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, role")
         .eq("id", user_id)
         .single()
         .execute()
@@ -461,3 +461,94 @@ async def get_user_integration(user_id: str, provider: str) -> Optional[dict]:
         .execute()
     )
     return res.data[0] if res.data else None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICAÇÕES / SCHEDULER
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def list_users_with_phones() -> list[dict]:
+    """Lista todos os usuários que possuem telefone cadastrado."""
+    res = (
+        _supabase.table("profiles")
+        .select("id, full_name, phone")
+        .not_.is_("phone", "null")
+        .execute()
+    )
+    return res.data or []
+
+
+async def search_tasks(
+    user_id: str,
+    texto: Optional[str] = None,
+    status: Optional[str] = None,
+    prioridade: Optional[int] = None,
+    project_id: Optional[str] = None,
+    data_inicio: Optional[str] = None,
+    data_fim: Optional[str] = None,
+    apenas_atrasadas: bool = False,
+) -> list[dict]:
+    """Busca tarefas com filtros avançados, incluindo projetos atribuídos."""
+    today = date.today().isoformat()
+
+    def build_query(base_query):
+        q = base_query.is_("parent_id", None)
+        if texto:
+            q = q.ilike("title", f"%{texto}%")
+        if status:
+            q = q.eq("status", status)
+        if prioridade:
+            q = q.eq("priority", prioridade)
+        if apenas_atrasadas:
+            q = q.lt("due_date", today).neq("status", "completed")
+        else:
+            if data_inicio:
+                q = q.gte("due_date", data_inicio)
+            if data_fim:
+                q = q.lte("due_date", data_fim)
+        return q
+
+    cols = "id, title, status, priority, due_date, project_id"
+
+    if project_id:
+        res = (
+            build_query(
+                _supabase.table("tasks").select(cols).eq("project_id", project_id)
+            )
+            .order("priority", desc=False)
+            .limit(20)
+            .execute()
+        )
+        return res.data or []
+
+    # Tarefas do criador
+    res_own = (
+        build_query(_supabase.table("tasks").select(cols).eq("creator_id", user_id))
+        .order("priority", desc=False)
+        .limit(20)
+        .execute()
+    )
+    tasks = res_own.data or []
+    seen_ids = {t["id"] for t in tasks}
+
+    # Tarefas de projetos atribuídos
+    memberships = (
+        _supabase.table("project_members").select("project_id").eq("user_id", user_id).execute()
+    )
+    project_ids = [m["project_id"] for m in (memberships.data or [])]
+    if project_ids:
+        res_member = (
+            build_query(
+                _supabase.table("tasks").select(cols).in_("project_id", project_ids)
+            )
+            .order("priority", desc=False)
+            .limit(20)
+            .execute()
+        )
+        for t in (res_member.data or []):
+            if t["id"] not in seen_ids:
+                tasks.append(t)
+                seen_ids.add(t["id"])
+
+    tasks.sort(key=lambda t: (t.get("priority") or 4, t.get("due_date") or "9999"))
+    return tasks[:20]

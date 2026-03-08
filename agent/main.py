@@ -6,8 +6,10 @@ Ponto de entrada do agente: servidor FastAPI que recebe webhooks do WazAPI e Tel
 import os
 import re
 from contextlib import asynccontextmanager
+from datetime import date
 from fastapi import FastAPI, Request, HTTPException
 from dotenv import load_dotenv
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import whatsapp
 import user_registry as registry
@@ -19,15 +21,80 @@ import n8n_integration
 load_dotenv()
 
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
+PRIO_EMOJI = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}
+
+
+# ─── Jobs agendados ───────────────────────────────────────────────────────────
+
+async def check_due_tasks():
+    """Notifica usuários sobre tarefas com prazo hoje (roda a cada hora)."""
+    try:
+        users = await db.list_users_with_phones()
+        for user in users:
+            phone = user.get("phone", "").strip()
+            if not phone:
+                continue
+            tasks = await db.list_tasks(user["id"], today_only=True, status_filter="pending")
+            if not tasks:
+                continue
+            lines = [f"⏰ *Olá, {user['full_name'].split()[0]}!* Você tem tarefas para hoje:\n"]
+            for t in tasks[:10]:
+                prio = PRIO_EMOJI.get(t.get("priority"), "⚪")
+                lines.append(f"{prio} {t['title']}")
+            await whatsapp.send_message(phone, "\n".join(lines))
+    except Exception as e:
+        print(f"[check_due_tasks] Erro: {e}")
+
+
+async def send_daily_report():
+    """Envia relatório diário às 8h com tarefas do dia + atrasadas."""
+    try:
+        users = await db.list_users_with_phones()
+        today = date.today().isoformat()
+        for user in users:
+            phone = user.get("phone", "").strip()
+            if not phone:
+                continue
+            # Tarefas de hoje
+            today_tasks = await db.list_tasks(user["id"], today_only=True, status_filter="pending")
+            # Tarefas atrasadas (prazo vencido, ainda pendentes)
+            overdue = await db.search_tasks(user["id"], apenas_atrasadas=True)
+
+            if not today_tasks and not overdue:
+                continue
+
+            nome = user['full_name'].split()[0]
+            lines = [f"📋 *Bom dia, {nome}! Seu resumo de hoje ({today}):*\n"]
+
+            if today_tasks:
+                lines.append("*Para hoje:*")
+                for t in today_tasks[:8]:
+                    prio = PRIO_EMOJI.get(t.get("priority"), "⚪")
+                    lines.append(f"{prio} {t['title']}")
+
+            if overdue:
+                lines.append("\n*Atrasadas:*")
+                for t in overdue[:5]:
+                    prio = PRIO_EMOJI.get(t.get("priority"), "⚪")
+                    lines.append(f"⚠️ {prio} {t['title']} _{t.get('due_date', '')}_")
+
+            await whatsapp.send_message(phone, "\n".join(lines))
+    except Exception as e:
+        print(f"[send_daily_report] Erro: {e}")
 
 
 # ─── App FastAPI ──────────────────────────────────────────────────────────────
 
+scheduler = AsyncIOScheduler()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Removido emoji para evitar erro de encoding no Windows
+    scheduler.add_job(check_due_tasks, "interval", hours=1, id="check_due_tasks")
+    scheduler.add_job(send_daily_report, "cron", hour=8, minute=0, id="daily_report")
+    scheduler.start()
     print("Agente Organizador iniciado na porta", os.environ.get("AGENT_PORT", 8001))
     yield
+    scheduler.shutdown()
     print("Agente encerrado.")
 
 app = FastAPI(
@@ -216,6 +283,42 @@ async def agent_tools(request: Request):
         elif action == "get_profile":
             profile = await db.get_profile(user_id)
             return {"success": True, "data": profile}
+            
+        elif action == "assign_task":
+            usuario = await db.find_user_by_name(params.get("nome_usuario"))
+            if not usuario: return {"success": False, "error": "Colaborador não encontrado"}
+            await db.assign_user_to_task(params.get("task_id"), usuario["id"])
+            return {"success": True, "ok": True}
+            
+        elif action == "unassign_task":
+            usuario = await db.find_user_by_name(params.get("nome_usuario"))
+            if not usuario: return {"success": False, "error": "Colaborador não encontrado"}
+            await db.unassign_user_from_task(params.get("task_id"), usuario["id"])
+            return {"success": True, "ok": True}
+            
+        elif action == "list_assignees":
+            data = await db.list_task_assignees(params.get("task_id"))
+            return {"success": True, "data": data}
+            
+        elif action == "add_project_member":
+            usuario = await db.find_user_by_name(params.get("nome_usuario"))
+            if not usuario: return {"success": False, "error": "Colaborador não encontrado"}
+            await db.add_project_member(params.get("project_id"), usuario["id"])
+            return {"success": True, "ok": True}
+            
+        elif action == "remove_project_member":
+            usuario = await db.find_user_by_name(params.get("nome_usuario"))
+            if not usuario: return {"success": False, "error": "Colaborador não encontrado"}
+            await db.remove_project_member(params.get("project_id"), usuario["id"])
+            return {"success": True, "ok": True}
+            
+        elif action == "list_project_members":
+            data = await db.list_project_members_with_profiles(params.get("project_id"))
+            return {"success": True, "data": data}
+            
+        elif action == "list_team":
+            data = await db.list_team_members()
+            return {"success": True, "data": data}
             
         else:
             return {"success": False, "error": f"Ação desconhecida: {action}"}
