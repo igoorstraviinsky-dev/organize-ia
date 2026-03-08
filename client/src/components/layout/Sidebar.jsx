@@ -146,12 +146,14 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
           >
             {projectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             Projetos
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowNewProject(true) }}
-              className="ml-auto rounded-lg p-1 hover:bg-white/10 text-slate-500 hover:text-white transition-all shadow-sm"
-            >
-              <Plus size={14} />
-            </button>
+            {isAdmin && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowNewProject(true) }}
+                className="ml-auto rounded-lg p-1 hover:bg-white/10 text-slate-500 hover:text-white transition-all shadow-sm"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
 
           {projectsOpen && (

@@ -15,7 +15,7 @@ export function useProjects() {
       if (error) throw error
       return data
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos — Realtime invalida quando necessário
+    staleTime: 0, // Sempre refetch — Realtime e invalidações funcionam imediatamente
   })
 }
 

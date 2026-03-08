@@ -363,12 +363,28 @@ router.post('/webhook', async (req, res) => {
     try {
       const { data: agentSettings } = await supabase
         .from('ai_agent_settings')
-        .select('openai_api_key, system_prompt, is_active')
+        .select('openai_api_key, system_prompt, is_active, only_collaborators')
         .eq('user_id', integration.user_id)
         .eq('is_active', true)
         .maybeSingle()
 
       if (agentSettings && agentSettings.openai_api_key) {
+        // --- NOVO: Filtro de Colaboradores ---
+        if (agentSettings.only_collaborators) {
+          const cleanPhone = phone.replace(/\D/g, '')
+          const { data: isCollaborator } = await supabase
+            .from('profiles')
+            .select('id')
+            .filter('phone', 'ilike', `%${cleanPhone}%`)
+            .maybeSingle()
+
+          if (!isCollaborator) {
+            console.log(`[AI Agent] Ignorando mensagem de ${phone}: não é um colaborador cadastrado.`)
+            return
+          }
+        }
+        // --- Fim Filtro ---
+
         console.log(`[AI Agent] Disparando LLM para ${phone}...`)
         
         // 2. Chama a lib/openai.js com o prompt preenchido

@@ -43,44 +43,6 @@ def normalize_phone(raw: str) -> str:
     return re.sub(r"\D", "", raw)
 
 
-# ─── Fluxo de vinculação ──────────────────────────────────────────────────────
-
-async def handle_link_flow(phone: str, text: str) -> str:
-    """
-    Gerencia o fluxo de onboarding:
-    1. Usuário digita 'vincular'  → pede o e-mail
-    2. Usuário envia o e-mail     → vincula a conta
-    """
-    state = registry.get_pending_link_state(phone)
-
-    if state == "awaiting_email":
-        # O texto deve ser o e-mail
-        email = text.strip().lower()
-        profile = await db.find_user_by_email(email)
-
-        if not profile:
-            return (
-                "❌ E-mail não encontrado no Organizador.\n"
-                "Verifique se está cadastrado em: https://organizador.app\n\n"
-                "Tente novamente enviando seu e-mail."
-            )
-
-        registry.link_phone(phone, profile["id"])
-        registry.clear_pending_link(phone)
-
-        nome = profile["full_name"].split()[0]
-        return (
-            f"✅ Conta vinculada com sucesso, *{nome}*!\n\n"
-            "Agora você pode gerenciar suas tarefas diretamente aqui.\n\n"
-            "Experimente:\n"
-            "• _Criar tarefa Reunião de equipe para amanhã_\n"
-            "• _Listar minhas tarefas de hoje_\n"
-            "• _Concluir tarefa Reunião_"
-        )
-
-    return None  # não está em fluxo de vinculação
-
-
 # ─── Endpoint principal do webhook ────────────────────────────────────────────
 
 @app.post("/webhook")
@@ -143,43 +105,20 @@ async def webhook(request: Request):
     if not text:
         return {"ok": True, "skipped": "no_text"}
 
-    # ── Envia indicador de digitação ──
-    await whatsapp.send_typing(phone, api_url=api_url, api_token=api_token)
-
-    # ── Comando especial: vincular ──
-    if text.lower() in ("vincular", "conectar", "link"):
-        registry.set_pending_link_state(phone, "awaiting_email")
-        await whatsapp.send_message(
-            phone,
-            "🔗 Vamos vincular sua conta!\n\n"
-            "Envie o *e-mail* que você usa para acessar o Organizador:",
-            api_url=api_url, api_token=api_token
-        )
-        return {"ok": True}
-
-    # ── Comando: desvincular ──
-    if text.lower() in ("desvincular", "desconectar", "unlink"):
-        registry.unlink_phone(phone)
-        registry.clear_history(phone)
-        await whatsapp.send_message(phone, "👋 Conta desvinculada. Até logo!", api_url=api_url, api_token=api_token)
-        return {"ok": True}
-
-    # ── Fluxo de vinculação pendente ──
-    if registry.is_pending_link(phone):
-        reply = await handle_link_flow(phone, text)
-        await whatsapp.send_message(phone, reply, api_url=api_url, api_token=api_token)
-        return {"ok": True}
-
-    # ── Verifica se o número está vinculado ──
+    # ── Verifica se o número está cadastrado em algum perfil ──
     user_id = registry.get_user_id(phone)
     if not user_id:
         await whatsapp.send_message(
             phone,
-            "👋 Olá! Eu sou o assistente do *Organizador*.\n\n"
-            "Para começar, vincule sua conta enviando:\n*vincular*",
+            "❌ Não encontrei o seu cadastro.\n\n"
+            "Acesse *https://organize.straviinsky.online/* e cadastre-se gratuitamente!\n\n"
+            "_Após o cadastro, peça ao administrador para adicionar seu número de WhatsApp no seu perfil._",
             api_url=api_url, api_token=api_token
         )
         return {"ok": True}
+
+    # ── Envia indicador de digitação ──
+    await whatsapp.send_typing(phone, api_url=api_url, api_token=api_token)
 
     # ── Processa a mensagem com o agente (Local ou n8n) ──
     try:

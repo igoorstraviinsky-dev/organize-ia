@@ -27,35 +27,21 @@ _pending_link: dict[str, str] = {}  # "awaiting_email"
 
 def get_user_id(phone: str) -> Optional[str]:
     """
-    Retorna o user_id do Supabase vinculado ao número de WhatsApp.
-    Retorna None se o número não estiver vinculado.
+    Retorna o user_id do Supabase pelo número de telefone cadastrado no perfil.
+    Retorna None se nenhum perfil tiver esse número.
     """
     res = (
-        _supabase.table("whatsapp_users")
-        .select("user_id")
+        _supabase.table("profiles")
+        .select("id")
         .eq("phone", phone)
-        .eq("is_active", True)
-        .single()
+        .limit(1)
         .execute()
     )
-    return res.data["user_id"] if res.data else None
-
-
-def link_phone(phone: str, user_id: str) -> None:
-    """Vincula um número de WhatsApp a um user_id no Supabase."""
-    _supabase.table("whatsapp_users").upsert(
-        {"phone": phone, "user_id": user_id, "is_active": True},
-        on_conflict="phone",
-    ).execute()
-
-
-def unlink_phone(phone: str) -> None:
-    """Remove a vinculação de um número."""
-    _supabase.table("whatsapp_users").update({"is_active": False}).eq("phone", phone).execute()
+    return res.data[0]["id"] if res.data else None
 
 
 def is_pending_link(phone: str) -> bool:
-    """Verifica se o número está no processo de vinculação."""
+    """Mantido para compatibilidade com Telegram (nunca ativo no WhatsApp)."""
     return phone in _pending_link
 
 

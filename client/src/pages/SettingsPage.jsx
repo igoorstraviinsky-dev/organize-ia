@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
-import { User, Mail, Shield, Settings, Bell, Palette, Camera, Check, Loader2, Save, X, Users, Zap, LogOut } from 'lucide-react'
+import { User, Mail, Shield, Settings, Bell, Palette, Camera, Check, Loader2, Save, X, Users, Zap, LogOut, Phone } from 'lucide-react'
 import TeamPage from './TeamPage'
 import IntegrationsPage from '../components/integrations/IntegrationsPage'
 
@@ -12,6 +12,7 @@ export default function SettingsPage() {
   
   const [activeTab, setActiveTab] = useState('profile')
   const [fullName, setFullName] = useState(user?.profile?.full_name || '')
+  const [phone, setPhone] = useState(user?.profile?.phone || '')
   const [hasChanges, setHasChanges] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: string }
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -20,10 +21,9 @@ export default function SettingsPage() {
 
   // Atualizar estado local quando o usuário carregar
   useEffect(() => {
-    if (user?.profile?.full_name) {
-      setFullName(user.profile.full_name)
-    }
-  }, [user?.profile?.full_name])
+    if (user?.profile?.full_name) setFullName(user.profile.full_name)
+    if (user?.profile?.phone !== undefined) setPhone(user.profile.phone || '')
+  }, [user?.profile?.full_name, user?.profile?.phone])
 
   const showFeedback = (type, text) => {
     setMessage({ type, text })
@@ -34,7 +34,7 @@ export default function SettingsPage() {
     try {
       await updateProfile({
         userId: user.id,
-        updates: { full_name: fullName }
+        updates: { full_name: fullName, phone: phone || null }
       })
       setHasChanges(false)
       showFeedback('success', 'Perfil atualizado com sucesso!')
@@ -81,6 +81,24 @@ export default function SettingsPage() {
           )
         },
         { label: 'Email', value: user?.email, readOnly: true },
+        {
+          label: 'WhatsApp',
+          value: (
+            <div className="relative">
+              <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value.replace(/\D/g, ''))
+                  setHasChanges(true)
+                }}
+                placeholder="Ex: 5511999999999"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8E44AD]/20 focus:border-[#8E44AD] transition-all"
+              />
+            </div>
+          )
+        },
         { label: 'Cargo', value: user?.profile?.role === 'admin' ? 'Administrador' : 'Colaborador', readOnly: true },
       ]
     },

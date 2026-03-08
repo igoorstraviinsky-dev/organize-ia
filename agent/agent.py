@@ -187,6 +187,103 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "designar_tarefa",
+            "description": "Designa (atribui) um colaborador a uma tarefa. Funciona para tarefas avulsas e tarefas dentro de projetos.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                    "nome_usuario": {"type": "string", "description": "Nome (parcial) do colaborador a designar"},
+                    "nome_projeto": {"type": "string", "description": "Nome do projeto para filtrar a tarefa (opcional)"},
+                },
+                "required": ["nome_tarefa", "nome_usuario"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remover_designado_tarefa",
+            "description": "Remove um colaborador designado de uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                    "nome_usuario": {"type": "string", "description": "Nome (parcial) do colaborador a remover"},
+                },
+                "required": ["nome_tarefa", "nome_usuario"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_designados_tarefa",
+            "description": "Lista os colaboradores designados a uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                },
+                "required": ["nome_tarefa"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "designar_projeto",
+            "description": "Adiciona um colaborador como membro de um projeto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Nome (parcial) do projeto"},
+                    "nome_usuario": {"type": "string", "description": "Nome (parcial) do colaborador a adicionar"},
+                },
+                "required": ["nome_projeto", "nome_usuario"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remover_membro_projeto",
+            "description": "Remove um colaborador de um projeto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Nome (parcial) do projeto"},
+                    "nome_usuario": {"type": "string", "description": "Nome (parcial) do colaborador a remover"},
+                },
+                "required": ["nome_projeto", "nome_usuario"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_membros_projeto",
+            "description": "Lista os colaboradores membros de um projeto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_projeto": {"type": "string", "description": "Nome (parcial) do projeto"},
+                },
+                "required": ["nome_projeto"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_equipe",
+            "description": "Lista todos os colaboradores disponíveis para designar.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """Você é o Assistente do Organizador, um agente inteligente de gestão de tarefas 
@@ -199,6 +296,11 @@ Suas capacidades:
 - Mover tarefas entre status (Pendente → Em Progresso → Concluída)
 - Apagar tarefas
 - Criar, listar e apagar projetos
+- Designar colaboradores a tarefas (avulsas ou dentro de projetos)
+- Remover designados de tarefas
+- Adicionar/remover membros de projetos
+- Listar designados de uma tarefa ou membros de um projeto
+- Listar a equipe disponível para designação
 
 Regras de resposta:
 - Seja conciso e direto. WhatsApp favorece respostas curtas.
@@ -361,6 +463,102 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
                 lines.append(f"{emoji} {s['title']}")
             return "\n".join(lines)
 
+        elif tool_name == "designar_tarefa":
+            # Resolve tarefa (com filtro de projeto opcional)
+            project_id = None
+            if args.get("nome_projeto"):
+                projects = await db.list_projects(user_id)
+                proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
+                if proj:
+                    project_id = proj["id"]
+
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            if project_id and task.get("project_id") != project_id:
+                return f"❌ Tarefa *{task['title']}* não pertence ao projeto informado."
+
+            # Resolve usuário
+            usuario = await db.find_user_by_name(args["nome_usuario"])
+            if not usuario:
+                return f"❌ Colaborador *{args['nome_usuario']}* não encontrado."
+
+            await db.assign_user_to_task(task["id"], usuario["id"])
+            nome_curto = usuario["full_name"].split()[0]
+            return f"👤 *{nome_curto}* designado(a) para *{task['title']}*!"
+
+        elif tool_name == "remover_designado_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+
+            usuario = await db.find_user_by_name(args["nome_usuario"])
+            if not usuario:
+                return f"❌ Colaborador *{args['nome_usuario']}* não encontrado."
+
+            await db.unassign_user_from_task(task["id"], usuario["id"])
+            nome_curto = usuario["full_name"].split()[0]
+            return f"✅ *{nome_curto}* removido(a) da tarefa *{task['title']}*."
+
+        elif tool_name == "listar_designados_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            assignees = await db.list_task_assignees(task["id"])
+            if not assignees:
+                return f"📋 A tarefa *{task['title']}* não tem ninguém designado."
+            lines = [f"👥 *Designados em '{task['title']}':*\n"]
+            for a in assignees:
+                lines.append(f"• {a['full_name']}")
+            return "\n".join(lines)
+
+        elif tool_name == "designar_projeto":
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            if not proj:
+                return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
+
+            usuario = await db.find_user_by_name(args["nome_usuario"])
+            if not usuario:
+                return f"❌ Colaborador *{args['nome_usuario']}* não encontrado."
+
+            await db.add_project_member(proj["id"], usuario["id"])
+            nome_curto = usuario["full_name"].split()[0]
+            return f"📁 *{nome_curto}* adicionado(a) ao projeto *{proj['name']}*!"
+
+        elif tool_name == "remover_membro_projeto":
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            if not proj:
+                return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
+
+            usuario = await db.find_user_by_name(args["nome_usuario"])
+            if not usuario:
+                return f"❌ Colaborador *{args['nome_usuario']}* não encontrado."
+
+            await db.remove_project_member(proj["id"], usuario["id"])
+            nome_curto = usuario["full_name"].split()[0]
+            return f"✅ *{nome_curto}* removido(a) do projeto *{proj['name']}*."
+
+        elif tool_name == "listar_membros_projeto":
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            if not proj:
+                return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
+            membros = await db.list_project_members_with_profiles(proj["id"])
+            if not membros:
+                return f"📁 O projeto *{proj['name']}* não tem membros."
+            lines = [f"👥 *Membros de '{proj['name']}':*\n"]
+            for m in membros:
+                lines.append(f"• {m['full_name']}")
+            return "\n".join(lines)
+
+        elif tool_name == "listar_equipe":
+            membros = await db.list_team_members()
+            if not membros:
+                return "👥 Nenhum colaborador encontrado."
+            lines = ["👥 *Equipe disponível:*\n"]
+            for m in membros:
+                lines.append(f"• {m['full_name']}")
+            return "\n".join(lines)
+
         else:
             return f"Função desconhecida: {tool_name}"
 
@@ -377,10 +575,6 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
     """
     today = date.today().strftime("%d/%m/%Y (%A)")
     system = SYSTEM_PROMPT.replace("{today}", today)
-
-    # Busca perfil do usuário
-    profile = await db.get_profile(user_id)
-    nome = profile["full_name"].split()[0] if profile else "você"
 
     # Monta o histórico de conversa
     registry.add_to_history(phone, "user", text)

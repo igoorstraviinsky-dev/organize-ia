@@ -230,6 +230,18 @@ async def get_profile(user_id: str) -> Optional[dict]:
     return res.data
 
 
+async def find_user_by_phone(phone: str) -> Optional[dict]:
+    """Busca usuário pelo número de telefone cadastrado no perfil."""
+    res = (
+        _supabase.table("profiles")
+        .select("id, full_name, email, phone")
+        .eq("phone", phone)
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
 async def find_user_by_email(email: str) -> Optional[dict]:
     """Busca usuário pelo e-mail (para vinculação WhatsApp)."""
     res = (
@@ -240,6 +252,91 @@ async def find_user_by_email(email: str) -> Optional[dict]:
         .execute()
     )
     return res.data
+
+
+async def find_user_by_name(name: str) -> Optional[dict]:
+    """Busca usuário pelo nome (parcial, case-insensitive)."""
+    res = (
+        _supabase.table("profiles")
+        .select("id, full_name, email")
+        .ilike("full_name", f"%{name}%")
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+async def list_team_members() -> list[dict]:
+    """Lista todos os membros da equipe (perfis)."""
+    res = (
+        _supabase.table("profiles")
+        .select("id, full_name, email")
+        .order("full_name")
+        .execute()
+    )
+    return res.data or []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DESIGNADOS DE TAREFAS (assignments)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def assign_user_to_task(task_id: str, assignee_id: str) -> bool:
+    """Designa um usuário a uma tarefa (ignora duplicata)."""
+    _supabase.table("assignments").insert({"task_id": task_id, "user_id": assignee_id}).execute()
+    return True
+
+
+async def unassign_user_from_task(task_id: str, assignee_id: str) -> bool:
+    """Remove um usuário designado de uma tarefa."""
+    _supabase.table("assignments").delete().eq("task_id", task_id).eq("user_id", assignee_id).execute()
+    return True
+
+
+async def list_task_assignees(task_id: str) -> list[dict]:
+    """Lista os designados de uma tarefa."""
+    res = (
+        _supabase.table("assignments")
+        .select("user_id, profiles(full_name, email)")
+        .eq("task_id", task_id)
+        .execute()
+    )
+    return [
+        {"id": r["user_id"], "full_name": r["profiles"]["full_name"], "email": r["profiles"]["email"]}
+        for r in (res.data or [])
+        if r.get("profiles")
+    ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MEMBROS DE PROJETO (project_members)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def add_project_member(project_id: str, user_id: str) -> bool:
+    """Adiciona um membro a um projeto (ignora duplicata)."""
+    _supabase.table("project_members").insert({"project_id": project_id, "user_id": user_id}).execute()
+    return True
+
+
+async def remove_project_member(project_id: str, user_id: str) -> bool:
+    """Remove um membro de um projeto."""
+    _supabase.table("project_members").delete().eq("project_id", project_id).eq("user_id", user_id).execute()
+    return True
+
+
+async def list_project_members_with_profiles(project_id: str) -> list[dict]:
+    """Lista membros de um projeto com seus perfis."""
+    res = (
+        _supabase.table("project_members")
+        .select("user_id, profiles(full_name, email)")
+        .eq("project_id", project_id)
+        .execute()
+    )
+    return [
+        {"id": r["user_id"], "full_name": r["profiles"]["full_name"], "email": r["profiles"]["email"]}
+        for r in (res.data or [])
+        if r.get("profiles")
+    ]
 
 
 async def get_integration_by_instance(instance_name: str) -> Optional[dict]:

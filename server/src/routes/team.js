@@ -71,6 +71,12 @@ router.post('/create', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'User created, but failed to set role' })
     }
 
+    // Remove the auto-created Inbox project — collaborators start with no projects
+    await supabase
+      .from('projects')
+      .delete()
+      .eq('owner_id', newUserId)
+
     res.json({ message: 'Collaborator created successfully', user_id: newUserId })
   } catch (err) {
     console.error('Unexpected error in /api/team/create:', err)
