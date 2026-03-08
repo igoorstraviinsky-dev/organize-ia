@@ -495,12 +495,15 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             }
             PRIORITY_LABEL = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}
 
+            proj_map = await db.get_projects_map(user_id)
+
             lines = ["📋 *Suas tarefas:*\n"]
             for t in tasks[:15]:
                 emoji = STATUS_EMOJI.get(t["status"], "•")
                 prio  = PRIORITY_LABEL.get(t["priority"], "•")
                 due   = f" _{t['due_date']}_" if t.get("due_date") else ""
-                lines.append(f"{emoji} {prio} {t['title']}{due}")
+                proj  = f" [{proj_map.get(t['project_id'], '')}]" if t.get("project_id") and t["project_id"] in proj_map else ""
+                lines.append(f"{emoji} {prio} {t['title']}{due}{proj}")
 
             if len(tasks) > 15:
                 lines.append(f"\n_...e mais {len(tasks) - 15} tarefas_")
@@ -734,12 +737,14 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
                 return "📋 Nenhuma tarefa encontrada com esses critérios."
             STATUS_EMOJI = {"pending": "⏳", "in_progress": "🔄", "completed": "✅", "cancelled": "❌"}
             PRIO_LABEL = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}
+            proj_map = await db.get_projects_map(user_id)
             lines = ["🔍 *Resultado da busca:*\n"]
             for t in tasks[:15]:
                 emoji = STATUS_EMOJI.get(t["status"], "•")
                 prio = PRIO_LABEL.get(t.get("priority"), "•")
                 due = f" _{t['due_date']}_" if t.get("due_date") else ""
-                lines.append(f"{emoji} {prio} {t['title']}{due}")
+                proj = f" [{proj_map.get(t['project_id'], '')}]" if t.get("project_id") and t["project_id"] in proj_map else ""
+                lines.append(f"{emoji} {prio} {t['title']}{due}{proj}")
             if len(tasks) > 15:
                 lines.append(f"\n_...e mais {len(tasks) - 15} tarefas_")
             return "\n".join(lines)

@@ -137,41 +137,61 @@ async def list_tasks(
     return tasks[:20]
 
 
+async def _user_can_modify_task(task_id: str, user_id: str) -> bool:
+    """Verifica se o usuário pode modificar a tarefa: é criador OU membro do projeto."""
+    res = (
+        _supabase.table("tasks")
+        .select("creator_id, project_id")
+        .eq("id", task_id)
+        .single()
+        .execute()
+    )
+    task = res.data
+    if not task:
+        return False
+    if task["creator_id"] == user_id:
+        return True
+    if task.get("project_id"):
+        member = (
+            _supabase.table("project_members")
+            .select("user_id")
+            .eq("project_id", task["project_id"])
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        return bool(member.data)
+    return False
+
+
 async def update_task_status(task_id: str, user_id: str, new_status: str) -> dict:
     """Atualiza o status de uma tarefa (pending/in_progress/completed/cancelled)."""
     valid = {"pending", "in_progress", "completed", "cancelled"}
     if new_status not in valid:
         raise ValueError(f"Status inválido: {new_status}. Use: {valid}")
 
-    res = (
-        _supabase.table("tasks")
-        .update({"status": new_status})
-        .eq("id", task_id)
-        .eq("creator_id", user_id)
-        .execute()
-    )
-    if not res.data:
+    if not await _user_can_modify_task(task_id, user_id):
         raise ValueError("Tarefa não encontrada ou sem permissão.")
+
+    res = _supabase.table("tasks").update({"status": new_status}).eq("id", task_id).execute()
     return res.data[0]
 
 
 async def update_task(task_id: str, user_id: str, updates: dict) -> dict:
     """Atualiza campos de uma tarefa (título, descrição, prioridade, etc.)."""
-    res = (
-        _supabase.table("tasks")
-        .update(updates)
-        .eq("id", task_id)
-        .eq("creator_id", user_id)
-        .execute()
-    )
-    if not res.data:
+    if not await _user_can_modify_task(task_id, user_id):
         raise ValueError("Tarefa não encontrada ou sem permissão.")
+
+    res = _supabase.table("tasks").update(updates).eq("id", task_id).execute()
     return res.data[0]
 
 
 async def delete_task(task_id: str, user_id: str) -> bool:
     """Remove uma tarefa (e suas subtarefas por cascade no banco)."""
-    _supabase.table("tasks").delete().eq("id", task_id).eq("creator_id", user_id).execute()
+    if not await _user_can_modify_task(task_id, user_id):
+        raise ValueError("Tarefa não encontrada ou sem permissão.")
+
+    _supabase.table("tasks").delete().eq("id", task_id).execute()
     return True
 
 
@@ -181,7 +201,6 @@ async def list_subtasks(parent_id: str, user_id: str) -> list[dict]:
         _supabase.table("tasks")
         .select("id, title, status, priority, due_date")
         .eq("parent_id", parent_id)
-        .eq("creator_id", user_id)
         .execute()
     )
     return res.data or []
@@ -238,6 +257,31 @@ async def list_projects(user_id: str) -> list[dict]:
         .execute()
     )
     return res.data or []
+
+
+async def get_projects_map(user_id: str) -> dict[str, str]:
+    """Retorna mapa {project_id: project_name} para projetos próprios e atribuídos."""
+    projects = await list_projects(user_id)
+    proj_map = {p["id"]: p["name"] for p in projects}
+
+    memberships = (
+        _supabase.table("project_members")
+        .select("project_id")
+        .eq("user_id", user_id)
+        .execute()
+    )
+    member_ids = [m["project_id"] for m in (memberships.data or []) if m["project_id"] not in proj_map]
+    if member_ids:
+        res = (
+            _supabase.table("projects")
+            .select("id, name")
+            .in_("id", member_ids)
+            .execute()
+        )
+        for p in (res.data or []):
+            proj_map[p["id"]] = p["name"]
+
+    return proj_map
 
 
 async def delete_project(project_id: str, user_id: str) -> bool:
