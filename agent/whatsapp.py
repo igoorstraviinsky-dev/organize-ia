@@ -65,3 +65,37 @@ async def send_typing(phone: str, api_url: str = None, api_token: str = None) ->
             await client.post(url, json=payload, headers=headers)
     except Exception:
         pass
+
+
+async def download_media(media_key: str, api_url: str = None, api_token: str = None) -> bytes:
+    """
+    Baixa um arquivo de mídia (áudio, imagem, etc) da instância WazAPI.
+    
+    Args:
+        media_key: Identificador da mídia (Geralmente o message id ou chave fornecida pelo evento)
+        api_url: URL base opcional
+        api_token: Token opcional
+        
+    Returns:
+        Conteúdo binário do arquivo ou None em caso de erro.
+    """
+    target_url = (api_url or WAZAPI_URL).rstrip("/")
+    # A rota do WazAPI para download de mídia geralmente é /download/media
+    url = f"{target_url}/download/media"
+    
+    headers = {
+        "token": api_token or WAZAPI_TOKEN,
+        "Accept": "*/*",
+    }
+    payload = {
+        "id": media_key,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            res = await client.post(url, json=payload, headers=headers)
+            res.raise_for_status()
+            return res.content
+    except Exception as e:
+        print(f"[WazAPI] Erro ao baixar mídia {media_key}: {e}")
+        return None

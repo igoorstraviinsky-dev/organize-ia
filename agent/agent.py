@@ -687,3 +687,33 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
 
     registry.add_to_history(phone, "assistant", reply)
     return reply
+
+
+async def transcribe_audio(audio_bytes: bytes) -> str:
+    """
+    Transcreve um áudio binário usando a API Whisper da OpenAI.
+    """
+    try:
+        # A API da OpenAI requer um arquivo em disco ou um buffer com nome.
+        # Vamos usar um arquivo temporário para garantir compatibilidade.
+        import tempfile
+        from pathlib import Path
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+            
+        try:
+            with open(tmp_path, "rb") as audio_file:
+                transcript = await openai.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                )
+                return transcript.text
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+                
+    except Exception as e:
+        print(f"[Agente] Erro na transcrição Whisper: {e}")
+        return ""

@@ -13,7 +13,7 @@ import whatsapp
 import user_registry as registry
 import supabase_client as db
 import telegram_client as telegram
-from agent import process_message
+from agent import process_message, transcribe_audio
 import n8n_integration
 
 load_dotenv()
@@ -25,6 +25,7 @@ WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Removido emoji para evitar erro de encoding no Windows
     print("Agente Organizador iniciado na porta", os.environ.get("AGENT_PORT", 8001))
     yield
     print("Agente encerrado.")
@@ -94,13 +95,27 @@ async def webhook(request: Request):
     if not phone:
         return {"ok": True, "skipped": "no_phone"}
 
-    # Extrai texto da mensagem
+    # Extrai texto ou áudio da mensagem
     msg_content = msg_obj.get("message", {})
-    text = (
-        msg_content.get("conversation")
-        or msg_content.get("extendedTextMessage", {}).get("text")
-        or ""
-    ).strip()
+    
+    # Se for áudio, tenta transcrever
+    is_audio = "audioMessage" in msg_content
+    text = ""
+    
+    if is_audio:
+        print(f"[Webhook] Áudio detectado de {phone}. Baixando...")
+        audio_data = await whatsapp.download_media(data.get("id"), api_url=api_url, api_token=api_token)
+        if audio_data:
+            text = await transcribe_audio(audio_data)
+            print(f"[Webhook] Transcrição: {text}")
+        else:
+            print("[Webhook] Falha ao baixar áudio.")
+    else:
+        text = (
+            msg_content.get("conversation")
+            or msg_content.get("extendedTextMessage", {}).get("text")
+            or ""
+        ).strip()
 
     if not text:
         return {"ok": True, "skipped": "no_text"}
