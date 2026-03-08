@@ -116,6 +116,34 @@ const TOOLS = [
         required: ['id']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_project',
+      description: 'Apaga um projeto/pasta específico. CUIDADO: Isso pode apagar as tarefas dentro dele.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'O UUID do projeto a ser apagado.' }
+        },
+        required: ['id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_task',
+      description: 'Apaga uma tarefa específica.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'O UUID da tarefa a ser apagada.' }
+        },
+        required: ['id']
+      }
+    }
   }
 ];
 
@@ -232,6 +260,16 @@ export async function generateAIResponse(userId, apiKey, systemPrompt, phone, ne
               const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select('id').single();
               if (error) throw error;
               functionOutput = JSON.stringify({ success: true, task: data });
+            }
+            else if (functionName === 'delete_project') {
+              const { error } = await supabase.from('projects').delete().eq('id', args.id).eq('owner_id', userId);
+              if (error) throw error;
+              functionOutput = JSON.stringify({ success: true, message: 'Projeto apagado com sucesso.' });
+            }
+            else if (functionName === 'delete_task') {
+              const { error } = await supabase.from('tasks').delete().eq('id', args.id).eq('creator_id', userId);
+              if (error) throw error;
+              functionOutput = JSON.stringify({ success: true, message: 'Tarefa apagada com sucesso.' });
             }
           } catch (fnErr) {
             functionOutput = JSON.stringify({ error: fnErr.message || 'Erro interno na tool' });
