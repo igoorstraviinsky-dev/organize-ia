@@ -360,32 +360,52 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
   const name = instanceName || ''
   const _log = log || (() => {})
 
-  async function tryPost(url, body) {
+  async function tryFetch(url, options = {}) {
+    const method = options.method || 'GET'
+    const body = options.body ? JSON.stringify(options.body) : undefined
     try {
       const res = await fetch(url, {
-        method: 'POST',
+        method,
         headers: buildHeaders(apiToken),
-        body: JSON.stringify(body),
+        body,
         signal: AbortSignal.timeout(15000),
       })
       const text = await res.text()
-      _log(`[dl] POST ${url.replace(base, '')} → ${res.status} | ${text.slice(0, 120)}`)
+      _log(`[dl] ${method} ${url.replace(base, '')} → ${res.status} | ${text.slice(0, 120)}`)
       if (res.ok) {
         const data = JSON.parse(text)
         if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
       }
     } catch (e) {
-      _log(`[dl] POST ${url.replace(base, '')} → ERRO: ${e.message}`)
+      _log(`[dl] ${method} ${url.replace(base, '')} → ERRO: ${e.message}`)
     }
     return null
   }
 
-  // ── Método 0: UazAPI Cloud flat format — usa messageid direto ──
+  // ── Método 0: UazAPI Cloud — GET com messageid ──
   const msgId = rawMsg?.messageid || rawMsg?.id || key?.id
   if (msgId) {
     _log(`[dl] msgId=${msgId}`)
-    for (const url of [`${base}/message/getMediaBase64`, `${base}/chat/getMediaBase64`, `${base}/download/message`]) {
-      const r = await tryPost(url, { messageid: msgId })
+    // UazAPI Cloud usa GET para download de mídia
+    const getEndpoints = [
+      `${base}/message/getMediaBase64?messageid=${msgId}`,
+      `${base}/chat/getMediaBase64?messageid=${msgId}`,
+      `${base}/download/${msgId}`,
+      `${base}/message/download/${msgId}`,
+      `${base}/media/${msgId}`,
+    ]
+    for (const url of getEndpoints) {
+      const r = await tryFetch(url)
+      if (r) return r
+    }
+    // Tenta POST também como fallback
+    const postEndpoints = [
+      `${base}/message/getMediaBase64`,
+      `${base}/chat/getMediaBase64`,
+      `${base}/download/message`,
+    ]
+    for (const url of postEndpoints) {
+      const r = await tryFetch(url, { method: 'POST', body: { messageid: msgId } })
       if (r) return r
     }
   }
@@ -398,14 +418,14 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
 
   if (rawMsg) {
     for (const url of endpointsWithFullMsg) {
-      const r = await tryPost(url, { message: rawMsg })
+      const r = await tryFetch(url, { method: 'POST', body: { message: rawMsg } })
       if (r) return r
     }
   }
 
   // ── Método 2: Fallback — envia só o key (Evolution API self-hosted legacy) ──
   for (const url of endpointsWithFullMsg) {
-    const r = await tryPost(url, { key })
+    const r = await tryFetch(url, { method: 'POST', body: { key } })
     if (r) return r
   }
 
