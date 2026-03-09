@@ -6,10 +6,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_supabase: Client = create_client(
-    os.environ["SUPABASE_URL"],
-    os.environ["SUPABASE_SERVICE_KEY"],
-)
+# Verificação de variáveis obrigatórias
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    print("❌ ERRO: SUPABASE_URL ou SUPABASE_SERVICE_KEY não configuradas no .env")
+    # Caso não as tenhamos, não podemos inicializar o cliente
+    _supabase = None
+else:
+    _supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 def normalize_phone(phone: str) -> str:
     """Extrai apenas os dígitos do telefone."""
@@ -19,6 +25,10 @@ async def get_user_id_by_phone(phone: str) -> Optional[str]:
     """Identifica o user_id baseado no número de telefone cadastrado no perfil."""
     target = normalize_phone(phone)
     if not target:
+        return None
+    
+    if not _supabase:
+        print("❌ Supabase não inicializado.")
         return None
     
     # Busca perfis que tenham telefone

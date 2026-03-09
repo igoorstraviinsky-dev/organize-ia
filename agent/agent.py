@@ -8,8 +8,18 @@ import db
 
 load_dotenv()
 
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
+_client = None
+def get_openai_client():
+    global _client
+    if _client is None:
+        key = os.environ.get("OPENAI_API_KEY")
+        if not key:
+            print("❌ ERRO: OPENAI_API_KEY não configurada no .env do Agente.")
+            return None
+        _client = AsyncOpenAI(api_key=key)
+    return _client
 
 # --- Ferramentas (Tools) ---
 TOOLS = [
@@ -203,6 +213,10 @@ async def process_message(user_id: str, text: str) -> str:
         {"role": "user", "content": text}
     ]
     
+    client = get_openai_client()
+    if not client:
+        return "❌ O Agente não está configurado corretamente (chave API faltando)."
+
     response = await client.chat.completions.create(
         model=MODEL,
         messages=messages,

@@ -5,7 +5,18 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID
 const GRAPH_API_URL = 'https://graph.facebook.com/v21.0'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// Inicializa OpenAI de forma tardia para evitar crash se a chave estiver faltando no boot
+let _openai = null
+function getOpenAI() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ ERRO: OPENAI_API_KEY não configurada no .env do servidor.')
+      return null
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
+  return _openai
+}
 
 /**
  * Baixa a URL de um media_id do WhatsApp
@@ -42,6 +53,9 @@ export async function transcribeAudio(mediaId, mimeType) {
   // WhatsApp envia áudio como audio/ogg ou audio/mpeg
   const extension = mimeType?.includes('ogg') ? 'ogg' : 'mp3'
   const filename = `audio.${extension}`
+
+  const openai = getOpenAI()
+  if (!openai) return null
 
   const form = new FormData()
   form.append('file', audioBuffer, { filename, contentType: mimeType || 'audio/ogg' })
