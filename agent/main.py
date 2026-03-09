@@ -1,6 +1,7 @@
 import os
 import json
 import asyncio
+import re
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
@@ -114,5 +115,4 @@ def run(server_class=HTTPServer, handler_class=WebhookHandler):
     httpd.serve_forever()
 
 if __name__ == "__main__":
-    import re # Importando aqui para garantir que normalize_phone funcione se movido
     run()

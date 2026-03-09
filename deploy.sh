@@ -1,42 +1,48 @@
 #!/bin/bash
-# deploy.sh - Script de atualização completa do Organizador
+# deploy.sh - Script de Reset e Deploy Completo
 # Uso: bash deploy.sh
 
 set -e
 
-echo "=== INICIANDO DEPLOY COMPLETO ==="
+echo "=== [1/7] LIMPANDO AMBIENTE ANTIGO ==="
+# Para e remove tudo do PM2 para evitar conflitos
+pm2 delete all || true
+# Mata processos residuais de Node/Vite/Python
+pkill -f vite || true
+pkill -f node || true
+pkill -f python3 || true
+echo "Limpeza concluida."
+
 echo ""
-
-DEPLOY_DIR="/var/www/organizador"
-cd "$DEPLOY_DIR"
-
-echo "[1/6] Sincronizando com GitHub (Branch: 001-mobile-design)..."
-git pull origin 001-mobile-design
+echo "=== [2/7] SINCRONIZANDO COM GITHUB ==="
+cd /var/www/organizador
+git fetch --all
+git reset --hard origin/001-mobile-design
 
 echo ""
-echo "[2/6] Atualizando Frontend (Client)..."
-cd "$DEPLOY_DIR/client"
+echo "=== [3/7] ATUALIZANDO FRONTEND (CLIENT) ==="
+cd /var/www/organizador/client
 npm install
 npm run build
 
 echo ""
-echo "[3/6] Atualizando Backend (Server)..."
-cd "$DEPLOY_DIR/server"
+echo "=== [4/7] ATUALIZANDO BACKEND (SERVER) ==="
+cd /var/www/organizador/server
 npm install --production
 
 echo ""
-echo "[4/6] Configurando Agente Python (venv e dependencias)..."
-cd "$DEPLOY_DIR/agent"
+echo "=== [5/7] CONFIGURANDO AGENTE PYTHON ==="
+cd /var/www/organizador/agent
 bash setup.sh
 
 echo ""
-echo "[5/6] Reiniciando Servicos no PM2..."
-cd "$DEPLOY_DIR"
-# O startOrRestart resolve o erro de "Process not found"
-pm2 startOrRestart ecosystem.config.js --env production
+echo "=== [6/7] INICIANDO SERVICOS NO PM2 ==="
+cd /var/www/organizador
+pm2 start ecosystem.config.js --env production
 pm2 save
 
 echo ""
-echo "=== DEPLOY FINALIZADO COM SUCESSO! ==="
-echo ""
+echo "=== [7/7] STATUS FINAL ==="
 pm2 list
+echo ""
+echo "Deploy finalizado! Se algo não ligou, use: pm2 logs"

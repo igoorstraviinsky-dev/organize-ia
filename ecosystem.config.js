@@ -10,6 +10,9 @@ module.exports = {
       script: "./server/src/index.js",
       cwd: "/var/www/organizador",
       env: {
+        NODE_ENV: "development",
+      },
+      env_production: {
         NODE_ENV: "production",
       },
       watch: false,
@@ -25,6 +28,12 @@ module.exports = {
       env: {
         PYTHONIOENCODING: "utf-8",
         PYTHONUNBUFFERED: "1",
+        NODE_ENV: "development",
+      },
+      env_production: {
+        PYTHONIOENCODING: "utf-8",
+        PYTHONUNBUFFERED: "1",
+        NODE_ENV: "production",
       },
       watch: false,
       autorestart: true,
