@@ -14,7 +14,7 @@ const functionExecutors = {
   delete_task:    { fn: deleteTask,    needsPhone: false },
   delete_project: { fn: deleteProject, needsPhone: true },
   search_tasks:   { fn: searchTasks,   needsPhone: true },
-  assign_task:    { fn: assignTask,    needsPhone: false },
+  assign_task:    { fn: assignTask,    needsPhone: true },
   assign_project_member: { fn: assignProjectMember, needsPhone: true },
   list_tasks:     { fn: listTasks,     needsPhone: true },
   update_status:  { fn: updateStatus,  needsPhone: false },
@@ -54,6 +54,7 @@ export async function processMessage(userMessage, phoneNumber) {
   // 1. Identificar o usuário
   let userName = null;
   let userRole = 'collaborator';
+  let messages = [];
 
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
@@ -74,9 +75,10 @@ export async function processMessage(userMessage, phoneNumber) {
       .from('profiles')
       .select('full_name, email');
     
+    const history = CHAT_MEMORY.get(phoneNumber) || [];
     const teamList = team?.map(u => `- ${u.full_name} (${u.email})`).join('\n') || 'Nenhum outro membro.';
 
-    const systemPrompt = `${getSystemPrompt(userName, userRole)}\n\n**Membros da Equipe:**\n${teamList}`;
+    const systemPrompt = getSystemPrompt(userName, userRole, teamList);
     
     messages = [
       { role: 'system', content: systemPrompt },
@@ -85,8 +87,9 @@ export async function processMessage(userMessage, phoneNumber) {
     ];
   } catch (err) {
     console.error('Error fetching profile for agent:', err.message);
+    const history = CHAT_MEMORY.get(phoneNumber) || [];
     messages = [
-      { role: 'system', content: getSystemPrompt(null, 'collaborator') },
+      { role: 'system', content: getSystemPrompt(null, 'collaborator', 'Nenhum membro.') },
       ...history,
       { role: 'user', content: userMessage },
     ];
@@ -139,10 +142,11 @@ export async function processMessage(userMessage, phoneNumber) {
     }
 
     // Atualiza histórico (mantendo as últimas 10 trocas)
-    // Apenas mensagens do usuário e respostas finais para economia
+    const history = CHAT_MEMORY.get(phoneNumber) || [];
     history.push({ role: 'user', content: userMessage });
     history.push({ role: 'assistant', content: finalResponse });
     if (history.length > 10) history.splice(0, 2); 
+    CHAT_MEMORY.set(phoneNumber, history);
 
     return finalResponse;
   } catch (error) {

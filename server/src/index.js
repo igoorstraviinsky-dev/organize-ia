@@ -17,6 +17,18 @@ app.use(express.json())
 // Meta WhatsApp Cloud API webhook
 app.use('/api/webhook', webhookRouter)
 
+// Endpoint central para processamento de mensagens (chamado pelo Python Body)
+app.post('/api/agent/process', async (req, res) => {
+  const { text, phone } = req.body;
+  const { processMessage } = await import('./agent/openai.js');
+  try {
+    const reply = await processMessage(text, phone);
+    res.json({ reply });
+  } catch (error) {
+    res.status(500).json({ reply: 'Erro interno no Cérebro.', error: error.message });
+  }
+});
+
 // UazAPI: status, connect, send, webhook de entrada
 app.use('/api/uazapi', uazapiRouter)
 

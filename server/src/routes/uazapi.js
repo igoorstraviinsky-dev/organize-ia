@@ -11,7 +11,7 @@ import {
   sendImageMessage,
   parseWebhookPayload,
 } from '../lib/uazapi.js'
-import { generateAIResponse } from '../lib/openai.js'
+// generateAIResponse removido daqui, processMessage usado via import dinâmico
 import { startSSEListener, stopSSEListener, getSSEStatus, getSSELogs } from '../lib/sseClient.js'
 
 const router = Router()
@@ -362,14 +362,9 @@ router.post('/webhook', async (req, res) => {
           if (!isCollaborator) return
         }
 
-        const prompt = agentSettings.system_prompt || 'Você é um assistente virtual gentil e conciso.'
-        const aiResponse = await generateAIResponse(
-          integration.user_id,
-          agentSettings.openai_api_key,
-          prompt,
-          phone,
-          text
-        )
+        // O Node.js atua como o Cérebro centralizado.
+        const { processMessage } = await import('../agent/openai.js')
+        const aiResponse = await processMessage(text, phone)
 
         if (aiResponse) {
           const result = await sendTextMessage({

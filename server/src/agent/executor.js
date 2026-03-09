@@ -1,4 +1,6 @@
-import { supabase } from '../lib/supabase.js'
+import fetch from 'node-fetch'
+
+const PYTHON_AGENT_URL = process.env.PYTHON_AGENT_URL || 'http://localhost:8001'
 
 /**
  * Resolve o user_id a partir do nome ou email.
@@ -44,6 +46,28 @@ async function resolveUserId(phoneNumber) {
 
   console.log(`User with phone ${cleanPhone} not found in profiles.`);
   return null
+}
+
+/**
+ * Chama o 'Corpo' (Agente Python) para execução de uma tool.
+ */
+async function callPythonBody(tool, args, userId) {
+  try {
+    const response = await fetch(`${PYTHON_AGENT_URL}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tool, args, user_id: userId })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Erro ao chamar Corpo Python (${tool}):`, error.message);
+    return { error: `Erro na execução remota: ${error.message}` };
+  }
 }
 
 /**
@@ -316,21 +340,13 @@ export async function searchTasks({ query }, phoneNumber) {
 /**
  * Executa: assign_task
  */
-export async function assignTask({ task_id, user_identifier }) {
-  const profile = await resolveUser(user_identifier);
+export async function assignTask({ task_id, user_identifier }, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber);
+  if (!userId) return { error: 'Usuário não encontrado.' };
 
-  if (!profile) return { error: `Usuário "${user_identifier}" não encontrado.` }
-
-  const { error } = await supabase
-    .from('assignments')
-    .insert({ task_id, user_id: profile.id })
-
-  if (error) {
-    if (error.code === '23505') return { error: 'Tarefa já atribuída a este usuário.' }
-    return { error: error.message }
-  }
-
-  return { success: true, assigned_to: profile.full_name }
+  // Delegar para o Corpo Python que já resolve nomes
+  const pyResult = await callPythonBody('designar_tarefa', { task_id, nome_usuario: user_identifier }, userId);
+  return pyResult.error ? pyResult : { success: true, message: pyResult.result };
 }
 
 /**
@@ -340,22 +356,23 @@ export async function assignProjectMember({ project_name, user_identifier, role 
   const userId = await resolveUserId(phoneNumber);
   if (!userId) return { error: 'Usuário não encontrado.' };
 
-  const projectId = await resolveProject(project_name, userId);
-  if (!projectId) return { error: `Projeto "${project_name}" não encontrado.` };
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('owner_id', userId)
+    .ilike('name', project_name)
+    .single();
 
-  const profile = await resolveUser(user_identifier);
-  if (!profile) return { error: `Usuário "${user_identifier}" não encontrado.` };
+  if (!project) return { error: `Projeto "${project_name}" não encontrado.` };
 
-  const { error } = await supabase
-    .from('project_members')
-    .insert({ project_id: projectId, user_id: profile.id, role })
-
-  if (error) {
-    if (error.code === '23505') return { error: 'Usuário já é membro deste projeto.' }
-    return { error: error.message }
-  }
-
-  return { success: true, added_to_project: project_name, user: profile.full_name }
+  // Delegar para o Corpo Python
+  const pyResult = await callPythonBody('designar_projeto', { 
+    project_id: project.id, 
+    nome_usuario: user_identifier,
+    role 
+  }, userId);
+  
+  return pyResult.error ? pyResult : { success: true, message: pyResult.result };
 }
 
 /**

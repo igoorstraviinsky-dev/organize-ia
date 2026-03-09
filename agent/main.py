@@ -37,10 +37,6 @@ class WebhookHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def do_POST(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length)
-        
         try:
             body = json.loads(post_data.decode('utf-8'))
         except:
@@ -52,6 +48,9 @@ class WebhookHandler(BaseHTTPRequestHandler):
             asyncio.run(self.handle_whatsapp(body))
         elif self.path == "/telegram/webhook":
             asyncio.run(self.handle_telegram(body))
+        elif self.path == "/execute":
+            asyncio.run(self.handle_execute(body))
+            return # handle_execute já envia a resposta
         
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -93,7 +92,19 @@ class WebhookHandler(BaseHTTPRequestHandler):
         user_name = profile.get("full_name", "Usuário")
         user_role = profile.get("role", "collaborator")
 
-        reply = await agent.process_message(user_id, text, user_name, user_role)
+        # O Python agora é apenas o 'Corpo'. Ele envia a mensagem para o 'Cérebro' (Node.js).
+        BRAIN_URL = os.environ.get("BRAIN_URL", "http://localhost:3001/api/agent/process")
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.post(BRAIN_URL, json={
+                    "text": text,
+                    "phone": phone,
+                    "user_id": user_id
+                }, timeout=30.0)
+                reply = res.json().get("reply", "⚠️ Cérebro não respondeu.")
+        except Exception as e:
+            reply = f"❌ Erro de comunicação com o Cérebro: {str(e)}"
+            
         await send_whatsapp(phone, reply, config)
 
     async def handle_telegram(self, body):
@@ -112,6 +123,33 @@ class WebhookHandler(BaseHTTPRequestHandler):
         # if user_id:
         #    reply = await agent.process_message(user_id, text)
         #    await send_telegram(chat_id, reply)
+
+    async def handle_execute(self, body):
+        """
+        Endpoint para o 'Cérebro' (Node.js) comandar o 'Corpo' (Python).
+        Payload: { "tool": "nome_da_tool", "args": {...}, "user_id": "uuid" }
+        """
+        tool_name = body.get("tool")
+        args = body.get("args", {})
+        user_id = body.get("user_id")
+
+        if not tool_name or not user_id:
+            self.send_response(400)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "tool and user_id required"}).encode())
+            return
+
+        print(f"Executing for Brain: {tool_name} with args {args}")
+        try:
+            result = await agent.execute_tool(tool_name, args, user_id)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"result": result}).encode())
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
 
 def run(server_class=HTTPServer, handler_class=WebhookHandler):
     server_address = ('', PORT)

@@ -6,7 +6,7 @@
 
 import { parseWebhookPayload, sendTextMessage, downloadMediaBase64 } from './uazapi.js'
 import { supabase } from './supabase.js'
-import { generateAIResponse, transcribeAudioBase64 } from './openai.js'
+import { transcribeAudioBase64 } from './openai.js'
 
 // Mapa de conexões ativas: integration_id -> { close(), connected, path }
 const activeConnections = new Map()
@@ -308,15 +308,9 @@ async function handleSSEEvent(eventName, rawData, integration) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (agentSettings?.openai_api_key) {
-      const prompt = agentSettings.system_prompt || 'Você é um assistente virtual gentil e conciso.'
-      const aiResponse = await generateAIResponse(
-        integration.user_id,
-        agentSettings.openai_api_key,
-        prompt,
-        phone,
-        text
-      )
+    if (agentSettings?.openai_api_key || process.env.OPENAI_API_KEY) {
+      const { processMessage } = await import('../agent/openai.js')
+      const aiResponse = await processMessage(text, phone)
 
       if (aiResponse) {
         const result = await sendTextMessage({
@@ -448,15 +442,9 @@ async function processAudioAsync(parsed, integration, integrationId) {
       .eq('is_active', true)
       .maybeSingle()
 
-    if (agentSettings?.openai_api_key) {
-      const prompt = agentSettings.system_prompt || 'Você é um assistente virtual gentil e conciso.'
-      const aiResponse = await generateAIResponse(
-        integration.user_id,
-        agentSettings.openai_api_key,
-        prompt,
-        phone,
-        transcribedText
-      )
+    if (agentSettings?.openai_api_key || process.env.OPENAI_API_KEY) {
+      const { processMessage } = await import('../agent/openai.js')
+      const aiResponse = await processMessage(transcribedText, phone)
 
       if (aiResponse) {
         const result = await sendTextMessage({
