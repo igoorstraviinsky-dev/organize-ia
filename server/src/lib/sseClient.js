@@ -392,6 +392,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
       key: parsed.audioKey,
       rawMsg: parsed.rawMsg,
       audioUrl: parsed.audioUrl,
+      audioMediaKey: parsed.audioMediaKey,
       log: (msg) => addLog(integrationId, 'info', msg),
     })
 

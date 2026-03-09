@@ -261,17 +261,21 @@ export function parseWebhookPayload(body) {
         (msg.type === 'media' && msgTypeLC.includes('audio'))  // UazAPI Cloud: type=media + messageType contém audio
       )
       if ((audioMsg || isUazAudio) && phone) {
+        // UazAPI Cloud envia a URL e mediaKey dentro de msg.content (objeto)
+        const contentObj = (msg.content && typeof msg.content === 'object') ? msg.content : null
         return {
           phone, fromMe, text: null, messageId, contactName, timestamp,
           messageType: 'audio',
           isPtt: audioMsg ? audioMsg.ptt === true : (realMsg.type === 'ptt' || msg.type === 'ptt' || msgTypeLC === 'audiomessage'),
-          fileSha256: audioMsg?.fileSha256 || null,
+          fileSha256: audioMsg?.fileSha256 || contentObj?.fileEncSha256 || null,
           audioKey: msg.key || { remoteJid, fromMe, id: messageId },
           audioUrl: audioMsg?.url || audioMsg?.mediaUrl ||
+            contentObj?.URL || contentObj?.url ||
             (typeof realMsg.body === 'string' ? realMsg.body : null) ||
             (typeof msg.body === 'string' ? msg.body : null) ||
             (typeof msg.content === 'string' ? msg.content : null) || null,
-          audioMimeType: audioMsg?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
+          audioMediaKey: audioMsg?.mediaKey || contentObj?.mediaKey || null,
+          audioMimeType: audioMsg?.mimetype || contentObj?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
           rawMsg: msg,
           _rawAudio: audioMsg || realMsg,
         }
@@ -355,7 +359,47 @@ export function parseWebhookPayload(body) {
  * @param {object} rawMsg - Objeto message completo do Evolution API (msg.key + msg.message)
  * @param {string} audioUrl - URL direta do CDN (fallback)
  */
-export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, audioUrl, log }) {
+/**
+ * Descriptografa um arquivo de mídia do WhatsApp (AES-256-CBC via HKDF).
+ * @param {Buffer} encData - Buffer do arquivo .enc baixado do CDN
+ * @param {string} mediaKeyB64 - mediaKey em base64 (vem no payload da mensagem)
+ * @param {string} mediaType - 'audio' | 'image' | 'video' | 'document'
+ */
+async function decryptWhatsAppMedia(encData, mediaKeyB64, mediaType = 'audio') {
+  const { createHmac, createDecipheriv } = await import('node:crypto')
+  const mediaKey = Buffer.from(mediaKeyB64, 'base64')
+
+  const infoMap = {
+    audio: 'WhatsApp Audio Keys',
+    image: 'WhatsApp Image Keys',
+    video: 'WhatsApp Video Keys',
+    document: 'WhatsApp Document Keys',
+  }
+  const info = Buffer.from(infoMap[mediaType] || 'WhatsApp Audio Keys')
+  const salt = Buffer.alloc(32) // zero-filled
+
+  // HKDF-Extract
+  const prk = createHmac('sha256', salt).update(mediaKey).digest()
+
+  // HKDF-Expand: 112 bytes
+  const n = Math.ceil(112 / 32)
+  let okm = Buffer.alloc(0)
+  let t = Buffer.alloc(0)
+  for (let i = 1; i <= n; i++) {
+    t = createHmac('sha256', prk).update(Buffer.concat([t, info, Buffer.from([i])])).digest()
+    okm = Buffer.concat([okm, t])
+  }
+  const expanded = okm.slice(0, 112)
+  const iv = expanded.slice(0, 16)
+  const cipherKey = expanded.slice(16, 48)
+
+  // Remove 10-byte mac do final e decripta
+  const cipherData = encData.slice(0, -10)
+  const decipher = createDecipheriv('aes-256-cbc', cipherKey, iv)
+  return Buffer.concat([decipher.update(cipherData), decipher.final()])
+}
+
+export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, audioUrl, audioMediaKey, log }) {
   const base = apiUrl.replace(/\/$/, '')
   const name = instanceName || ''
   const _log = log || (() => {})
@@ -429,14 +473,29 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
     if (r) return r
   }
 
-  // ── Método 3: URL direta do CDN ──
-  if (audioUrl) {
+  // ── Método 3: Download direto do CDN WhatsApp + descriptografia ──
+  if (audioUrl && audioMediaKey) {
+    try {
+      _log(`[dl] CDN + decrypt: ${audioUrl.slice(0, 80)}`)
+      const res = await fetch(audioUrl, { signal: AbortSignal.timeout(30000) })
+      _log(`[dl] CDN → ${res.status}`)
+      if (res.ok) {
+        const encBuffer = Buffer.from(await res.arrayBuffer())
+        const decrypted = await decryptWhatsAppMedia(encBuffer, audioMediaKey, 'audio')
+        const base64 = decrypted.toString('base64')
+        return { base64, mimetype: 'audio/ogg; codecs=opus' }
+      }
+    } catch (e) {
+      _log(`[dl] CDN decrypt ERRO: ${e.message}`)
+    }
+  } else if (audioUrl) {
+    // Tenta URL sem descriptografia (caso não criptografado)
     try {
       const res = await fetch(audioUrl, {
         headers: buildHeaders(apiToken),
         signal: AbortSignal.timeout(20000),
       })
-      _log(`[dl] GET ${audioUrl.slice(0, 60)} → ${res.status}`)
+      _log(`[dl] GET audioUrl (sem decrypt) → ${res.status}`)
       if (res.ok) {
         const buffer = await res.arrayBuffer()
         const base64 = Buffer.from(buffer).toString('base64')
