@@ -5,6 +5,8 @@
 set -e
 
 echo "=== [1/7] LIMPANDO AMBIENTE ANTIGO ==="
+# Garante dependencias basicas de sistema
+sudo apt-get update -qq && sudo apt-get install -y python3-pip python3-venv -qq || true
 # Para e remove tudo do PM2 para evitar conflitos
 pm2 delete all || true
 # Mata processos residuais de Node/Vite/Python
