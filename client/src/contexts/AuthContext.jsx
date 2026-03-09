@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
@@ -7,6 +7,7 @@ const AuthContext = createContext({})
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null)
   const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const queryClient = useQueryClient()
 
   // 1. Gerenciar Sessão e Listener
   useEffect(() => {
@@ -73,11 +74,12 @@ export const AuthProvider = ({ children }) => {
   const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut()
+      queryClient.clear()
       setSession(null)
     } catch (err) {
       console.error('Sign out error:', err)
     }
-  }, [])
+  }, [queryClient])
 
   const loading = isSessionLoading || (!!session?.user?.id && isProfileLoading)
 

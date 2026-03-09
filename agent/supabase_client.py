@@ -605,3 +605,77 @@ async def search_tasks(
 
     tasks.sort(key=lambda t: (t.get("priority") or 4, t.get("due_date") or "9999"))
     return tasks[:20]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ETIQUETAS (labels / task_labels)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def create_label(user_id: str, name: str, color: Optional[str] = None) -> dict:
+    """Cria uma nova etiqueta para o usuário."""
+    payload = {"name": name, "owner_id": user_id}
+    if color:
+        payload["color"] = color
+    res = _supabase.table("labels").insert(payload).execute()
+    if not res.data:
+        raise ValueError(f"Erro ao criar etiqueta: {res}")
+    return res.data[0]
+
+
+async def list_labels(user_id: str) -> list[dict]:
+    """Lista todas as etiquetas do usuário."""
+    res = (
+        _supabase.table("labels")
+        .select("id, name, color")
+        .eq("owner_id", user_id)
+        .order("name")
+        .execute()
+    )
+    return res.data or []
+
+
+async def find_label_by_name(user_id: str, name: str) -> Optional[dict]:
+    """Busca uma etiqueta pelo nome (correspondência parcial)."""
+    res = (
+        _supabase.table("labels")
+        .select("id, name, color")
+        .eq("owner_id", user_id)
+        .ilike("name", f"%{name}%")
+        .limit(1)
+        .execute()
+    )
+    return res.data[0] if res.data else None
+
+
+async def add_label_to_task(task_id: str, label_id: str) -> bool:
+    """Adiciona uma etiqueta a uma tarefa (ignora duplicata)."""
+    _supabase.table("task_labels").upsert(
+        {"task_id": task_id, "label_id": label_id},
+        on_conflict="task_id,label_id"
+    ).execute()
+    return True
+
+
+async def remove_label_from_task(task_id: str, label_id: str) -> bool:
+    """Remove uma etiqueta de uma tarefa."""
+    _supabase.table("task_labels").delete().eq("task_id", task_id).eq("label_id", label_id).execute()
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUBTAREFAS
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def find_subtask_by_name(user_id: str, name: str, parent_id: Optional[str] = None) -> Optional[dict]:
+    """Busca uma subtarefa pelo nome (deve ter parent_id)."""
+    q = (
+        _supabase.table("tasks")
+        .select("id, title, status, parent_id")
+        .not_.is_("parent_id", None)
+        .ilike("title", f"%{name}%")
+    )
+    if parent_id:
+        q = q.eq("parent_id", parent_id)
+    q = q.limit(1)
+    res = q.execute()
+    return res.data[0] if res.data else None

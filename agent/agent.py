@@ -374,28 +374,86 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "concluir_subtarefa",
+            "description": "Marca uma subtarefa específica como concluída.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_subtarefa": {"type": "string", "description": "Nome (parcial) da subtarefa a concluir"},
+                    "nome_tarefa_pai": {"type": "string", "description": "Nome da tarefa pai (opcional, para desambiguar)"},
+                },
+                "required": ["nome_subtarefa"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "criar_etiqueta",
+            "description": "Cria uma nova etiqueta/label para organizar tarefas.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome": {"type": "string", "description": "Nome da etiqueta"},
+                    "cor": {"type": "string", "description": "Cor hex da etiqueta (ex: #ef4444). Opcional."},
+                },
+                "required": ["nome"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "listar_etiquetas",
+            "description": "Lista todas as etiquetas do usuário.",
+            "parameters": {"type": "object", "properties": {}},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "adicionar_etiqueta_tarefa",
+            "description": "Adiciona uma etiqueta a uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                    "nome_etiqueta": {"type": "string", "description": "Nome (parcial) da etiqueta a adicionar"},
+                },
+                "required": ["nome_tarefa", "nome_etiqueta"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "remover_etiqueta_tarefa",
+            "description": "Remove uma etiqueta de uma tarefa.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "nome_tarefa": {"type": "string", "description": "Nome (parcial) da tarefa"},
+                    "nome_etiqueta": {"type": "string", "description": "Nome (parcial) da etiqueta a remover"},
+                },
+                "required": ["nome_tarefa", "nome_etiqueta"],
+            },
+        },
+    },
 ]
 
-# ─── Tools por perfil ─────────────────────────────────────────────────────────
+# Todos os usuários têm acesso ao conjunto completo de ferramentas.
+# A separação por role foi removida — qualquer pessoa autenticada pode gerenciar projetos,
+# designar membros e usar todas as capacidades do agente.
 TOOLS_ADMIN = TOOLS
-
-# Colaboradores não podem gerenciar projetos, seções nem designar tarefas/membros
-_COLLABORATOR_BLOCKED = {
-    "criar_projeto",
-    "apagar_projeto",
-    "criar_secao",
-    "designar_tarefa",
-    "remover_designado_tarefa",
-    "designar_projeto",
-    "remover_membro_projeto",
-}
-TOOLS_COLLABORATOR = [t for t in TOOLS if t["function"]["name"] not in _COLLABORATOR_BLOCKED]
+TOOLS_COLLABORATOR = TOOLS
 
 SYSTEM_PROMPT = """Você é o assistente de produtividade do "Organizador". Você está integrado ao WhatsApp e Telegram e possui ferramentas reais para gerenciar tarefas, projetos e equipe diretamente no banco de dados.
 
 IDENTIDADE DO USUÁRIO:
 - Nome: {user_info}
-- Perfil: {user_role}
 - Data atual: {today}
 
 REGRA ABSOLUTA: Você SEMPRE sabe quem é o usuário. Nunca diga que não tem informações sobre ele — as informações estão acima.
@@ -405,54 +463,32 @@ COMPORTAMENTO:
 - Use emojis para confirmar ações: ✅ concluído, 📁 projeto, 👤 usuário, 🚨 urgente, 📅 data.
 - Seja proativo: se o usuário mencionar algo que claramente é uma tarefa, CRIE imediatamente sem pedir confirmação.
 - NUNCA invente dados — use sempre as ferramentas para buscar informações reais do banco.
-- Ao ser perguntado sobre suas funcionalidades, liste EXATAMENTE as capacidades abaixo, de forma detalhada.
+- Ao ser perguntado sobre suas funcionalidades, liste as capacidades abaixo de forma detalhada.
 
-{capabilities}
+SUAS CAPACIDADES:
+✅ Tarefas: criar, listar, editar, concluir, mover status (pendente/em progresso/concluída/cancelada), alterar prioridade, apagar tarefas e subtarefas.
+✅ Subtarefas: criar subtarefas dentro de uma tarefa pai, listar subtarefas, concluir subtarefas.
+✅ Projetos: criar, listar e apagar projetos. Criar seções dentro de projetos.
+✅ Etiquetas: criar etiquetas/labels, adicionar etiquetas a tarefas, remover etiquetas de tarefas, listar todas as etiquetas.
+✅ Equipe: listar membros da equipe, adicionar/remover membros de projetos, designar/remover colaboradores em tarefas.
+✅ Busca: buscar tarefas por texto, status, prioridade, data de vencimento ou tarefas atrasadas.
+✅ Datas inteligentes: interprete "hoje", "amanhã", "próxima segunda", "daqui a 3 dias" automaticamente. Hoje é {today}.
+✅ Áudio: transcreva e execute comandos de voz com o mesmo rigor de texto.
 
 COMO EXECUTAR AÇÕES:
-- Criar tarefa → use ferramenta criar_tarefa
-- Listar tarefas → use ferramenta listar_tarefas
-- Concluir tarefa → use ferramenta concluir_tarefa
-- Mover status → use ferramenta mover_tarefa
-- Editar tarefa → use ferramenta editar_tarefa
-- Apagar tarefa → use ferramenta apagar_tarefa
-- Criar projeto → use ferramenta criar_projeto (apenas admin)
-- Listar projetos → use ferramenta listar_projetos
-- Apagar projeto → use ferramenta apagar_projeto (apenas admin)
-- Criar seção → use ferramenta criar_secao (apenas admin)
-- Subtarefas → use ferramenta listar_subtarefas
-- Designar colaborador → use ferramenta designar_tarefa (apenas admin)
-- Remover designado → use ferramenta remover_designado_tarefa (apenas admin)
-- Ver designados → use ferramenta listar_designados_tarefa
-- Adicionar membro ao projeto → use ferramenta designar_projeto (apenas admin)
-- Remover membro do projeto → use ferramenta remover_membro_projeto (apenas admin)
-- Ver membros do projeto → use ferramenta listar_membros_projeto
-- Ver equipe → use ferramenta listar_equipe
-- Alterar prioridade → use ferramenta alterar_prioridade
-- Tarefas urgentes → use ferramenta listar_urgentes
-- Busca avançada → use ferramenta buscar_tarefas
-
-REGRAS POR PERFIL:
-- Se o usuário for Colaborador e tentar uma ação restrita, recuse educadamente: "Essa ação é exclusiva do Administrador."
-- Se o usuário for Administrador, execute qualquer ação sem restrição.
+- Criar tarefa → criar_tarefa | Listar tarefas → listar_tarefas | Concluir → concluir_tarefa
+- Mover status → mover_tarefa | Editar → editar_tarefa | Apagar → apagar_tarefa
+- Subtarefas → listar_subtarefas, criar_tarefa (com tarefa_pai), concluir_subtarefa
+- Etiquetas → criar_etiqueta, listar_etiquetas, adicionar_etiqueta_tarefa, remover_etiqueta_tarefa
+- Projetos → criar_projeto, listar_projetos, apagar_projeto, criar_secao
+- Equipe → listar_equipe, designar_tarefa, remover_designado_tarefa, listar_designados_tarefa
+- Membros de projeto → designar_projeto, remover_membro_projeto, listar_membros_projeto
+- Busca avançada → buscar_tarefas | Urgentes → listar_urgentes | Prioridade → alterar_prioridade
 
 Após cada ação, confirme com elegância: "✅ Pronto! [descrição do que foi feito]." """
 
-CAPABILITIES_ADMIN = """SUAS CAPACIDADES (Perfil: Administrador):
-✅ Tarefas: criar, listar, editar, concluir, mover status, alterar prioridade, apagar tarefas e subtarefas de QUALQUER membro da equipe.
-✅ Projetos: criar, listar e apagar projetos. Criar seções dentro de projetos. Ver todos os projetos do sistema.
-✅ Equipe: listar todos os colaboradores, adicionar/remover membros de projetos, designar/remover colaboradores de tarefas específicas.
-✅ Busca: buscar tarefas por texto, status (pendente/em progresso/concluída/cancelada), prioridade (urgente/alta/média/baixa), data de vencimento ou tarefas atrasadas.
-✅ Datas inteligentes: interprete "hoje", "amanhã", "próxima segunda", "daqui a 3 dias" automaticamente. Hoje é {today}.
-✅ Áudio: transcreva e execute comandos de voz com o mesmo rigor de texto."""
-
-CAPABILITIES_COLLABORATOR = """SUAS CAPACIDADES (Perfil: Colaborador):
-✅ Suas tarefas: criar, listar, editar, concluir, mover status, alterar prioridade, apagar suas próprias tarefas e subtarefas.
-✅ Projetos: visualizar projetos dos quais você é membro.
-✅ Equipe: ver lista de membros e quem está designado em cada tarefa.
-✅ Busca: buscar suas tarefas por texto, status, prioridade ou data de vencimento.
-✅ Datas inteligentes: interprete "hoje", "amanhã", "próxima segunda", "daqui a 3 dias" automaticamente. Hoje é {today}.
-⛔ Restrito ao Administrador: criar/apagar projetos, criar seções, designar colaboradores a tarefas, adicionar/remover membros de projetos."""
+CAPABILITIES_ADMIN = ""
+CAPABILITIES_COLLABORATOR = ""
 
 
 # ─── Executor das funções ─────────────────────────────────────────────────────
@@ -787,6 +823,55 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str, role: str = "c
                 lines.append(f"\n_...e mais {len(tasks) - 15} tarefas_")
             return "\n".join(lines)
 
+        elif tool_name == "concluir_subtarefa":
+            # Resolver tarefa pai opcional
+            parent_id = None
+            if args.get("nome_tarefa_pai"):
+                parent = await db.find_task_by_name(user_id, args["nome_tarefa_pai"], is_admin=is_admin)
+                if parent:
+                    parent_id = parent["id"]
+
+            subtask = await db.find_subtask_by_name(user_id, args["nome_subtarefa"], parent_id=parent_id)
+            if not subtask:
+                return f"❌ Subtarefa *{args['nome_subtarefa']}* não encontrada."
+            await db.update_task_status(subtask["id"], user_id, "completed")
+            return f"✅ Subtarefa concluída!\n*{subtask['title']}*"
+
+        elif tool_name == "criar_etiqueta":
+            etiqueta = await db.create_label(user_id, args["nome"], args.get("cor"))
+            cor_info = f" ({etiqueta.get('color', '')})" if etiqueta.get("color") else ""
+            return f"🏷️ Etiqueta *{etiqueta['name']}*{cor_info} criada com sucesso!"
+
+        elif tool_name == "listar_etiquetas":
+            etiquetas = await db.list_labels(user_id)
+            if not etiquetas:
+                return "🏷️ Nenhuma etiqueta encontrada. Crie uma com: 'criar etiqueta [nome]'."
+            lines = ["🏷️ *Suas etiquetas:*\n"]
+            for e in etiquetas:
+                cor = f" `{e['color']}`" if e.get("color") else ""
+                lines.append(f"• {e['name']}{cor}")
+            return "\n".join(lines)
+
+        elif tool_name == "adicionar_etiqueta_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            etiqueta = await db.find_label_by_name(user_id, args["nome_etiqueta"])
+            if not etiqueta:
+                return f"❌ Etiqueta *{args['nome_etiqueta']}* não encontrada. Crie-a primeiro."
+            await db.add_label_to_task(task["id"], etiqueta["id"])
+            return f"🏷️ Etiqueta *{etiqueta['name']}* adicionada à tarefa *{task['title']}*!"
+
+        elif tool_name == "remover_etiqueta_tarefa":
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
+            if not task:
+                return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
+            etiqueta = await db.find_label_by_name(user_id, args["nome_etiqueta"])
+            if not etiqueta:
+                return f"❌ Etiqueta *{args['nome_etiqueta']}* não encontrada."
+            await db.remove_label_from_task(task["id"], etiqueta["id"])
+            return f"🏷️ Etiqueta *{etiqueta['name']}* removida da tarefa *{task['title']}*."
+
         else:
             return f"Função desconhecida: {tool_name}"
 
@@ -810,16 +895,12 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
         user_info = "Não identificado"
         role = "collaborator"
     user_role = "Administrador" if role == "admin" else "Colaborador"
-    tools = TOOLS_ADMIN if role == "admin" else TOOLS_COLLABORATOR
-    capabilities = (
-        CAPABILITIES_ADMIN if role == "admin" else CAPABILITIES_COLLABORATOR
-    ).replace("{today}", today)
+    tools = TOOLS  # Todos os usuários têm acesso ao conjunto completo de ferramentas
+    capabilities = ""  # Capacidades já estão descritas no sistema prompt principal
     system = (
         SYSTEM_PROMPT
         .replace("{today}", today)
         .replace("{user_info}", user_info)
-        .replace("{user_role}", user_role)
-        .replace("{capabilities}", capabilities)
     )
 
     # Monta o histórico de conversa

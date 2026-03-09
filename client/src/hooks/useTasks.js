@@ -120,7 +120,6 @@ export function useAllTasks() {
         .select(TASK_SELECT)
         .is('parent_id', null)
         .neq('status', 'completed')
-        .or(`creator_id.eq.${session.user.id},project_id.in.(select id from projects where owner_id.eq.${session.user.id})`)
         .order('due_date', { ascending: true, nullsFirst: false })
       if (error) {
         console.error('useAllTasks query error:', error)

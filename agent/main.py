@@ -5,6 +5,7 @@ Ponto de entrada do agente: servidor FastAPI que recebe webhooks do WazAPI e Tel
 
 import os
 import re
+import sys
 from contextlib import asynccontextmanager
 from datetime import date
 from fastapi import FastAPI, Request, HTTPException
@@ -16,6 +17,11 @@ import user_registry as registry
 import supabase_client as db
 import telegram_client as telegram
 from agent import process_message, transcribe_audio
+
+# Fix Windows console encoding for emojis
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 load_dotenv()
 
