@@ -31,7 +31,10 @@ def get_user_id(phone: str) -> Optional[str]:
     Retorna o user_id do Supabase pelo número de telefone cadastrado no perfil.
     Normaliza os números para garantir o match (ignora símbolos e DDI).
     """
-    # Busca todos os perfis com telefone (tamanho da equipe costuma ser pequeno)
+    target = re.sub(r"\D", "", phone)
+    print(f"[Registry] Buscando user_id para telefone: {target}")
+    
+    # Busca todos os perfis com telefone
     res = (
         _supabase.table("profiles")
         .select("id, phone")
@@ -40,27 +43,29 @@ def get_user_id(phone: str) -> Optional[str]:
     )
     
     if not res.data:
+        print("[Registry] Nenhum perfil com telefone encontrado no banco.")
         return None
 
     def clean(p: str) -> str:
         return re.sub(r"\D", "", p)
 
-    target = clean(phone)
-    # Tenta match exato ou match parcial (ex: ignorando DDI ou o '9' extra)
+    # Tenta match exato ou match parcial
     for row in res.data:
         db_phone = clean(row["phone"])
         if not db_phone: continue
         
         # Match exato
         if db_phone == target:
+            print(f"[Registry] Match exato encontrado: {row['id']}")
             return row["id"]
         
         # Match parcial (ex: o banco tem com 55 e o zap manda sem, ou vice-versa)
         if db_phone.endswith(target) or target.endswith(db_phone):
-            # Garante que o match tenha pelo menos 8 dígitos para evitar falsos positivos
             if len(db_phone) >= 8 and len(target) >= 8:
+                print(f"[Registry] Match parcial encontrado: {row['id']} (db: {db_phone}, target: {target})")
                 return row["id"]
                 
+    print(f"[Registry] Nenhum match encontrado para {target}.")
     return None
 
 

@@ -143,10 +143,9 @@ async def _user_can_modify_task(task_id: str, user_id: str) -> bool:
         _supabase.table("tasks")
         .select("creator_id, project_id")
         .eq("id", task_id)
-        .single()
         .execute()
     )
-    task = res.data
+    task = res.data[0] if res.data else None
     if not task:
         return False
     if task["creator_id"] == user_id:
@@ -351,14 +350,20 @@ async def create_section(project_id: str, name: str) -> dict:
 
 async def get_profile(user_id: str) -> Optional[dict]:
     """Retorna perfil do usuário incluindo role."""
-    res = (
-        _supabase.table("profiles")
-        .select("id, full_name, email, role")
-        .eq("id", user_id)
-        .single()
-        .execute()
-    )
-    return res.data
+    print(f"[Supabase] Buscando perfil para ID: {user_id}")
+    try:
+        res = (
+            _supabase.table("profiles")
+            .select("id, full_name, email, role")
+            .eq("id", user_id)
+            .execute()
+        )
+        profile = res.data[0] if res.data else None
+        print(f"[Supabase] Perfil encontrado: {profile}")
+        return profile
+    except Exception as e:
+        print(f"[Supabase] Erro ao buscar perfil: {e}")
+        return None
 
 
 async def find_user_by_phone(phone: str) -> Optional[dict]:
@@ -379,10 +384,9 @@ async def find_user_by_email(email: str) -> Optional[dict]:
         _supabase.table("profiles")
         .select("id, full_name, email")
         .eq("email", email.strip().lower())
-        .single()
         .execute()
     )
-    return res.data
+    return res.data[0] if res.data else None
 
 
 async def find_user_by_name(name: str) -> Optional[dict]:
