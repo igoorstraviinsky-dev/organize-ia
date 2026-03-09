@@ -179,6 +179,27 @@ export const tools = [
   {
     type: 'function',
     function: {
+      name: 'remove_project_member',
+      description: 'Remove um colaborador de um projeto. Use quando o usuário quiser remover, retirar ou desatribuir alguém de um projeto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: {
+            type: 'string',
+            description: 'Nome do projeto',
+          },
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário a ser removido. Ex: "Rafael", "rafael@gmail.com"',
+          },
+        },
+        required: ['project_name', 'user_identifier'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'assign_project_member',
       description: 'Adiciona um colaborador a um projeto. Use quando o usuário quiser convidar ou atribuir alguém a um projeto inteiro.',
       parameters: {

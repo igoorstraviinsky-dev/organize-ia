@@ -334,6 +334,35 @@ export async function assignTask({ task_id, user_identifier }, phoneNumber) {
 }
 
 /**
+ * Executa: remove_project_member
+ */
+export async function removeProjectMember({ project_name, user_identifier }, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id, name')
+    .ilike('name', project_name)
+    .maybeSingle()
+
+  if (!project) return { error: `Projeto "${project_name}" não encontrado.` }
+
+  const assignee = await resolveUser(user_identifier)
+  if (!assignee) return { error: `Usuário "${user_identifier}" não encontrado.` }
+
+  const { error } = await supabase
+    .from('project_members')
+    .delete()
+    .eq('project_id', project.id)
+    .eq('user_id', assignee.id)
+
+  if (error) return { error: error.message }
+
+  return { success: true, message: `✅ ${assignee.full_name} removido do projeto ${project.name}.` }
+}
+
+/**
  * Executa: assign_project_member
  */
 export async function assignProjectMember({ project_name, user_identifier }, phoneNumber) {

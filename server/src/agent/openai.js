@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, listTasks, updateStatus } from './executor.js'
+import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus } from './executor.js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
@@ -16,6 +16,7 @@ const functionExecutors = {
   search_tasks:   { fn: searchTasks,   needsPhone: true },
   assign_task:    { fn: assignTask,    needsPhone: true },
   assign_project_member: { fn: assignProjectMember, needsPhone: true },
+  remove_project_member: { fn: removeProjectMember, needsPhone: true },
   list_tasks:     { fn: listTasks,     needsPhone: true },
   update_status:  { fn: updateStatus,  needsPhone: false },
 }
