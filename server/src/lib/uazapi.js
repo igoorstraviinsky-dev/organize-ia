@@ -267,7 +267,10 @@ export function parseWebhookPayload(body) {
           isPtt: audioMsg ? audioMsg.ptt === true : (realMsg.type === 'ptt' || msg.type === 'ptt' || msgTypeLC === 'audiomessage'),
           fileSha256: audioMsg?.fileSha256 || null,
           audioKey: msg.key || { remoteJid, fromMe, id: messageId },
-          audioUrl: audioMsg?.url || audioMsg?.mediaUrl || realMsg.body || msg.body || msg.content || null,
+          audioUrl: audioMsg?.url || audioMsg?.mediaUrl ||
+            (typeof realMsg.body === 'string' ? realMsg.body : null) ||
+            (typeof msg.body === 'string' ? msg.body : null) ||
+            (typeof msg.content === 'string' ? msg.content : null) || null,
           audioMimeType: audioMsg?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
           rawMsg: msg,
           _rawAudio: audioMsg || realMsg,

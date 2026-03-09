@@ -351,7 +351,8 @@ async function handleSSEEvent(eventName, rawData, integration) {
 async function processAudioAsync(parsed, integration, integrationId) {
   const { phone, messageId, contactName, timestamp, fileSha256 } = parsed
 
-  addLog(integrationId, 'info', `[audio] Iniciando processamento — phone=${phone} isPtt=${parsed.isPtt} audioUrl=${parsed.audioUrl?.slice(0,60)||'N/A'}`)
+  const audioUrlPreview = typeof parsed.audioUrl === 'string' ? parsed.audioUrl.slice(0, 60) : (parsed.audioUrl ? '[object]' : 'N/A')
+  addLog(integrationId, 'info', `[audio] Iniciando processamento — phone=${phone} isPtt=${parsed.isPtt} audioUrl=${audioUrlPreview}`)
 
   // 1. Verificar cache pelo hash do arquivo (evita re-transcrever o mesmo áudio)
   let transcribedText = fileSha256 ? transcriptionCache.get(fileSha256) : null
