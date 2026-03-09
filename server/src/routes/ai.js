@@ -1,36 +1,18 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
-import { supabase } from '../lib/supabase.js'
+import { authenticate } from '../middleware/auth.js'
 
 const router = Router()
 
 /**
- * Cria client Supabase autenticado com o JWT do usuário (respeita RLS).
- * Fallback para client de service role se não houver token.
- */
-function getUserClient(userToken) {
-  if (userToken) {
-    return createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY,
-      { global: { headers: { Authorization: `Bearer ${userToken}` } } }
-    )
-  }
-  return supabase
-}
-
-/**
  * GET /api/ai/settings
  * Retorna as configurações do Agente nativo para o usuário autenticado.
- * Header: x-user-id, x-user-token
+ * Protegido pelo middleware authenticate.
  */
-router.get('/settings', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.get('/settings', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const client = getUserClient(userToken)
+    const client = req.sb
     let { data, error } = await client
       .from('ai_agent_settings')
       .select('*')
@@ -58,18 +40,14 @@ router.get('/settings', async (req, res) => {
 /**
  * POST /api/ai/settings
  * Cria ou atualiza as configurações do Agente nativo.
- * Header: x-user-id, x-user-token
- * Body: { openai_api_key, system_prompt, is_active }
+ * Protegido pelo middleware authenticate.
  */
-router.post('/settings', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
-
+router.post('/settings', authenticate, async (req, res) => {
+  const userId = req.user.id
   const { openai_api_key, system_prompt, is_active } = req.body
 
   try {
-    const client = getUserClient(userToken)
+    const client = req.sb
 
     // Verifica se já existe
     const { data: existing } = await client

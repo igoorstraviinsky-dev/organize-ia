@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import multer from 'multer'
 import { supabase } from '../lib/supabase.js'
+import { authenticate } from '../middleware/auth.js'
 import {
   getInstanceStatus,
   connectInstance,
@@ -25,27 +25,11 @@ function logWebhook(payload, result) {
 }
 
 /**
- * Cria client Supabase autenticado com o JWT do usuário (respeita RLS).
- * Fallback para client de service role se não houver token.
- */
-function getUserClient(userToken) {
-  if (userToken) {
-    return createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY,
-      { global: { headers: { Authorization: `Bearer ${userToken}` } } }
-    )
-  }
-  return supabase
-}
-
-/**
  * Busca a integração UazAPI do usuário pelo user_id.
- * Usa o JWT do usuário para respeitar o RLS.
+ * Usa o cliente autenticado da requisição (req.sb).
  */
-async function getIntegration(userId, userToken) {
-  const client = getUserClient(userToken)
-  const { data, error } = await client
+async function getIntegration(userId, sb) {
+  const { data, error } = await sb
     .from('integrations')
     .select('*')
     .eq('user_id', userId)
@@ -60,15 +44,12 @@ async function getIntegration(userId, userToken) {
 /**
  * GET /api/uazapi/status
  * Consulta o status da instância do usuário.
- * Header: x-user-id
  */
-router.get('/status', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.get('/status', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     const result = await getInstanceStatus({ apiUrl: integration.api_url, apiToken: integration.api_token, instanceName: integration.instance_name })
     const state = result.state || 'unknown'
 
@@ -80,8 +61,7 @@ router.get('/status', async (req, res) => {
       stateStr.includes('connect') || stateStr.includes('open')
 
     // Atualiza status na tabela integrations
-    const client = getUserClient(userToken)
-    await client
+    await req.sb
       .from('integrations')
       .update({ status: isConnected ? 'connected' : 'disconnected' })
       .eq('id', integration.id)
@@ -95,18 +75,15 @@ router.get('/status', async (req, res) => {
 /**
  * POST /api/uazapi/connect
  * Gera o QR code para parear o celular.
- * Header: x-user-id
  */
-router.post('/connect', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.post('/connect', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
 
     // Atualiza status para 'connecting'
-    await supabase
+    await req.sb
       .from('integrations')
       .update({ status: 'connecting' })
       .eq('id', integration.id)
@@ -131,18 +108,15 @@ router.post('/connect', async (req, res) => {
 /**
  * POST /api/uazapi/disconnect
  * Desconecta a instância (logout do WhatsApp).
- * Header: x-user-id
  */
-router.post('/disconnect', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.post('/disconnect', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     const data = await logoutInstance({ apiUrl: integration.api_url, apiToken: integration.api_token, instanceName: integration.instance_name })
 
-    await supabase
+    await req.sb
       .from('integrations')
       .update({ status: 'disconnected' })
       .eq('id', integration.id)
@@ -157,13 +131,11 @@ router.post('/disconnect', async (req, res) => {
  * POST /api/uazapi/sse/start
  * Inicia (ou reinicia) o listener SSE para a integração do usuário.
  */
-router.post('/sse/start', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.post('/sse/start', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     startSSEListener(integration)
     res.json({ ok: true, message: 'SSE listener iniciado.' })
   } catch (err) {
@@ -175,13 +147,11 @@ router.post('/sse/start', async (req, res) => {
  * POST /api/uazapi/sse/stop
  * Para o listener SSE da integração do usuário.
  */
-router.post('/sse/stop', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.post('/sse/stop', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     stopSSEListener(integration.id)
     res.json({ ok: true, message: 'SSE listener parado.' })
   } catch (err) {
@@ -193,13 +163,11 @@ router.post('/sse/stop', async (req, res) => {
  * GET /api/uazapi/sse/status
  * Retorna se o listener SSE da integração está ativo.
  */
-router.get('/sse/status', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.get('/sse/status', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     const status = getSSEStatus(integration.id)
     res.json(status)
   } catch (err) {
@@ -211,13 +179,11 @@ router.get('/sse/status', async (req, res) => {
  * GET /api/uazapi/sse/logs
  * Retorna os últimos logs do listener SSE da integração.
  */
-router.get('/sse/logs', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
+router.get('/sse/logs', authenticate, async (req, res) => {
+  const userId = req.user.id
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     const logs = getSSELogs(integration.id)
     res.json({ logs })
   } catch (err) {
@@ -228,19 +194,14 @@ router.get('/sse/logs', async (req, res) => {
 /**
  * POST /api/uazapi/send
  * Envia mensagem de texto para um número.
- * Header: x-user-id
- * Body: { to: '5511999998888', text: 'Olá!' }
  */
-router.post('/send', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
-
+router.post('/send', authenticate, async (req, res) => {
+  const userId = req.user.id
   const { to, text } = req.body
   if (!to || !text) return res.status(400).json({ error: 'Campos "to" e "text" são obrigatórios.' })
 
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
 
     const result = await sendTextMessage({
       apiUrl: integration.api_url,
@@ -250,8 +211,8 @@ router.post('/send', async (req, res) => {
       text,
     })
 
-    // Salva mensagem enviada no banco
-    await supabase.from('chat_messages').insert({
+    // Salva mensagem enviada no banco usando o cliente da requisição
+    await req.sb.from('chat_messages').insert({
       integration_id: integration.id,
       user_id: userId,
       phone: to,
@@ -270,15 +231,20 @@ router.post('/send', async (req, res) => {
 /**
  * POST /api/uazapi/webhook
  * Recebe mensagens/eventos do UazAPI.
- * A UazAPI chama este endpoint quando chega uma mensagem.
- * Não requer autenticação de usuário — usa instance_name para identificar a integração.
+ * Protegido por segredo compartilhado (WHATSAPP_WEBHOOK_SECRET).
  */
 router.post('/webhook', async (req, res) => {
+  // Validação de segredo para evitar falsificações
+  const secret = req.query.secret || req.headers['x-webhook-secret']
+  if (process.env.WHATSAPP_WEBHOOK_SECRET && secret !== process.env.WHATSAPP_WEBHOOK_SECRET) {
+    console.warn('[UazAPI Webhook] Tentativa de acesso sem segredo válido.')
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+
   // Responde 200 imediatamente para a UazAPI não reenviar
   res.sendStatus(200)
 
   const body = req.body
-  // Loga o payload bruto SEMPRE — para diagnóstico
   logWebhook(body, { step: 'received' })
   console.log('[UazAPI Webhook] RAW:', JSON.stringify(body).slice(0, 500))
 
@@ -286,7 +252,6 @@ router.post('/webhook', async (req, res) => {
     const parsed = parseWebhookPayload(body)
     if (!parsed) {
       logWebhook(body, { step: 'ignored', reason: 'payload_not_recognized' })
-      console.warn('[UazAPI Webhook] Payload não reconhecido — event:', body?.event, '| keys:', Object.keys(body || {}).join(','))
       return
     }
 
@@ -300,6 +265,7 @@ router.post('/webhook', async (req, res) => {
     }
 
     // Tenta encontrar a integração (por instance_name)
+    // Aqui usamos o supabase admin pois o webhook não tem token de usuário
     const instanceName = body?.instance || body?.instanceName || body?.instanceId ||
       body?.instanceKey?.instance || body?.key?.remoteJid?.split('@')[0] || null
 
@@ -317,7 +283,6 @@ router.post('/webhook', async (req, res) => {
 
     if (!integration) {
       logWebhook(body, { step: 'error', reason: 'no_integration_found', context: { instanceName } })
-      console.warn(`[UazAPI Webhook] Nenhuma integração encontrada para a instância: "${instanceName}".`)
       return
     }
 
@@ -325,7 +290,6 @@ router.post('/webhook', async (req, res) => {
     let mediaUrlToSave = null
     if (messageType === 'audio' && direction === 'in') {
       try {
-        console.log(`[UazAPI Webhook] Áudio detectado de ${phone}. Processando...`)
         const { transcribeAudioBase64 } = await import('../lib/openai.js')
         const { downloadMediaBase64 } = await import('../lib/uazapi.js')
         const { data: agentSettings } = await supabase
@@ -348,7 +312,6 @@ router.post('/webhook', async (req, res) => {
             const transcription = await transcribeAudioBase64(agentSettings.openai_api_key, media.base64, media.mimetype)
             if (transcription) {
               text = transcription
-              console.log(`[UazAPI Webhook] Transcrição de ${phone}: "${text}"`)
             }
           }
         }
@@ -357,7 +320,7 @@ router.post('/webhook', async (req, res) => {
       }
     }
 
-    // Salva mensagem (entrada ou saída)
+    // Salva mensagem no banco (usando admin client)
     const { error: insertError } = await supabase.from('chat_messages').insert({
       integration_id: integration.id,
       user_id: integration.user_id,
@@ -372,19 +335,11 @@ router.post('/webhook', async (req, res) => {
       media_url: mediaUrlToSave || audioUrl || null
     })
 
-    if (insertError) {
-      if (insertError.code === '23505') {
-        logWebhook(body, { step: 'duplicate', phone, direction })
-      } else {
-        logWebhook(body, { step: 'insert_error', error: insertError.message, phone })
-        console.error('[UazAPI Webhook] Erro INSERT:', insertError.message, insertError.code)
-      }
-    } else {
+    if (!insertError) {
       logWebhook(body, { step: 'saved', phone, direction, text: text?.slice(0, 60) })
-      console.log(`[UazAPI Webhook] ✓ ${direction} | ${phone}: "${(text || '').slice(0, 60)}"`)
     }
 
-    // --- AI Agent: só dispara em mensagens recebidas ---
+    // --- AI Agent ---
     if (direction !== 'in' || !text) return
 
     try {
@@ -395,8 +350,7 @@ router.post('/webhook', async (req, res) => {
         .eq('is_active', true)
         .maybeSingle()
 
-      if (agentSettings && agentSettings.openai_api_key) {
-        // --- NOVO: Filtro de Colaboradores ---
+      if (agentSettings?.openai_api_key) {
         if (agentSettings.only_collaborators) {
           const cleanPhone = phone.replace(/\D/g, '')
           const { data: isCollaborator } = await supabase
@@ -405,28 +359,18 @@ router.post('/webhook', async (req, res) => {
             .filter('phone', 'ilike', `%${cleanPhone}%`)
             .maybeSingle()
 
-          if (!isCollaborator) {
-            console.log(`[AI Agent] Ignorando mensagem de ${phone}: não é um colaborador cadastrado.`)
-            return
-          }
+          if (!isCollaborator) return
         }
-        // --- Fim Filtro ---
 
-        console.log(`[AI Agent] Disparando LLM para ${phone}...`)
-        
-        // 2. Chama a lib/openai.js com o prompt preenchido
-        const prompt = agentSettings.system_prompt || 'Você é um assistente virtual gentil e conciso. Responda brevemente.'
-        const apiKey = agentSettings.openai_api_key
-        
+        const prompt = agentSettings.system_prompt || 'Você é um assistente virtual gentil e conciso.'
         const aiResponse = await generateAIResponse(
           integration.user_id,
-          apiKey,
+          agentSettings.openai_api_key,
           prompt,
           phone,
           text
         )
 
-        // 3. Devolve resposta via WhatsApp
         if (aiResponse) {
           const result = await sendTextMessage({
             apiUrl: integration.api_url,
@@ -436,7 +380,6 @@ router.post('/webhook', async (req, res) => {
             text: aiResponse,
           })
 
-          // 4. Salva a resposta do Agente no log
           await supabase.from('chat_messages').insert({
             integration_id: integration.id,
             user_id: integration.user_id,
@@ -446,14 +389,11 @@ router.post('/webhook', async (req, res) => {
             message_id: result?.messageid || result?.key?.id || result?.messageId || `ai-${Date.now()}`,
             status: 'sent',
           })
-
-          console.log(`[AI Agent] Resposta enviada para ${phone}`)
         }
       }
     } catch (aiErr) {
       console.error('[AI Agent Webhook Error]', aiErr.message)
     }
-    // --- Fim Integração AI Agent ---
 
   } catch (err) {
     console.error('[UazAPI Webhook] Erro:', err.message)
@@ -464,36 +404,31 @@ router.post('/webhook', async (req, res) => {
  * GET /api/uazapi/webhook-logs
  * Retorna os últimos payloads recebidos no webhook (diagnóstico).
  */
-router.get('/webhook-logs', (_req, res) => {
+router.get('/webhook-logs', authenticate, (_req, res) => {
   res.json({ count: webhookLogs.length, logs: webhookLogs })
 })
 
 /**
  * POST /api/uazapi/webhook/test
- * Simula o recebimento de uma mensagem — útil para testar sem UazAPI configurada.
- * Header: x-user-id
- * Body: { phone: '5511999998888', text: 'Olá!', contact_name?: 'João' }
+ * Simula o recebimento de uma mensagem.
  */
-router.post('/webhook/test', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
-
+router.post('/webhook/test', authenticate, async (req, res) => {
+  const userId = req.user.id
   const { phone, text, contact_name } = req.body
   if (!phone || !text) return res.status(400).json({ error: 'Campos "phone" e "text" são obrigatórios.' })
 
   try {
-    // Busca a integração do usuário (se existir) para vincular o integration_id
-    const { data: integration } = await supabase
+    const { data: integration } = await req.sb
       .from('integrations')
       .select('id')
       .eq('user_id', userId)
       .eq('provider', 'uazapi')
       .maybeSingle()
 
-    const { data, error } = await supabase.from('chat_messages').insert({
+    const { data, error } = await req.sb.from('chat_messages').insert({
       integration_id: integration?.id || null,
       user_id: userId,
-      phone: phone.replace(/\D/g, ''), // normaliza: só dígitos
+      phone: phone.replace(/\D/g, ''),
       contact_name: contact_name || null,
       direction: 'in',
       body: text,
@@ -502,27 +437,20 @@ router.post('/webhook/test', async (req, res) => {
     }).select().single()
 
     if (error) throw error
-
-    console.log(`[Webhook Test] Mensagem simulada de ${phone}: "${text}"`)
     res.json({ ok: true, message: data })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-
 /**
  * GET /api/uazapi/debug
- * Testa vários endpoints da UazAPI e retorna o que funciona.
- * Header: x-user-id
+ * Testa vários endpoints da UazAPI.
  */
-router.get('/debug', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
-
+router.get('/debug', authenticate, async (req, res) => {
+  const userId = req.user.id
   try {
-    const integration = await getIntegration(userId, userToken)
+    const integration = await getIntegration(userId, req.sb)
     const base = integration.api_url.replace(/\/$/, '')
     const token = integration.api_token
     const instanceName = integration.instance_name || ''
@@ -547,74 +475,25 @@ router.get('/debug', async (req, res) => {
         results.push({ url, error: e.message })
       }
     }
-
     res.json({ integration: { api_url: base, instance_name: instanceName }, results })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-
-/**
- * GET /api/uazapi/probe
- * Retorna a resposta RAW da UazAPI para diagnóstico.
- */
-router.get('/probe', async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatório' })
-
-  try {
-    const integration = await getIntegration(userId, userToken)
-    const base = integration.api_url.replace(/\/.$/, '').replace(/\/$/, '')
-    const token = integration.api_token
-    const name = integration.instance_name || ''
-
-    const headers = { 'Content-Type': 'application/json', 'token': token, 'apikey': token }
-    const results = []
-
-    for (const path of [
-      `/instance/status`,
-      `/instance/connectionState`,
-      `/instance/connectionState/${name}`,
-      `/instance/fetchInstances`,
-    ]) {
-      try {
-        const r = await fetch(`${base}${path}`, { headers, signal: AbortSignal.timeout(5000) })
-        const text = await r.text()
-        let json = null
-        try { json = JSON.parse(text) } catch {}
-        results.push({ path, status: r.status, json })
-      } catch (e) {
-        results.push({ path, error: e.message })
-      }
-    }
-
-    res.json({ base, name, results })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-
 /**
  * POST /api/uazapi/send-audio
- * Envia nota de voz (PTT). Recebe o arquivo via multipart/form-data.
- * Header: x-user-id, x-user-token
- * Form fields: to (numero), file (audio)
+ * Envia nota de voz (PTT).
  */
-router.post('/send-audio', upload.single('file'), async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatorio' })
+router.post('/send-audio', authenticate, upload.single('file'), async (req, res) => {
+  const userId = req.user.id
   if (!req.file) return res.status(400).json({ error: 'Campo "file" e obrigatorio' })
 
   const { to } = req.body
   if (!to) return res.status(400).json({ error: 'Campo "to" e obrigatorio' })
 
   try {
-    const integration = await getIntegration(userId, userToken)
-
+    const integration = await getIntegration(userId, req.sb)
     const result = await sendAudioMessage({
       apiUrl: integration.api_url,
       apiToken: integration.api_token,
@@ -624,9 +503,7 @@ router.post('/send-audio', upload.single('file'), async (req, res) => {
       filename: req.file.originalname || 'audio.ogg',
     })
 
-    // Salva no banco
-    const client = getUserClient(userToken)
-    await client.from('chat_messages').insert({
+    await req.sb.from('chat_messages').insert({
       integration_id: integration.id,
       user_id: userId,
       phone: to,
@@ -646,22 +523,17 @@ router.post('/send-audio', upload.single('file'), async (req, res) => {
 
 /**
  * POST /api/uazapi/send-image
- * Envia imagem. Recebe o arquivo via multipart/form-data.
- * Header: x-user-id, x-user-token
- * Form fields: to (numero), caption (opcional), file (imagem)
+ * Envia imagem.
  */
-router.post('/send-image', upload.single('file'), async (req, res) => {
-  const userId = req.headers['x-user-id']
-  const userToken = req.headers['x-user-token'] || ''
-  if (!userId) return res.status(401).json({ error: 'x-user-id obrigatorio' })
+router.post('/send-image', authenticate, upload.single('file'), async (req, res) => {
+  const userId = req.user.id
   if (!req.file) return res.status(400).json({ error: 'Campo "file" e obrigatorio' })
 
   const { to, caption } = req.body
   if (!to) return res.status(400).json({ error: 'Campo "to" e obrigatorio' })
 
   try {
-    const integration = await getIntegration(userId, userToken)
-
+    const integration = await getIntegration(userId, req.sb)
     const result = await sendImageMessage({
       apiUrl: integration.api_url,
       apiToken: integration.api_token,
@@ -672,8 +544,7 @@ router.post('/send-image', upload.single('file'), async (req, res) => {
       caption: caption || '',
     })
 
-    const client = getUserClient(userToken)
-    await client.from('chat_messages').insert({
+    await req.sb.from('chat_messages').insert({
       integration_id: integration.id,
       user_id: userId,
       phone: to,

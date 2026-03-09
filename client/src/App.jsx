@@ -25,16 +25,17 @@ export default function App() {
     <Routes>
       <Route
         path="/login"
-        element={!session ? <Login /> : <Navigate to="/" replace />}
+        element={!session ? <Login /> : <Navigate to="/app/today" replace />}
       />
       <Route
         path="/register"
-        element={!session ? <Register /> : <Navigate to="/" replace />}
+        element={!session ? <Register /> : <Navigate to="/app/today" replace />}
       />
       <Route
-        path="/*"
-        element={session ? <Dashboard session={session} onSignOut={signOut} /> : <Navigate to="/login" replace />}
+        path="/app/:view?/:id?"
+        element={session ? <Dashboard onSignOut={signOut} /> : <Navigate to="/login" replace />}
       />
+      <Route path="/" element={<Navigate to="/app/today" replace />} />
     </Routes>
   )
 }

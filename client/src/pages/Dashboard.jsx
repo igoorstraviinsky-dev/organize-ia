@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useParams, useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import { List, LayoutGrid } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProjects } from "../hooks/useProjects";
@@ -12,21 +13,26 @@ import WhatsAppChat from '../components/chat/WhatsAppChat';
 import SettingsPage from './SettingsPage';
 
 export default function Dashboard({ onSignOut }) {
+  const { view, id } = useParams();
+  const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { data: projects = [] } = useProjects();
-  const [currentView, setCurrentView] = useState("inbox");
-  const [currentProjectId, setCurrentProjectId] = useState(null);
+  
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'board'
 
   useRealtimeTasks();
 
-  // Auto-selecionar Inbox ao carregar
+  const currentView = view || "inbox";
+  const currentProjectId = id || null;
+
+  // Auto-selecionar Inbox ao carregar se estiver na raiz do app
   useEffect(() => {
-    if (currentView === "inbox" && !currentProjectId && projects.length > 0) {
+    if (projects.length > 0 && view === undefined) {
       const inbox = projects.find((p) => p.name === "Inbox");
-      if (inbox) setCurrentProjectId(inbox.id);
+      if (inbox) navigate(`/app/inbox/${inbox.id}`, { replace: true });
+      else navigate(`/app/today`, { replace: true });
     }
-  }, [projects, currentView, currentProjectId]);
+  }, [projects, view, navigate]);
 
   if (loading) {
     return (
@@ -56,21 +62,6 @@ export default function Dashboard({ onSignOut }) {
   const showViewToggle = currentView === "project" || currentView === "inbox";
   const isFullHeight = currentView === 'chat';
 
-  const renderContent = () => {
-    if (currentView === 'upcoming') return <Upcoming />
-    if (currentView === 'labels') return <LabelsPage />
-    if (currentView === 'chat') return <WhatsAppChat />
-    if (currentView === 'settings') return <SettingsPage />
-
-    return (
-      <TaskList
-        projectId={currentView === 'today' ? null : currentProjectId}
-        title={getTitle()}
-        filterToday={currentView === 'today'}
-      />
-    )
-  }
-
   const ViewToggle = () => (
     <div className="flex rounded-xl border border-white/5 bg-white/5 p-1 backdrop-blur-md shadow-inner">
       <button
@@ -98,25 +89,20 @@ export default function Dashboard({ onSignOut }) {
     </div>
   );
 
-  // No modo board: usar largura total para as colunas caberem na tela
   const isBoardMode = viewMode === "board" && showViewToggle;
 
   return (
     <div className="flex h-screen bg-brand-gray text-slate-900 font-sans">
       <Sidebar
         currentView={currentView}
-        onViewChange={(view) => {
-          setCurrentView(view);
-          setViewMode("list");
-        }}
-        onProjectSelect={setCurrentProjectId}
+        onViewChange={(newView) => navigate(`/app/${newView}`)}
+        onProjectSelect={(projectId) => navigate(`/app/project/${projectId}`)}
         currentProjectId={currentProjectId}
         onSignOut={onSignOut}
         role={user?.profile?.role}
         userId={user?.id}
       />
       <main className="flex-1 overflow-hidden p-8 flex flex-col">
-        {/* Main Content Card */}
         <div className="flex-1 premium-card flex flex-col overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-100 bg-white px-10 py-8">
             <h1 className="text-3xl font-extrabold tracking-tight font-display uppercase" style={{ color: '#17112E' }}>
@@ -128,7 +114,16 @@ export default function Dashboard({ onSignOut }) {
           </div>
           
           <div className={`flex-1 overflow-auto custom-scrollbar ${isFullHeight ? '' : 'p-10'}`}>
-            {isBoardMode ? <KanbanBoard projectId={currentProjectId} /> : renderContent()}
+            <Routes>
+              <Route path="today" element={<TaskList projectId={null} title="Hoje" filterToday={true} />} />
+              <Route path="inbox/:id?" element={isBoardMode ? <KanbanBoard projectId={currentProjectId} /> : <TaskList projectId={currentProjectId} title="Inbox" />} />
+              <Route path="project/:id" element={isBoardMode ? <KanbanBoard projectId={currentProjectId} /> : <TaskList projectId={currentProjectId} title={getTitle()} />} />
+              <Route path="upcoming" element={<Upcoming />} />
+              <Route path="labels" element={<LabelsPage />} />
+              <Route path="chat" element={<WhatsAppChat />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="*" element={<Navigate to="today" replace />} />
+            </Routes>
           </div>
         </div>
       </main>

@@ -70,31 +70,37 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
       key: 'inbox',
       icon: Inbox,
       label: 'Inbox',
-      onClick: () => { onViewChange('inbox'); inboxProject && onProjectSelect(inboxProject.id) },
+      onClick: () => {
+        if (inboxProject) {
+          onViewChange(`inbox/${inboxProject.id}`);
+        } else {
+          onViewChange('inbox');
+        }
+      },
     },
     {
       key: 'today',
       icon: Calendar,
       label: 'Hoje',
-      onClick: () => { onViewChange('today'); onProjectSelect(null) },
+      onClick: () => onViewChange('today'),
     },
     {
       key: 'upcoming',
       icon: CalendarRange,
       label: 'Em Breve',
-      onClick: () => { onViewChange('upcoming'); onProjectSelect(null) },
+      onClick: () => onViewChange('upcoming'),
     },
     {
       key: 'labels',
       icon: Tag,
       label: 'Filtros e Etiquetas',
-      onClick: () => { onViewChange('labels'); onProjectSelect(null) },
+      onClick: () => onViewChange('labels'),
     },
     isAdmin && {
       key: 'chat',
       icon: MessageCircle,
       label: 'Chat WhatsApp',
-      onClick: () => { onViewChange('chat'); onProjectSelect(null) },
+      onClick: () => onViewChange('chat'),
     },
   ].filter(Boolean)
 
@@ -197,7 +203,7 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
                 return (
                   <div key={project.id} className="group flex items-center px-1">
                     <button
-                      onClick={() => { onViewChange('project'); onProjectSelect(project.id) }}
+                      onClick={() => { onProjectSelect(project.id) }}
                       className={`flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-xs transition-all relative overflow-hidden ${
                         isActive
                           ? 'bg-[#8E44AD]/20 text-white font-bold'

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { authenticate } from '../middleware/auth.js'
 
 const router = Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -39,9 +40,11 @@ function parseEnv(filePath) {
 
 /**
  * GET /api/config/supabase
- * Lê as variáveis de ambiente atuais
+ * Lê as variáveis de ambiente atuais.
+ * Apenas usuários autenticados podem ler (RLS cuidará do resto se necessário, 
+ * mas aqui é leitura direta de arquivo, então ser autenticado é o mínimo).
  */
-router.get('/supabase', (req, res) => {
+router.get('/supabase', authenticate, (req, res) => {
   const serverEnv = parseEnv(SERVER_ENV_PATH)
   const clientEnv = parseEnv(CLIENT_ENV_PATH)
   
@@ -54,9 +57,10 @@ router.get('/supabase', (req, res) => {
 
 /**
  * POST /api/config/supabase
- * Atualiza os arquivos .env do frontend e do backend
+ * Atualiza os arquivos .env do frontend e do backend.
+ * Requer autenticação.
  */
-router.post('/supabase', (req, res) => {
+router.post('/supabase', authenticate, (req, res) => {
   const { supabase_url, supabase_anon_key, supabase_service_key } = req.body
 
   try {
@@ -76,7 +80,7 @@ router.post('/supabase', (req, res) => {
     
     res.json({ success: true, message: 'Configurações atualizadas com sucesso! O servidor será reiniciado automaticamente em 2 segundos.' })
     
-    // Desliga a API para que o gerenciador de processos (ex: bat do usuário) reinicie a aplicação
+    // Desliga a API para que o gerenciador de processos reinicie a aplicação
     setTimeout(() => {
       console.log('[System] Reiniciando processo Node a pedido da interface de configuração...')
       process.exit(1)
