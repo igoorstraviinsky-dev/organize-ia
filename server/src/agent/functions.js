@@ -251,6 +251,27 @@ export const tools = [
   {
     type: 'function',
     function: {
+      name: 'send_message',
+      description: 'Envia uma mensagem WhatsApp para um usuário do sistema pelo nome ou email. Use quando o usuário quiser mandar, enviar ou encaminhar uma mensagem para alguém da equipe.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário que receberá a mensagem. Ex: "Diego", "diego@naprata.com"',
+          },
+          message: {
+            type: 'string',
+            description: 'Texto da mensagem a ser enviada',
+          },
+        },
+        required: ['user_identifier', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'update_status',
       description: 'Atualiza o status de uma tarefa. Use para marcar como concluída, reabrir, cancelar ou alterar o status.',
       parameters: {

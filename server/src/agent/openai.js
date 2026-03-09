@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus } from './executor.js'
+import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage } from './executor.js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
@@ -19,6 +19,7 @@ const functionExecutors = {
   remove_project_member: { fn: removeProjectMember, needsPhone: true },
   list_tasks:     { fn: listTasks,     needsPhone: true },
   update_status:  { fn: updateStatus,  needsPhone: false },
+  send_message:   { fn: sendMessage,   needsPhone: true },
 }
 
 const getSystemPrompt = (userName, userRole, teamMembersList) => {
@@ -33,6 +34,7 @@ Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
    - Criar, editar, buscar e deletar tarefas e projetos.
    - Atribuir tarefas a membros da equipe usando a ferramenta 'assign_task'.
    - Adicionar membros a projetos usando a ferramenta 'assign_project_member'.
+   - Enviar mensagens WhatsApp para membros da equipe usando a ferramenta 'send_message'.
    - Consultar e listar membros da equipe.
 2. NUNCA diga que não consegue fazer uma tarefa de gerenciamento ou atribuição. Se o usuário pedir para "atribuir a X", use a tool correspondente.
 3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome fornecido no comando.

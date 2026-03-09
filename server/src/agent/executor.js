@@ -521,6 +521,69 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
 }
 
 /**
+ * Executa: send_message
+ */
+export async function sendMessage({ user_identifier, message }, phoneNumber) {
+  const senderUserId = await resolveUserId(phoneNumber)
+  if (!senderUserId) return { error: 'Usuário remetente não encontrado.' }
+
+  const recipient = await resolveUser(user_identifier)
+  if (!recipient) return { error: `Usuário "${user_identifier}" não encontrado.` }
+
+  const { data: toProfile } = await supabase
+    .from('profiles')
+    .select('phone')
+    .eq('id', recipient.id)
+    .maybeSingle()
+
+  if (!toProfile?.phone) {
+    return { error: `${recipient.full_name} não tem número de telefone cadastrado.` }
+  }
+
+  const cleanPhone = String(toProfile.phone).replace(/[^0-9]/g, '')
+  if (!cleanPhone) {
+    return { error: `Número de telefone inválido para ${recipient.full_name}.` }
+  }
+
+  // Busca integração UazAPI do remetente, ou qualquer uma ativa
+  let { data: integration } = await supabase
+    .from('integrations')
+    .select('api_url, api_token, instance_name')
+    .eq('user_id', senderUserId)
+    .eq('provider', 'uazapi')
+    .maybeSingle()
+
+  if (!integration) {
+    const { data: any } = await supabase
+      .from('integrations')
+      .select('api_url, api_token, instance_name')
+      .eq('provider', 'uazapi')
+      .not('api_url', 'is', null)
+      .maybeSingle()
+    integration = any
+  }
+
+  if (!integration) {
+    return { error: 'Nenhuma integração WhatsApp (UazAPI) configurada.' }
+  }
+
+  try {
+    await sendTextMessage({
+      apiUrl: integration.api_url,
+      apiToken: integration.api_token,
+      instanceName: integration.instance_name,
+      number: cleanPhone,
+      text: message,
+    })
+    console.log(`[SendMessage] Mensagem enviada para ${recipient.full_name} (${cleanPhone})`)
+    return { success: true, message: `✅ Mensagem enviada para ${recipient.full_name}` }
+  } catch (err) {
+    console.error('[SendMessage] Erro ao enviar:', err.message)
+    return { error: `Falha ao enviar mensagem: ${err.message}` }
+  }
+}
+
+/**
  * Executa: update_status
  */
 export async function updateStatus({ task_id, status }) {
