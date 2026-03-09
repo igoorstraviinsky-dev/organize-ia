@@ -48,11 +48,15 @@ function brPhonesMatch(a, b) {
   return false;
 }
 
-const getSystemPrompt = (userName, userRole, teamMembersList) => {
+const getSystemPrompt = (currentUser, teamMembersList) => {
+  const userLine = currentUser
+    ? `**${currentUser.full_name}** | ID: ${currentUser.id} | Cargo: ${currentUser.role} | WhatsApp: ${currentUser.phone || 'não cadastrado'}`
+    : `**Usuário não identificado** (número não cadastrado no sistema)`;
+
   return `
 Você é o Agente Organizador, o núcleo de inteligência do sistema Organizador. Você é autoritário, eficiente e tem controle total sobre as tarefas, projetos e colaboração da equipe.
 
-Você está conversando com: **${userName}** (Cargo: ${userRole}).
+Você está conversando com: ${userLine}
 Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
 
 **Suas Instruções de Operação:**
@@ -63,10 +67,10 @@ Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
    - Enviar mensagens WhatsApp para membros da equipe usando a ferramenta 'send_message'.
    - Consultar e listar membros da equipe.
 2. NUNCA diga que não consegue fazer uma tarefa de gerenciamento ou atribuição. Se o usuário pedir para "atribuir a X", use a tool correspondente.
-3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome fornecido no comando.
-4. Use a lista de membros abaixo para resolver nomes para a ferramenta.
+3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome ou email da lista abaixo.
+4. Use SEMPRE o campo "email" (ou nome) como user_identifier nas ferramentas — nunca o ID diretamente.
 
-**Membros da Equipe cadastrados:**
+**Membros da Equipe cadastrados (todos os usuários do sistema):**
 ${teamMembersList}
 
 **Estilo de Resposta:**
@@ -80,57 +84,60 @@ ${teamMembersList}
  * Processa uma mensagem do usuário via OpenAI com Function Calling
  */
 export async function processMessage(userMessage, phoneNumber) {
-  // 1. Identificar o usuário
-  let userName = null;
-  let userRole = 'collaborator';
+  let currentUser = null; // { id, full_name, role, phone }
   let messages = [];
 
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
     console.log(`[Cérebro] Buscando perfil para: ${phoneNumber}`);
 
+    // Busca TODOS os membros (com e sem telefone) numa única query
     const { data: allProfiles } = await supabase
       .from('profiles')
-      .select('full_name, role, phone')
-      .not('phone', 'is', null);
+      .select('id, full_name, role, email, phone');
 
-    const profile = (allProfiles || []).find(p => {
+    const profiles = allProfiles || [];
+
+    // Identifica quem está conversando pelo telefone (com suporte ao nono dígito)
+    const matched = profiles.find(p => {
+      if (!p.phone) return false;
       const dbPhone = String(p.phone).replace(/[^0-9]/g, '');
       return dbPhone.length >= 8 && brPhonesMatch(cleanPhone, dbPhone);
     });
 
-    if (profile) {
-      userName = profile.full_name;
-      userRole = profile.role;
-      console.log(`[Cérebro] Usuário identificado: ${userName} (${userRole})`);
+    if (matched) {
+      currentUser = matched;
+      console.log(`[Cérebro] Usuário identificado: ${currentUser.full_name} (${currentUser.role}) | ID: ${currentUser.id}`);
     } else {
       console.log(`[Cérebro] Telefone ${cleanPhone} não cadastrado.`);
     }
 
-    // Buscar lista de membros da equipe para o prompt
-    const { data: team } = await supabase
-      .from('profiles')
-      .select('full_name, email');
-    
-    console.log(`[Cérebro] Equipe: ${team?.length || 0} membros encontrados.`);
-    
-    const history = CHAT_MEMORY.get(phoneNumber) || [];
-    const teamList = team?.map(u => `- ${u.full_name} (${u.email})`).join('\n') || 'Nenhum outro membro.';
+    // Monta lista de equipe com id, email, telefone e cargo para o prompt
+    const teamList = profiles.length > 0
+      ? profiles.map(u => {
+          const phone = u.phone ? String(u.phone).replace(/[^0-9]/g, '') : null;
+          const phoneLine = phone ? `telefone: ${phone}` : 'sem telefone cadastrado';
+          return `- **${u.full_name}** | email: ${u.email} | cargo: ${u.role} | ${phoneLine}`;
+        }).join('\n')
+      : 'Nenhum membro cadastrado.';
 
-    const systemPrompt = getSystemPrompt(userName, userRole, teamList);
-    
+    console.log(`[Cérebro] Equipe: ${profiles.length} membros encontrados.`);
+
+    const history = CHAT_MEMORY.get(phoneNumber) || [];
+    const systemPrompt = getSystemPrompt(currentUser, teamList);
+
     messages = [
       { role: 'system', content: systemPrompt },
       ...history,
       { role: 'user', content: userMessage },
     ];
-    
+
     console.log(`[Cérebro] Enviando para OpenAI (${MODEL})...`);
   } catch (err) {
     console.error('[Cérebro] Erro na preparação:', err.message);
     const history = CHAT_MEMORY.get(phoneNumber) || [];
     messages = [
-      { role: 'system', content: getSystemPrompt(null, 'collaborator', 'Nenhum membro.') },
+      { role: 'system', content: getSystemPrompt(null, 'Nenhum membro.') },
       ...history,
       { role: 'user', content: userMessage },
     ];
