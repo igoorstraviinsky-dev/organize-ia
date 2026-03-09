@@ -243,7 +243,8 @@ async function handleSSEEvent(eventName, rawData, integration) {
   if (data.message && typeof data.message === 'object') {
     const msg = data.message
     const msgInner = msg.message
-    addLog(integrationId, 'info', `[diag] message.keys=[${Object.keys(msg).join(',')}] type=${msg.type||'N/A'} messageType=${msg.messageType||'N/A'}${msgInner ? ` inner.keys=[${Object.keys(msgInner).join(',')}]` : ''}`)
+    const contentSample = msg.content !== undefined ? (typeof msg.content === 'string' ? msg.content.slice(0,60) : JSON.stringify(msg.content).slice(0,100)) : 'undefined'
+    addLog(integrationId, 'info', `[diag] message.keys=[${Object.keys(msg).join(',')}] type=${msg.type||'N/A'} messageType=${msg.messageType||'N/A'} content=${contentSample}${msgInner ? ` inner.keys=[${Object.keys(msgInner).join(',')}]` : ''}`)
   }
 
   const parsed = parseWebhookPayload(data)
@@ -391,6 +392,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
       key: parsed.audioKey,
       rawMsg: parsed.rawMsg,
       audioUrl: parsed.audioUrl,
+      log: (msg) => addLog(integrationId, 'info', msg),
     })
 
     if (!mediaData?.base64) {

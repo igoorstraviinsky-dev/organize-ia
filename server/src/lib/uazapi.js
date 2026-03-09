@@ -355,35 +355,42 @@ export function parseWebhookPayload(body) {
  * @param {object} rawMsg - Objeto message completo do Evolution API (msg.key + msg.message)
  * @param {string} audioUrl - URL direta do CDN (fallback)
  */
-export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, audioUrl }) {
+export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, audioUrl, log }) {
   const base = apiUrl.replace(/\/$/, '')
   const name = instanceName || ''
+  const _log = log || (() => {})
+
+  async function tryPost(url, body) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: buildHeaders(apiToken),
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(15000),
+      })
+      const text = await res.text()
+      _log(`[dl] POST ${url.replace(base, '')} → ${res.status} | ${text.slice(0, 120)}`)
+      if (res.ok) {
+        const data = JSON.parse(text)
+        if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
+      }
+    } catch (e) {
+      _log(`[dl] POST ${url.replace(base, '')} → ERRO: ${e.message}`)
+    }
+    return null
+  }
 
   // ── Método 0: UazAPI Cloud flat format — usa messageid direto ──
   const msgId = rawMsg?.messageid || rawMsg?.id || key?.id
   if (msgId) {
-    const uazEndpoints = [
-      `${base}/message/getMediaBase64`,
-      `${base}/chat/getMediaBase64`,
-    ]
-    for (const url of uazEndpoints) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: buildHeaders(apiToken),
-          body: JSON.stringify({ messageid: msgId }),
-          signal: AbortSignal.timeout(15000),
-        })
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}))
-          if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
-        }
-      } catch {}
+    _log(`[dl] msgId=${msgId}`)
+    for (const url of [`${base}/message/getMediaBase64`, `${base}/chat/getMediaBase64`, `${base}/download/message`]) {
+      const r = await tryPost(url, { messageid: msgId })
+      if (r) return r
     }
   }
 
   // ── Método 1: UazAPI Cloud / Evolution API — envia o message COMPLETO ──
-  // O endpoint requer o objeto message inteiro (contendo key + audioMessage), não apenas key
   const endpointsWithFullMsg = [
     `${base}/chat/getBase64FromMediaMessage/${name}`,
     `${base}/chat/getBase64FromMediaMessage`,
@@ -391,35 +398,15 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
 
   if (rawMsg) {
     for (const url of endpointsWithFullMsg) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: buildHeaders(apiToken),
-          body: JSON.stringify({ message: rawMsg }),
-          signal: AbortSignal.timeout(15000),
-        })
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}))
-          if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
-        }
-      } catch {}
+      const r = await tryPost(url, { message: rawMsg })
+      if (r) return r
     }
   }
 
   // ── Método 2: Fallback — envia só o key (Evolution API self-hosted legacy) ──
   for (const url of endpointsWithFullMsg) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: buildHeaders(apiToken),
-        body: JSON.stringify({ key }),
-        signal: AbortSignal.timeout(15000),
-      })
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}))
-        if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
-      }
-    } catch {}
+    const r = await tryPost(url, { key })
+    if (r) return r
   }
 
   // ── Método 3: URL direta do CDN ──
@@ -429,13 +416,16 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
         headers: buildHeaders(apiToken),
         signal: AbortSignal.timeout(20000),
       })
+      _log(`[dl] GET ${audioUrl.slice(0, 60)} → ${res.status}`)
       if (res.ok) {
         const buffer = await res.arrayBuffer()
         const base64 = Buffer.from(buffer).toString('base64')
         const mimetype = res.headers.get('content-type') || 'audio/ogg'
         return { base64, mimetype }
       }
-    } catch {}
+    } catch (e) {
+      _log(`[dl] GET audioUrl → ERRO: ${e.message}`)
+    }
   }
 
   return null
