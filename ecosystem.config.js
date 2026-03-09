@@ -20,7 +20,7 @@ module.exports = {
       // Agente Python (WhatsApp/Telegram)
       name: "organizador-agente",
       script: "main.py",
-      interpreter: "/usr/bin/python3",
+      interpreter: "/var/www/organizador/agent/venv/bin/python",
       cwd: "/var/www/organizador/agent",
       env: {
         PYTHONIOENCODING: "utf-8",

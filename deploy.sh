@@ -19,13 +19,9 @@ cd "$DEPLOY_DIR/server"
 npm install --production
 
 echo ""
-echo "[3/5] Garantindo que Python3 e pip estao instalados..."
-apt-get install -y python3 python3-pip 2>/dev/null || true
-
-echo ""
-echo "[4/5] Instalando dependencias do agente Python..."
+echo "[3/5] Configurando ambiente do agente Python (venv)..."
 cd "$DEPLOY_DIR/agent"
-python3 -m pip install -r requirements.txt -q
+bash setup.sh
 
 echo ""
 echo "[5/5] Reiniciando processos com PM2..."
