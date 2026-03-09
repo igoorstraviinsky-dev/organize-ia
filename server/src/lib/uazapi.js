@@ -235,8 +235,12 @@ export function parseWebhookPayload(body) {
 
       // Tenta extrair o texto (força string para evitar objetos como extendedTextMessage completo)
       const realMsg = msg.message || msg
-      const rawText = realMsg.conversation || realMsg.extendedTextMessage?.text || realMsg.text || realMsg.content || ''
-      const text = typeof rawText === 'string' ? rawText : String(rawText || '')
+      // Garante que rawText nunca seja um objeto (proteção contra body.message.text sendo obj)
+      const rawTextCandidate = realMsg.conversation || realMsg.extendedTextMessage?.text ||
+        (typeof realMsg.text === 'string' ? realMsg.text : undefined) ||
+        (typeof realMsg.content === 'string' ? realMsg.content : undefined) || ''
+      const rawText = typeof rawTextCandidate === 'string' ? rawTextCandidate : ''
+      const text = rawText
 
       // Tenta extrair ID da mensagem
       const messageId = msg.key?.id || msg.id || msg.messageid || msg.messageId || null
@@ -247,19 +251,20 @@ export function parseWebhookPayload(body) {
         ? new Date(Number(ts) > 9999999999 ? ts : ts * 1000).toISOString()
         : new Date().toISOString()
 
-      // Detecta mensagem de áudio (ptt = nota de voz gravada OU arquivo de áudio)
+      // Detecta áudio: formato Evolution API (audioMessage) OU formato UazAPI (type: ptt/audio)
       const audioMsg = realMsg.audioMessage || realMsg.pttMessage || realMsg.audio || null
-      if (audioMsg && phone) {
+      const isUazAudio = (realMsg.type === 'ptt' || realMsg.type === 'audio' || msg.type === 'ptt' || msg.type === 'audio')
+      if ((audioMsg || isUazAudio) && phone) {
         return {
           phone, fromMe, text: null, messageId, contactName, timestamp,
           messageType: 'audio',
-          isPtt: audioMsg.ptt === true,           // true = gravado na hora; false = arquivo encaminhado
-          fileSha256: audioMsg.fileSha256 || null, // hash para cache de transcrição
+          isPtt: audioMsg ? audioMsg.ptt === true : (realMsg.type === 'ptt' || msg.type === 'ptt'),
+          fileSha256: audioMsg?.fileSha256 || null,
           audioKey: msg.key || { remoteJid, fromMe, id: messageId },
-          audioUrl: audioMsg.url || audioMsg.mediaUrl || null,
-          audioMimeType: audioMsg.mimetype || 'audio/ogg; codecs=opus',
-          rawMsg: msg, // Passa o objeto completo para downloadMediaBase64
-          _rawAudio: audioMsg,
+          audioUrl: audioMsg?.url || audioMsg?.mediaUrl || realMsg.body || msg.body || null,
+          audioMimeType: audioMsg?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
+          rawMsg: msg,
+          _rawAudio: audioMsg || realMsg,
         }
       }
 

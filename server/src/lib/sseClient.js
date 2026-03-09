@@ -239,6 +239,13 @@ async function handleSSEEvent(eventName, rawData, integration) {
 
   addLog(integrationId, 'info', `Payload: chaves=[${Object.keys(data).join(',')}]${data.data ? ` data.chaves=[${Object.keys(data.data).join(',')}]` : ''} | ${JSON.stringify(data).slice(0, 300)}`)
 
+  // Log de diagnóstico: mostra estrutura interna de body.message para identificar formato de áudio
+  if (data.message && typeof data.message === 'object') {
+    const msg = data.message
+    const msgInner = msg.message
+    addLog(integrationId, 'info', `[diag] message.keys=[${Object.keys(msg).join(',')}] type=${msg.type||'N/A'} messageType=${msg.messageType||'N/A'}${msgInner ? ` inner.keys=[${Object.keys(msgInner).join(',')}]` : ''}`)
+  }
+
   const parsed = parseWebhookPayload(data)
   if (!parsed) {
     addLog(integrationId, 'warn', `Payload não reconhecido (type="${dataType || 'N/A'}") — formato desconhecido`)
