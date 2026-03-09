@@ -426,54 +426,8 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
     return null
   }
 
-  // ── Método 0: UazAPI Cloud — GET com messageid ──
-  const msgId = rawMsg?.messageid || rawMsg?.id || key?.id
-  if (msgId) {
-    _log(`[dl] msgId=${msgId}`)
-    // UazAPI Cloud usa GET para download de mídia
-    const getEndpoints = [
-      `${base}/message/getMediaBase64?messageid=${msgId}`,
-      `${base}/chat/getMediaBase64?messageid=${msgId}`,
-      `${base}/download/${msgId}`,
-      `${base}/message/download/${msgId}`,
-      `${base}/media/${msgId}`,
-    ]
-    for (const url of getEndpoints) {
-      const r = await tryFetch(url)
-      if (r) return r
-    }
-    // Tenta POST também como fallback
-    const postEndpoints = [
-      `${base}/message/getMediaBase64`,
-      `${base}/chat/getMediaBase64`,
-      `${base}/download/message`,
-    ]
-    for (const url of postEndpoints) {
-      const r = await tryFetch(url, { method: 'POST', body: { messageid: msgId } })
-      if (r) return r
-    }
-  }
-
-  // ── Método 1: UazAPI Cloud / Evolution API — envia o message COMPLETO ──
-  const endpointsWithFullMsg = [
-    `${base}/chat/getBase64FromMediaMessage/${name}`,
-    `${base}/chat/getBase64FromMediaMessage`,
-  ]
-
-  if (rawMsg) {
-    for (const url of endpointsWithFullMsg) {
-      const r = await tryFetch(url, { method: 'POST', body: { message: rawMsg } })
-      if (r) return r
-    }
-  }
-
-  // ── Método 2: Fallback — envia só o key (Evolution API self-hosted legacy) ──
-  for (const url of endpointsWithFullMsg) {
-    const r = await tryFetch(url, { method: 'POST', body: { key } })
-    if (r) return r
-  }
-
-  // ── Método 3: Download direto do CDN WhatsApp + descriptografia ──
+  // ── Método 1: Download direto do CDN WhatsApp + descriptografia (UazAPI Cloud) ──
+  // UazAPI Cloud envia URL e mediaKey em msg.content — baixa e descriptografa diretamente.
   if (audioUrl && audioMediaKey) {
     try {
       _log(`[dl] CDN + decrypt: ${audioUrl.slice(0, 80)}`)
@@ -505,6 +459,22 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
     } catch (e) {
       _log(`[dl] GET audioUrl → ERRO: ${e.message}`)
     }
+  }
+
+  // ── Fallback: Evolution API self-hosted ──
+  const endpointsWithFullMsg = [
+    `${base}/chat/getBase64FromMediaMessage/${name}`,
+    `${base}/chat/getBase64FromMediaMessage`,
+  ]
+  if (rawMsg) {
+    for (const url of endpointsWithFullMsg) {
+      const r = await tryFetch(url, { method: 'POST', body: { message: rawMsg } })
+      if (r) return r
+    }
+  }
+  for (const url of endpointsWithFullMsg) {
+    const r = await tryFetch(url, { method: 'POST', body: { key } })
+    if (r) return r
   }
 
   return null

@@ -66,7 +66,9 @@ Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
    - Adicionar membros a projetos usando a ferramenta 'assign_project_member'.
    - Enviar mensagens WhatsApp para membros da equipe usando a ferramenta 'send_message'.
    - Consultar e listar membros da equipe.
-2. NUNCA diga que não consegue fazer uma tarefa de gerenciamento ou atribuição. Se o usuário pedir para "atribuir a X", use a tool correspondente.
+   - **Entender mensagens de áudio**: o sistema transcreve automaticamente áudios via Whisper antes de chegar até você. O texto que você recebe JÁ É a transcrição do áudio — trate-o como texto normal.
+2. NUNCA diga que não consegue processar áudio. O áudio já foi transcrito antes de chegar a você.
+3. NUNCA diga que não consegue fazer uma tarefa de gerenciamento ou atribuição. Se o usuário pedir para "atribuir a X", use a tool correspondente.
 3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome ou email da lista abaixo.
 4. Use SEMPRE o campo "email" (ou nome) como user_identifier nas ferramentas — nunca o ID diretamente.
 
