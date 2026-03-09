@@ -5,6 +5,7 @@ Também mantém contexto de conversa em memória (últimas mensagens por número
 """
 
 import os
+import re
 from typing import Optional
 from collections import defaultdict
 from supabase import create_client, Client
@@ -28,16 +29,39 @@ _pending_link: dict[str, str] = {}  # "awaiting_email"
 def get_user_id(phone: str) -> Optional[str]:
     """
     Retorna o user_id do Supabase pelo número de telefone cadastrado no perfil.
-    Retorna None se nenhum perfil tiver esse número.
+    Normaliza os números para garantir o match (ignora símbolos e DDI).
     """
+    # Busca todos os perfis com telefone (tamanho da equipe costuma ser pequeno)
     res = (
         _supabase.table("profiles")
-        .select("id")
-        .eq("phone", phone)
-        .limit(1)
+        .select("id, phone")
+        .not_.is_("phone", "null")
         .execute()
     )
-    return res.data[0]["id"] if res.data else None
+    
+    if not res.data:
+        return None
+
+    def clean(p: str) -> str:
+        return re.sub(r"\D", "", p)
+
+    target = clean(phone)
+    # Tenta match exato ou match parcial (ex: ignorando DDI ou o '9' extra)
+    for row in res.data:
+        db_phone = clean(row["phone"])
+        if not db_phone: continue
+        
+        # Match exato
+        if db_phone == target:
+            return row["id"]
+        
+        # Match parcial (ex: o banco tem com 55 e o zap manda sem, ou vice-versa)
+        if db_phone.endswith(target) or target.endswith(db_phone):
+            # Garante que o match tenha pelo menos 8 dígitos para evitar falsos positivos
+            if len(db_phone) >= 8 and len(target) >= 8:
+                return row["id"]
+                
+    return None
 
 
 def is_pending_link(phone: str) -> bool:

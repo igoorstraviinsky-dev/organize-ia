@@ -854,180 +854,7 @@ function IntegrationCategory({ title, icon: Icon, children, defaultOpen = true }
   )
 }
 
-// ─── Card Agente Inteligente Nativo (OpenAI) ──────────────────────────────────────
 
-function NativeAICard() {
-  const { data: settings } = useAiSettings()
-  const save = useSaveAiSettings()
-  const [open, setOpen] = useState(false)
-  const [successMsg, setSuccessMsg] = useState('')
-
-  const SUPER_PROMPT = `Você é o Orquestrador de IA do "Organizador", um ecossistema produtivo premium. Sua missão é ser o assistente definitivo do usuário no WhatsApp, focado em alta eficiência.
-
-COMPORTAMENTO:
-- Responda de forma direta, executiva e prestativa.
-- O idioma padrão é o Português (Brasil).
-- Use emojis sutis para organizar o texto (✅, 📅, ⚠️, 🚀).
-
-SOBRE A APLICAÇÃO (SUA CASA):
-1. Nós possuímos "Tarefas" (que possuem título, descrição, data de vencimento e coluna de status).
-2. Possuímos "Projetos" (pastas onde as tarefas moram).
-3. Entenda comandos temporais como "amanhã de manhã" e converta para a data ISO correta ao usar suas ferramentas.
-
-SUAS FERRAMENTAS:
-Ao conversar, entenda a dor do usuário. Se ele pedir para criar algo, analisar o dia ou cancelar uma reunião, use silenciosamente as **Tools** de banco de dados disponíveis (criar tarefa, listar projetos, etc.) antes de responder.
-
-Se você usou uma ferramenta para fazer uma ação, SEMPRE diga ao usuário:
-"✅ Pronto! Criei a tarefa 'X' para o projeto 'Y'."
-
-Só pergunte mais detalhes se a instrução do usuário for muito vaga ("Faz aí").`
-
-  // Controla o estado local do formulário
-  const [form, setForm] = useState({
-    openai_api_key: '',
-    system_prompt: '',
-    is_active: false
-  })
-
-  // Quando os dados chegarem da API, preenche o form
-  useEffect(() => {
-    if (settings) {
-      setForm({
-        openai_api_key: settings.openai_api_key || '',
-        system_prompt: settings.system_prompt || '',
-        is_active: settings.is_active || false
-      })
-    }
-  }, [settings])
-
-  const set = (field) => (val) => setForm((f) => ({ ...f, [field]: val }))
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    setSuccessMsg('')
-    try {
-      await save.mutateAsync(form)
-      setSuccessMsg('Configuração salva com sucesso! O Agente está pronto.')
-      setTimeout(() => setSuccessMsg(''), 4000)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
-      {/* Header */}
-      <div
-        className="flex cursor-pointer items-center gap-4 px-6 py-5"
-        onClick={() => setOpen(!open)}
-      >
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-sm transition-transform hover:scale-105">
-          <BrainCircuit size={22} className="text-white" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-gray-900 font-display tracking-tight">Inteligência Artificial Nativa (OpenAI)</h3>
-            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-600 uppercase">Novo</span>
-          </div>
-          <p className="text-sm text-gray-500">Configure um Agente LLM para responder os seus contatos no WhatsApp automaticamente.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <StatusBadge status={form.is_active ? 'connected' : 'disconnected'} />
-          {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-        </div>
-      </div>
-
-      {/* Form */}
-      {open && (
-        <form onSubmit={handleSave} className="border-t border-gray-100 px-6 pb-6 pt-5 bg-gray-50/20">
-          <div className="space-y-5">
-            
-            {/* 1. Instruções */}
-            <div className="rounded-xl bg-violet-50/70 border border-violet-200/80 p-4 space-y-1.5 cursor-default select-none">
-              <p className="text-xs font-semibold text-violet-800 uppercase tracking-wide">Como funciona</p>
-              <p className="text-xs text-violet-700 leading-relaxed">
-                Nesta seção você habilita o nosso Agente embutido. Forneça a sua chave da OpenAI e escreva a <strong>Base de Conhecimento</strong> (Regras de Negócio e Prompt). Sempre que receber uma mensagem via WhatsApp (UazAPI), o robô usará GPT-4o-mini para ler o contexto e responder ao usuário sozinho.
-              </p>
-            </div>
-
-            {/* Ativação */}
-            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-default select-none">
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Ativar Agente de IA</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Se desligado, você precisa responder as mensagens do WhatsApp manualmente.</p>
-              </div>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input 
-                  type="checkbox" 
-                  className="peer sr-only" 
-                  checked={form.is_active}
-                  onChange={(e) => set('is_active')(e.target.checked)}
-                />
-                <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300"></div>
-              </label>
-            </div>
-
-            <div className="grid gap-4">
-              <SecretInput
-                id="openai-key"
-                label="OpenAI API Key"
-                value={form.openai_api_key}
-                onChange={set('openai_api_key')}
-                placeholder="sk-proj-........................."
-                hint="Sua chave secreta gerada em platform.openai.com."
-              />
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label htmlFor="system-prompt" className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                    Base de Conhecimento (System Prompt)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => set('system_prompt')(SUPER_PROMPT)}
-                    className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors uppercase"
-                  >
-                    Carregar Prompt Mestre (Tudo incluído)
-                  </button>
-                </div>
-                <textarea
-                  id="system-prompt"
-                  value={form.system_prompt}
-                  onChange={(e) => set('system_prompt')(e.target.value)}
-                  placeholder="Você é o assistente virtual do Organizador e tem acesso a..."
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm text-gray-800 outline-none transition-all focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 min-h-[300px] resize-y"
-                />
-                <p className="mt-1 text-[11px] text-gray-400">
-                  Descreva exatamente quem é o bot, suas regras, limites e produtos/serviços que ele pode sugerir.
-                </p>
-              </div>
-            </div>
-
-            {/* Resultado do salvamento */}
-            {successMsg && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
-                <CheckCircle2 size={15} className="flex-shrink-0" />
-                {successMsg}
-              </div>
-            )}
-
-            {/* Ações */}
-            <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-              <button
-                type="submit"
-                disabled={save.isPending}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 hover:shadow-indigo-200 active:scale-95 disabled:opacity-60"
-              >
-                {save.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                Salvar Configurações
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
-    </div>
-  )
-}
 
 // ─── Card Banco de Dados (Supabase) ──────────────────────────────────────────
 
@@ -1170,7 +997,6 @@ export default function IntegrationsPage() {
   const uazapi = integrations.find((i) => i.provider === 'uazapi')
   const whatsappCloud = integrations.find((i) => i.provider === 'whatsapp_cloud')
   const telegram = integrations.find((i) => i.provider === 'telegram')
-  const agentN8n = integrations.find((i) => i.provider === 'agent_n8n')
 
   return (
     <div>
@@ -1210,10 +1036,7 @@ export default function IntegrationsPage() {
             <TelegramCard existing={telegram} />
           </IntegrationCategory>
 
-          {/* Seção 2: Automação & Inteligência */}
-          <IntegrationCategory title="Automação & Inteligência" icon={Zap} defaultOpen={true}>
-            <NativeAICard />
-          </IntegrationCategory>
+
 
           {/* Seção 3: Servidor / Infra */}
           <IntegrationCategory title="Banco de Dados & Infraestrutura" icon={Database} defaultOpen={true}>

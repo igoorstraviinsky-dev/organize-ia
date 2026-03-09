@@ -16,7 +16,6 @@ import user_registry as registry
 import supabase_client as db
 import telegram_client as telegram
 from agent import process_message, transcribe_audio
-import n8n_integration
 
 load_dotenv()
 
@@ -202,25 +201,9 @@ async def webhook(request: Request):
     # ── Envia indicador de digitação ──
     await whatsapp.send_typing(phone, api_url=api_url, api_token=api_token)
 
-    # ── Processa a mensagem com o agente (Local ou n8n) ──
+    # ── Processa a mensagem com o agente local ──
     try:
-        # Verifica se o usuário tem orquestração n8n ativa
-        n8n_config = await db.get_user_integration(user_id, "agent_n8n")
-        
-        reply = None
-        if n8n_config and n8n_config.get("api_url"):
-            reply = await n8n_integration.call_n8n_agent(
-                n8n_config["api_url"],
-                n8n_config.get("api_token"),
-                phone,
-                text,
-                user_id
-            )
-            
-        # Se não houver n8n ou o n8n falhar/retornar vazio, usa o agente local
-        if not reply:
-            reply = await process_message(phone, text, user_id)
-            
+        reply = await process_message(phone, text, user_id)
     except Exception as e:
         print(f"[Agente] Erro ao processar mensagem de {phone}: {e}")
         reply = "⚠️ Ocorreu um erro interno. Tente novamente em instantes."
@@ -417,23 +400,9 @@ async def telegram_webhook(request: Request):
         )
         return {"ok": True}
 
-    # Processa com o agente (Local ou n8n)
+    # Processa com o agente local
     try:
-        n8n_config = await db.get_user_integration(user_id, "agent_n8n")
-        
-        reply = None
-        if n8n_config and n8n_config.get("api_url"):
-            reply = await n8n_integration.call_n8n_agent(
-                n8n_config["api_url"],
-                n8n_config.get("api_token"),
-                tg_key,
-                text,
-                user_id
-            )
-            
-        if not reply:
-            reply = await process_message(tg_key, text, user_id)
-            
+        reply = await process_message(tg_key, text, user_id)
     except Exception as e:
         print(f"[Telegram] Erro ao processar mensagem de chat_id={chat_id}: {e}")
         reply = "Ocorreu um erro interno. Tente novamente em instantes."

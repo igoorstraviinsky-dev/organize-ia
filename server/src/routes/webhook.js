@@ -70,8 +70,12 @@ router.post('/', async (req, res) => {
 
     await markAsRead(messageId)
 
-    const response = await processMessage(userText, from)
-    await sendWhatsAppMessage(from, response)
+    // O processamento de IA agora é feito exclusivamente pelo Agente Python (porta 8001).
+    // O servidor Node apenas registra o recebimento se necessário.
+    console.log(`Mensagem recebida de ${from}: ${userText}. Aguardando processamento pelo Agente Python...`)
+    
+    // const response = await processMessage(userText, from)
+    // await sendWhatsAppMessage(from, response)
 
   } catch (error) {
     console.error('Webhook error:', error)

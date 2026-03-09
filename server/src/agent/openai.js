@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
+import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, listTasks, updateStatus } from './executor.js'
+import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, listTasks, updateStatus } from './executor.js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
@@ -66,6 +67,7 @@ export async function processMessage(userMessage, phoneNumber) {
 
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
+    console.log(`Buscando perfil para telefone limpo: ${cleanPhone}`);
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, role')

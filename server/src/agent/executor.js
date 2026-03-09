@@ -32,7 +32,7 @@ async function resolveUser(identifier) {
 async function resolveUserId(phoneNumber) {
   if (!phoneNumber) return null;
 
-  const cleanPhone = String(phoneNumber).replace('+', '');
+  const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
 
   const { data: profile } = await supabase
     .from('profiles')
