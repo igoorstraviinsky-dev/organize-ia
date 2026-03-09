@@ -13,7 +13,16 @@ async function sendAssignmentNotification(toUserId, message, senderUserId) {
       .eq('id', toUserId)
       .maybeSingle()
 
-    if (!toProfile?.phone) return
+    if (!toProfile?.phone) {
+      console.log('[Notification] Sem telefone cadastrado para userId:', toUserId)
+      return
+    }
+
+    const cleanPhone = String(toProfile.phone).replace(/[^0-9]/g, '')
+    if (!cleanPhone) {
+      console.log('[Notification] Telefone inválido para userId:', toUserId)
+      return
+    }
 
     // Busca integração UazAPI do remetente, ou qualquer uma ativa
     let { data: integration } = await supabase
@@ -33,15 +42,22 @@ async function sendAssignmentNotification(toUserId, message, senderUserId) {
       integration = any
     }
 
-    if (!integration) return
+    if (!integration) {
+      console.log('[Notification] Nenhuma integração UazAPI encontrada para userId:', senderUserId)
+      return
+    }
+
+    console.log('[Notification] Enviando para:', cleanPhone, '| instância:', integration.instance_name)
 
     await sendTextMessage({
       apiUrl: integration.api_url,
       apiToken: integration.api_token,
       instanceName: integration.instance_name,
-      number: toProfile.phone,
+      number: cleanPhone,
       text: message,
     })
+
+    console.log('[Notification] Enviado com sucesso para:', cleanPhone)
   } catch (err) {
     console.error('[Notification] Erro ao enviar notificação:', err.message)
   }
