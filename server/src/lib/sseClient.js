@@ -351,6 +351,8 @@ async function handleSSEEvent(eventName, rawData, integration) {
 async function processAudioAsync(parsed, integration, integrationId) {
   const { phone, messageId, contactName, timestamp, fileSha256 } = parsed
 
+  addLog(integrationId, 'info', `[audio] Iniciando processamento — phone=${phone} isPtt=${parsed.isPtt} audioUrl=${parsed.audioUrl?.slice(0,60)||'N/A'}`)
+
   // 1. Verificar cache pelo hash do arquivo (evita re-transcrever o mesmo áudio)
   let transcribedText = fileSha256 ? transcriptionCache.get(fileSha256) : null
   if (transcribedText) {
@@ -367,13 +369,20 @@ async function processAudioAsync(parsed, integration, integrationId) {
 
     const openaiKey = agentSettings?.openai_api_key || process.env.OPENAI_API_KEY
 
+    addLog(integrationId, 'info', `[audio] openaiKey=${openaiKey ? 'OK' : 'AUSENTE'} agentSettings=${agentSettings ? 'OK' : 'null'}`)
+
     if (!openaiKey) {
       addLog(integrationId, 'warn', `Agente AI não configurado — sem openai_api_key para transcrever`)
+      await sendTextMessage({
+        apiUrl: integration.api_url, apiToken: integration.api_token,
+        instanceName: integration.instance_name, number: phone,
+        text: '🎤 Recebi seu áudio, mas a chave da IA não está configurada. Contate o administrador.',
+      }).catch(() => {})
       return
     }
 
     // 3. Baixar o áudio via UazAPI (message completo para getBase64FromMediaMessage)
-    addLog(integrationId, 'info', `Baixando áudio de ${phone}...`)
+    addLog(integrationId, 'info', `[audio] Baixando áudio de ${phone}...`)
     const mediaData = await downloadMediaBase64({
       apiUrl: integration.api_url,
       apiToken: integration.api_token,
