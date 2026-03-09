@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
-import { CheckCircle, Circle, Calendar, Plus, X } from 'lucide-react-native';
+import { Calendar, Plus, X } from 'lucide-react-native';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { TaskItem } from '../../src/components/TaskItem';
+import { TaskDetailModal } from '../../src/components/TaskDetailModal';
+import { Colors } from '../../src/constants/Colors';
+import { useColorScheme } from 'react-native';
 
 export default function TodayScreen() {
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
 
   // Sincronização em tempo real
   useRealtimeSync(() => fetchTasks());
@@ -76,37 +84,23 @@ export default function TodayScreen() {
   };
 
   const renderTask = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.taskCard} 
-      onPress={() => toggleTask(item)}
-      activeOpacity={0.7}
-    >
-      {item.status === 'completed' ? (
-        <CheckCircle size={22} color="#10b981" />
-      ) : (
-        <Circle size={22} color="#94a3b8" />
-      )}
-      <View style={styles.taskInfo}>
-        <Text style={[styles.taskText, item.status === 'completed' && styles.completedText]}>
-          {item.title}
-        </Text>
-        {item.project && (
-          <View style={styles.projectBadge}>
-            <View style={[styles.projectDot, { backgroundColor: item.project.color || '#6366f1' }]} />
-            <Text style={styles.projectLabel}>{item.project.name}</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+    <TaskItem 
+      task={item} 
+      onToggle={toggleTask} 
+      onPress={(task) => {
+        setSelectedTask(task);
+        setDetailVisible(true);
+      }}
+    />
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Calendar size={24} color="#6366f1" />
-          <Text style={styles.title}>Hoje</Text>
+          <Calendar size={28} color={theme.tint} />
+          <Text style={[styles.title, { color: theme.text }]}>Hoje</Text>
         </View>
         <Text style={styles.dateText}>
           {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -119,12 +113,12 @@ export default function TodayScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
         }
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Parece que você está livre hoje!</Text>
+              <Text style={[styles.emptyText, { color: theme.subtext }]}>Parece que você está livre hoje!</Text>
             </View>
           ) : null
         }
@@ -148,15 +142,15 @@ export default function TodayScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Tarefa para Hoje</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color="#94a3b8" />
+                <X size={24} color={theme.subtext} />
               </TouchableOpacity>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
               placeholder="O que precisa ser feito hoje?"
               placeholderTextColor="#64748b"
               value={newTaskTitle}
@@ -172,6 +166,13 @@ export default function TodayScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <TaskDetailModal
+        visible={detailVisible}
+        task={selectedTask}
+        onClose={() => setDetailVisible(false)}
+        onToggle={toggleTask}
+      />
     </SafeAreaView>
   );
 }

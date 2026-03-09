@@ -1,13 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
-import { CheckCircle, Circle, CalendarRange } from 'lucide-react-native';
+import { CalendarRange } from 'lucide-react-native';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { TaskItem } from '../../src/components/TaskItem';
+import { TaskDetailModal } from '../../src/components/TaskDetailModal';
+import { Colors } from '../../src/constants/Colors';
+import { useColorScheme } from 'react-native';
 
 export default function UpcomingScreen() {
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
 
   // Sincronização em tempo real
   useRealtimeSync(() => fetchTasks());
@@ -62,45 +70,25 @@ export default function UpcomingScreen() {
   };
 
   const renderTask = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.taskCard} 
-      onPress={() => toggleTask(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.leftSection}>
-        {item.status === 'completed' ? (
-          <CheckCircle size={22} color="#10b981" />
-        ) : (
-          <Circle size={22} color="#94a3b8" />
-        )}
-      </View>
-      <View style={styles.taskInfo}>
-        <Text style={[styles.taskText, item.status === 'completed' && styles.completedText]}>
-          {item.title}
-        </Text>
-        <View style={styles.metaRow}>
-          <Text style={styles.dateLabel}>{formatDate(item.due_date)}</Text>
-          {item.project && (
-            <>
-              <Text style={styles.separator}>•</Text>
-              <View style={[styles.projectDot, { backgroundColor: item.project.color || '#6366f1' }]} />
-              <Text style={styles.projectLabel}>{item.project.name}</Text>
-            </>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
+    <TaskItem 
+      task={item} 
+      onToggle={toggleTask} 
+      onPress={(task) => {
+        setSelectedTask(task);
+        setDetailVisible(true);
+      }}
+    />
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <CalendarRange size={24} color="#6366f1" />
-          <Text style={styles.title}>Em Breve</Text>
+          <CalendarRange size={28} color={theme.tint} />
+          <Text style={[styles.title, { color: theme.text }]}>Em Breve</Text>
         </View>
-        <Text style={styles.dateText}>Próximas tarefas agendadas</Text>
+        <Text style={[styles.dateText, { color: theme.subtext }]}>Próximas tarefas agendadas</Text>
       </View>
 
       <FlatList
@@ -109,15 +97,22 @@ export default function UpcomingScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
         }
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>Nenhuma tarefa para o futuro.</Text>
+              <Text style={[styles.emptyText, { color: theme.subtext }]}>Nenhuma tarefa para o futuro.</Text>
             </View>
           ) : null
         }
+      />
+
+      <TaskDetailModal
+        visible={detailVisible}
+        task={selectedTask}
+        onClose={() => setDetailVisible(false)}
+        onToggle={toggleTask}
       />
     </SafeAreaView>
   );

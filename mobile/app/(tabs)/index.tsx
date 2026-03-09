@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
-import { CheckCircle, Circle, Archive, Calendar, CalendarRange, Plus, X } from 'lucide-react-native';
+import { Plus, X, Calendar, CalendarRange, Archive } from 'lucide-react-native';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { TaskItem } from '../../src/components/TaskItem';
+import { TaskDetailModal } from '../../src/components/TaskDetailModal';
+import { Colors } from '../../src/constants/Colors';
+import { useColorScheme } from 'react-native';
 
 export default function DashboardScreen() {
+  const colorScheme = useColorScheme() ?? 'dark';
+  const theme = Colors[colorScheme];
   const [tasks, setTasks] = useState<any[]>([]);
   const [stats, setStats] = useState({ today: 0, upcoming: 0, inbox: 0 });
   const [loading, setLoading] = useState(true);
@@ -88,28 +94,18 @@ export default function DashboardScreen() {
     }
   };
 
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [detailVisible, setDetailVisible] = useState(false);
+
   const renderTask = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={styles.taskCard} 
-      onPress={() => toggleTask(item)}
-      activeOpacity={0.7}
-    >
-      {item.status === 'completed' ? (
-        <CheckCircle size={20} color="#10b981" />
-      ) : (
-        <Circle size={20} color="#94a3b8" />
-      )}
-      <View style={styles.taskInfo}>
-        <Text style={[styles.taskText, item.status === 'completed' && styles.completedText]}>
-          {item.title}
-        </Text>
-        {item.project && (
-          <Text style={[styles.projectLabel, { color: item.project.color || '#94a3b8' }]}>
-            #{item.project.name}
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    <TaskItem 
+      task={item} 
+      onToggle={toggleTask} 
+      onPress={(task) => {
+        setSelectedTask(task);
+        setDetailVisible(true);
+      }}
+    />
   );
 
   return (
@@ -122,17 +118,17 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Calendar size={20} color="#ef4444" />
           <Text style={styles.statNumber}>{stats.today}</Text>
           <Text style={styles.statLabel}>Hoje</Text>
         </View>
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <CalendarRange size={20} color="#f59e0b" />
           <Text style={styles.statNumber}>{stats.upcoming}</Text>
           <Text style={styles.statLabel}>Breve</Text>
         </View>
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Archive size={20} color="#6366f1" />
           <Text style={styles.statNumber}>{stats.inbox}</Text>
           <Text style={styles.statLabel}>Inbox</Text>
@@ -170,7 +166,7 @@ export default function DashboardScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Nova Tarefa</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -178,7 +174,7 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
               placeholder="O que precisa ser feito?"
               placeholderTextColor="#64748b"
               value={newTaskTitle}
@@ -194,6 +190,13 @@ export default function DashboardScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <TaskDetailModal
+        visible={detailVisible}
+        task={selectedTask}
+        onClose={() => setDetailVisible(false)}
+        onToggle={toggleTask}
+      />
     </SafeAreaView>
   );
 }
@@ -287,19 +290,19 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 30,
-    right: 30,
+    bottom: 100,
+    right: 24,
     backgroundColor: '#6366f1',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 8,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   modalOverlay: {
     flex: 1,

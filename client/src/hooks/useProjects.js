@@ -12,7 +12,7 @@ export function useProjects() {
       if (error) throw error
       return data
     },
-    staleTime: 0, // Sempre refetch — Realtime e invalidações funcionam imediatamente
+    staleTime: 1000 * 60 * 2,
   })
 }
 
