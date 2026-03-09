@@ -45,13 +45,16 @@ export async function transcribeAudioBase64(apiKey, base64, mimeType) {
   form.append('language', 'pt')
   form.append('prompt', WHISPER_PROMPT)
 
+  // form-data npm package não é compatível com fetch nativo como body stream.
+  // Usa getBuffer() para obter o multipart como Buffer antes de enviar.
+  const formBuffer = form.getBuffer()
   const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       ...form.getHeaders(),
     },
-    body: form,
+    body: formBuffer,
   })
 
   if (!response.ok) {
