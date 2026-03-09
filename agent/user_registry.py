@@ -29,8 +29,15 @@ _pending_link: dict[str, str] = {}  # "awaiting_email"
 def get_user_id(phone: str) -> Optional[str]:
     """
     Retorna o user_id do Supabase pelo número de telefone cadastrado no perfil.
+    Para chaves Telegram (tg_xxx), busca no mapa de links.
     Normaliza os números para garantir o match (ignora símbolos e DDI).
     """
+    # Chave Telegram
+    if phone.startswith("tg_"):
+        uid = _telegram_links.get(phone)
+        print(f"[Registry] Telegram key {phone}: {'encontrado' if uid else 'não encontrado'}")
+        return uid
+
     target = re.sub(r"\D", "", phone)
     print(f"[Registry] Buscando user_id para telefone: {target}")
     
@@ -105,3 +112,22 @@ def get_history(phone: str) -> list[dict]:
 def clear_history(phone: str) -> None:
     """Limpa o histórico de conversa de um número."""
     _conversation_history.pop(phone, None)
+
+
+# ─── Vinculação Telegram → user_id ───────────────────────────────────────────
+
+# Mapa de tg_key → user_id para usuários do Telegram
+_telegram_links: dict[str, str] = {}
+
+
+def link_phone(phone: str, user_id: str) -> None:
+    """Vincula um número/chat_id a um user_id do Supabase."""
+    _telegram_links[phone] = user_id
+    # Sobrescreve no histórico de registry se já havia
+    print(f"[Registry] Vinculado: {phone} → {user_id}")
+
+
+def unlink_phone(phone: str) -> None:
+    """Remove a vinculação de um número/chat_id."""
+    _telegram_links.pop(phone, None)
+    print(f"[Registry] Desvinculado: {phone}")
