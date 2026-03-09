@@ -90,20 +90,67 @@ async function resolveUser(identifier) {
 }
 
 /**
+ * Gera todas as variantes possíveis de um número brasileiro.
+ * Lida com o nono dígito móvel (presente ou ausente no cadastro).
+ *
+ * Ex: 5563991326858 → Set { '5563991326858', '556391326858' }
+ * Ex: 556391326858  → Set { '556391326858',  '5563991326858' }
+ * Ex: 556332241234  → Set { '556332241234' }  (fixo, não adiciona 9)
+ */
+function getBrPhoneVariants(rawPhone) {
+  const digits = String(rawPhone).replace(/[^0-9]/g, '');
+  const variants = new Set([digits]);
+
+  if (digits.startsWith('55')) {
+    const local = digits.slice(4); // remove código país + DDD
+
+    // 13 dígitos com nono: remove o 9 para gerar versão sem nono
+    if (digits.length === 13 && local.startsWith('9')) {
+      variants.add(digits.slice(0, 4) + local.slice(1));
+    }
+
+    // 12 dígitos sem nono e número móvel (inicia com 6-9): adiciona o 9
+    if (digits.length === 12 && /^[6-9]/.test(local)) {
+      variants.add(digits.slice(0, 4) + '9' + local);
+    }
+  }
+
+  return variants;
+}
+
+function phonesMatch(a, b) {
+  const va = getBrPhoneVariants(a);
+  const vb = getBrPhoneVariants(b);
+  for (const x of va) {
+    if (vb.has(x)) return true;
+  }
+  return false;
+}
+
+/**
  * Resolve o owner_id a partir do número de telefone do WhatsApp.
+ * Reconhece números com ou sem o nono dígito brasileiro.
  */
 async function resolveUserId(phoneNumber) {
   if (!phoneNumber) return null;
 
   const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
+  if (cleanPhone.length < 8) return null;
 
-  const { data: profile } = await supabase
+  const { data: profiles } = await supabase
     .from('profiles')
-    .select('id')
-    .eq('phone', cleanPhone)
-    .single()
+    .select('id, phone')
+    .not('phone', 'is', null)
 
-  if (profile) return profile.id
+  if (!profiles) return null;
+
+  for (const row of profiles) {
+    const dbPhone = String(row.phone).replace(/[^0-9]/g, '');
+    if (dbPhone.length < 8) continue;
+    if (phonesMatch(cleanPhone, dbPhone)) {
+      return row.id;
+    }
+  }
 
   console.log(`User with phone ${cleanPhone} not found in profiles.`);
   return null

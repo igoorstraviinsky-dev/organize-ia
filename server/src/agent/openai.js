@@ -22,6 +22,32 @@ const functionExecutors = {
   send_message:   { fn: sendMessage,   needsPhone: true },
 }
 
+function getBrPhoneVariants(rawPhone) {
+  const digits = String(rawPhone).replace(/[^0-9]/g, '');
+  const variants = new Set([digits]);
+
+  if (digits.startsWith('55')) {
+    const local = digits.slice(4);
+    if (digits.length === 13 && local.startsWith('9')) {
+      variants.add(digits.slice(0, 4) + local.slice(1));
+    }
+    if (digits.length === 12 && /^[6-9]/.test(local)) {
+      variants.add(digits.slice(0, 4) + '9' + local);
+    }
+  }
+
+  return variants;
+}
+
+function brPhonesMatch(a, b) {
+  const va = getBrPhoneVariants(a);
+  const vb = getBrPhoneVariants(b);
+  for (const x of va) {
+    if (vb.has(x)) return true;
+  }
+  return false;
+}
+
 const getSystemPrompt = (userName, userRole, teamMembersList) => {
   return `
 Você é o Agente Organizador, o núcleo de inteligência do sistema Organizador. Você é autoritário, eficiente e tem controle total sobre as tarefas, projetos e colaboração da equipe.
@@ -62,11 +88,16 @@ export async function processMessage(userMessage, phoneNumber) {
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
     console.log(`[Cérebro] Buscando perfil para: ${phoneNumber}`);
-    const { data: profile } = await supabase
+
+    const { data: allProfiles } = await supabase
       .from('profiles')
-      .select('full_name, role')
-      .eq('phone', cleanPhone)
-      .maybeSingle();
+      .select('full_name, role, phone')
+      .not('phone', 'is', null);
+
+    const profile = (allProfiles || []).find(p => {
+      const dbPhone = String(p.phone).replace(/[^0-9]/g, '');
+      return dbPhone.length >= 8 && brPhonesMatch(cleanPhone, dbPhone);
+    });
 
     if (profile) {
       userName = profile.full_name;
