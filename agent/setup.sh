@@ -9,18 +9,19 @@ echo "=== CONFIGURANDO AGENTE PYTHON ==="
 # 1. Garantir que estamos na pasta do agente
 cd "$(dirname "$0")"
 
-# 2. Criar Virtualenv se não existir
-if [ ! -d "venv" ]; then
-    echo "[1/3] Criando virtualenv..."
+# 2. Criar Virtualenv se não estiver completo
+if [ ! -f "venv/bin/python" ] && [ ! -f "venv/bin/python3" ]; then
+    echo "[1/3] Virtualenv incompleto ou inexistente. Criando..."
+    rm -rf venv
     python3 -m venv venv
 else
-    echo "[1/3] Virtualenv já existe."
+    echo "[1/3] Virtualenv operacional detectado."
 fi
 
 # 3. Instalar dependências no venv
 echo "[2/3] Instalando dependências..."
-venv/bin/pip install --upgrade pip
-venv/bin/pip install -r requirements.txt
+venv/bin/python -m pip install --upgrade pip -q
+venv/bin/python -m pip install -r requirements.txt -q
 
 # 4. Verificar se o .env existe
 if [ ! -f ".env" ]; then
