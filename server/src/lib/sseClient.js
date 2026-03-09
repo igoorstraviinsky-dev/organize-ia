@@ -351,14 +351,16 @@ async function processAudioAsync(parsed, integration, integrationId) {
   }
 
   if (!transcribedText) {
-    // 2. Buscar a chave da API do agente
+    // 2. Buscar a chave da API do agente (fallback para variável de ambiente)
     const { data: agentSettings } = await supabase
       .from('ai_agent_settings')
       .select('openai_api_key')
       .eq('user_id', integration.user_id)
       .maybeSingle()
 
-    if (!agentSettings?.openai_api_key) {
+    const openaiKey = agentSettings?.openai_api_key || process.env.OPENAI_API_KEY
+
+    if (!openaiKey) {
       addLog(integrationId, 'warn', `Agente AI não configurado — sem openai_api_key para transcrever`)
       return
     }
@@ -370,7 +372,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
       apiToken: integration.api_token,
       instanceName: integration.instance_name,
       key: parsed.audioKey,
-      rawMsg: parsed._rawMsg,
+      rawMsg: parsed.rawMsg,
       audioUrl: parsed.audioUrl,
     })
 
@@ -390,7 +392,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
 
     // 4. Transcrever com Whisper
     transcribedText = await transcribeAudioBase64(
-      agentSettings.openai_api_key,
+      openaiKey,
       mediaData.base64,
       parsed.audioMimeType || mediaData.mimetype || 'audio/ogg'
     )
