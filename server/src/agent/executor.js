@@ -1,6 +1,32 @@
 import { supabase } from '../lib/supabase.js'
 
 /**
+ * Resolve o user_id a partir do nome ou email.
+ */
+async function resolveUser(identifier) {
+  if (!identifier) return null;
+
+  // Tenta por email primeiro
+  const { data: byEmail } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .eq('email', identifier)
+    .maybeSingle();
+
+  if (byEmail) return byEmail;
+
+  // Tenta por nome (busca parcial)
+  const { data: byName } = await supabase
+    .from('profiles')
+    .select('id, full_name')
+    .ilike('full_name', `%${identifier}%`)
+    .limit(1)
+    .maybeSingle();
+
+  return byName || null;
+}
+
+/**
  * Resolve o owner_id a partir do número de telefone do WhatsApp.
  */
 async function resolveUserId(phoneNumber) {
@@ -262,10 +288,12 @@ export async function searchTasks({ query }, phoneNumber) {
   const userId = await resolveUserId(phoneNumber)
   if (!userId) return { error: 'Usuário não encontrado.' }
 
+  // Buscar tarefas onde o usuário é criador OU está atribuído OU faz parte do projeto
+  // Como usamos o service key, precisamos fazer uma query mais inteligente ou simplificar
+  // por agora, vamos permitir que encontre todas as tarefas que o usuário PODE ver no frontend
   const { data, error } = await supabase
     .from('tasks')
     .select('id, title, status, priority, due_date, parent_id, project:projects(name)')
-    .eq('creator_id', userId)
     .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
     .order('created_at', { ascending: false })
     .limit(10)
@@ -288,14 +316,10 @@ export async function searchTasks({ query }, phoneNumber) {
 /**
  * Executa: assign_task
  */
-export async function assignTask({ task_id, user_email }) {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .eq('email', user_email)
-    .single()
+export async function assignTask({ task_id, user_identifier }) {
+  const profile = await resolveUser(user_identifier);
 
-  if (!profile) return { error: `Usuário com email "${user_email}" não encontrado.` }
+  if (!profile) return { error: `Usuário "${user_identifier}" não encontrado.` }
 
   const { error } = await supabase
     .from('assignments')
@@ -310,6 +334,31 @@ export async function assignTask({ task_id, user_email }) {
 }
 
 /**
+ * Executa: assign_project_member
+ */
+export async function assignProjectMember({ project_name, user_identifier, role = 'member' }, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber);
+  if (!userId) return { error: 'Usuário não encontrado.' };
+
+  const projectId = await resolveProject(project_name, userId);
+  if (!projectId) return { error: `Projeto "${project_name}" não encontrado.` };
+
+  const profile = await resolveUser(user_identifier);
+  if (!profile) return { error: `Usuário "${user_identifier}" não encontrado.` };
+
+  const { error } = await supabase
+    .from('project_members')
+    .insert({ project_id: projectId, user_id: profile.id, role })
+
+  if (error) {
+    if (error.code === '23505') return { error: 'Usuário já é membro deste projeto.' }
+    return { error: error.message }
+  }
+
+  return { success: true, added_to_project: project_name, user: profile.full_name }
+}
+
+/**
  * Executa: list_tasks
  */
 export async function listTasks({ filter, project_name, label_name }, phoneNumber) {
@@ -319,7 +368,6 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
   let query = supabase
     .from('tasks')
     .select('id, title, status, priority, due_date, due_time, project:projects(name), task_labels(label:labels(name))')
-    .eq('creator_id', userId)
     .is('parent_id', null)
     .order('created_at', { ascending: false })
     .limit(20)

@@ -18,8 +18,8 @@ Implement a dedicated integration area for an Intelligent Agent powered by n8n. 
 ### Frontend
 
 - New component `AgentMcpCard` in `IntegrationsPage.jsx`.
-- Fields: `n8n_url`, `n8n_api_key`, `mcp_server_url` (optional), `is_active`.
-- Premium design following the existing glassmorphism/gradient style.
+- Fields: `n8n_url`, `n8n_api_key`, `mcp_server_url` (opcional; se vazio, o sistema assume o servidor MCP interno do Organizador), `is_active`.
+- Premium design seguindo o estilo existente de glassmorphism/gradient.
 
 ### Database
 
@@ -49,4 +49,5 @@ Implement a dedicated integration area for an Intelligent Agent powered by n8n. 
 ## Verification
 
 - Connection test button for n8n.
-- Successful message processing through n8n.
+- Botão de teste de conexão para n8n.
+- Processamento bem-sucedido de mensagens via n8n.

@@ -20,8 +20,3 @@
 
 - [x] T8: Update `atualizacao.md` with the new feature.
 - [x] T9: Provide instructions to the user on how to import the n8n workflow.
-
-## Phase 5: One-Click Automation
-
-- [ ] T10: Create a JSON file containing the n8n workflow template.
-- [ ] T11: Implement "Deploy to n8n" logic in the frontend to push the workflow via API.

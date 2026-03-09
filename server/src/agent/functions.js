@@ -159,7 +159,7 @@ export const tools = [
     type: 'function',
     function: {
       name: 'assign_task',
-      description: 'Atribui uma tarefa a um usuário pelo email. Use quando o usuário quiser delegar ou atribuir uma tarefa a alguém.',
+      description: 'Atribui uma tarefa a um usuário pelo nome ou email. Use quando o usuário quiser delegar ou atribuir uma tarefa a alguém.',
       parameters: {
         type: 'object',
         properties: {
@@ -167,12 +167,38 @@ export const tools = [
             type: 'string',
             description: 'ID da tarefa (UUID)',
           },
-          user_email: {
+          user_identifier: {
             type: 'string',
-            description: 'Email do usuário que receberá a tarefa',
+            description: 'Nome ou Email do usuário que receberá a tarefa. Ex: "Rafael", "rafael@gmail.com"',
           },
         },
-        required: ['task_id', 'user_email'],
+        required: ['task_id', 'user_identifier'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'assign_project_member',
+      description: 'Adiciona um colaborador a um projeto. Use quando o usuário quiser convidar ou atribuir alguém a um projeto inteiro.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: {
+            type: 'string',
+            description: 'Nome do projeto',
+          },
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário a ser adicionado. Ex: "Rafael", "rafael@gmail.com"',
+          },
+          role: {
+            type: 'string',
+            enum: ['admin', 'member'],
+            description: 'Papel do usuário no projeto (padrão: member)',
+          },
+        },
+        required: ['project_name', 'user_identifier'],
       },
     },
   },

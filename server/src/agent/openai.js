@@ -7,6 +7,18 @@ const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
 const CHAT_MEMORY = new Map(); // Simple in-memory history: phoneNumber -> messages[]
 
+const functionExecutors = {
+  create_task:    { fn: createTask,    needsPhone: true },
+  edit_task:      { fn: editTask,      needsPhone: true },
+  delete_task:    { fn: deleteTask,    needsPhone: false },
+  delete_project: { fn: deleteProject, needsPhone: true },
+  search_tasks:   { fn: searchTasks,   needsPhone: true },
+  assign_task:    { fn: assignTask,    needsPhone: false },
+  assign_project_member: { fn: assignProjectMember, needsPhone: true },
+  list_tasks:     { fn: listTasks,     needsPhone: true },
+  update_status:  { fn: updateStatus,  needsPhone: false },
+}
+
 const getSystemPrompt = (userName, userRole) => {
   const today = new Date().toISOString().split('T')[0];
   const roleDisplay = userRole === 'admin' ? 'Administrador' : 'Colaborador';

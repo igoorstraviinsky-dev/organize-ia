@@ -14,7 +14,6 @@
   - Icon: `Bot`.
   - Form fields for n8n URL and API Key.
   - Status badge integration.
-  - **One-Click Deploy**: Implement a "Deploy to n8n" button that uses the n8n API to create the orchestrator workflow automatically.
 
 ## Phase 3: n8n Workflow Creation
 
