@@ -1,4 +1,51 @@
 import { supabase } from '../lib/supabase.js'
+import { sendTextMessage } from '../lib/uazapi.js'
+
+/**
+ * Envia notificação WhatsApp para o usuário atribuído.
+ * Fire-and-forget: não bloqueia nem falha a operação principal.
+ */
+async function sendAssignmentNotification(toUserId, message, senderUserId) {
+  try {
+    const { data: toProfile } = await supabase
+      .from('profiles')
+      .select('phone')
+      .eq('id', toUserId)
+      .maybeSingle()
+
+    if (!toProfile?.phone) return
+
+    // Busca integração UazAPI do remetente, ou qualquer uma ativa
+    let { data: integration } = await supabase
+      .from('integrations')
+      .select('api_url, api_token, instance_name')
+      .eq('user_id', senderUserId)
+      .eq('provider', 'uazapi')
+      .maybeSingle()
+
+    if (!integration) {
+      const { data: any } = await supabase
+        .from('integrations')
+        .select('api_url, api_token, instance_name')
+        .eq('provider', 'uazapi')
+        .not('api_url', 'is', null)
+        .maybeSingle()
+      integration = any
+    }
+
+    if (!integration) return
+
+    await sendTextMessage({
+      apiUrl: integration.api_url,
+      apiToken: integration.api_token,
+      instanceName: integration.instance_name,
+      number: toProfile.phone,
+      text: message,
+    })
+  } catch (err) {
+    console.error('[Notification] Erro ao enviar notificação:', err.message)
+  }
+}
 
 /**
  * Resolve o user_id a partir do nome ou email.
@@ -324,11 +371,20 @@ export async function assignTask({ task_id, user_identifier }, phoneNumber) {
   const assignee = await resolveUser(user_identifier)
   if (!assignee) return { error: `Usuário "${user_identifier}" não encontrado.` }
 
+  const { data: task } = await supabase.from('tasks').select('title').eq('id', task_id).single()
+
   const { error } = await supabase
     .from('assignments')
     .upsert({ task_id, user_id: assignee.id })
 
   if (error) return { error: error.message }
+
+  const taskTitle = task?.title || 'uma tarefa'
+  sendAssignmentNotification(
+    assignee.id,
+    `🔔 Você foi atribuído à tarefa *${taskTitle}*. Acesse o Organizador para mais detalhes.`,
+    userId
+  )
 
   return { success: true, message: `✅ Tarefa atribuída a ${assignee.full_name}` }
 }
@@ -385,6 +441,12 @@ export async function assignProjectMember({ project_name, user_identifier }, pho
     .upsert({ project_id: project.id, user_id: assignee.id })
 
   if (error) return { error: error.message }
+
+  sendAssignmentNotification(
+    assignee.id,
+    `🔔 Você foi adicionado ao projeto *${project.name}*. Acesse o Organizador para colaborar.`,
+    userId
+  )
 
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
