@@ -26,12 +26,12 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "listar_tarefas",
+            "name": "list_tasks",
             "description": "Lista tarefas do usuário. Pode filtrar por projeto, status (pending, completed) ou apenas hoje.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "project_id": {"type": "string"},
+                    "project_name": {"type": "string"},
                     "status_filter": {"type": "string", "enum": ["pending", "completed"]},
                     "today_only": {"type": "boolean"}
                 }
@@ -41,7 +41,7 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "criar_tarefa",
+            "name": "create_task",
             "description": "Cria uma nova tarefa para o usuário.",
             "parameters": {
                 "type": "object",
@@ -50,7 +50,7 @@ TOOLS = [
                     "description": {"type": "string"},
                     "priority": {"type": "integer", "minimum": 1, "maximum": 4},
                     "due_date": {"type": "string", "description": "Formato YYYY-MM-DD"},
-                    "project_id": {"type": "string"}
+                    "project_name": {"type": "string"}
                 },
                 "required": ["title"]
             }
@@ -59,21 +59,22 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "concluir_tarefa",
-            "description": "Marca uma tarefa como concluída.",
+            "name": "update_status",
+            "description": "Atualiza o status de uma tarefa (ex: completar).",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "task_id": {"type": "string"}
+                    "task_id": {"type": "string"},
+                    "status": {"type": "string", "enum": ["pending", "completed", "in_progress", "cancelled"]}
                 },
-                "required": ["task_id"]
+                "required": ["task_id", "status"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "listar_projetos",
+            "name": "list_projects",
             "description": "Lista os projetos que o usuário pode acessar.",
             "parameters": {"type": "object", "properties": {}}
         }
@@ -81,61 +82,31 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "designar_tarefa",
-            "description": "Atribui uma tarefa a um colega de equipe pelo nome.",
+            "name": "assign_task",
+            "description": "Atribui uma tarefa a um colega de equipe pelo nome ou email.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "task_id": {"type": "string"},
-                    "nome_usuario": {"type": "string"}
+                    "user_identifier": {"type": "string"}
                 },
-                "required": ["task_id", "nome_usuario"]
+                "required": ["task_id", "user_identifier"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "criar_etiqueta",
-            "description": "Cria uma nova etiqueta para o usuário.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "color": {"type": "string", "description": "Hex color code"}
-                },
-                "required": ["name"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "adicionar_etiqueta_tarefa",
-            "description": "Adiciona uma etiqueta a uma tarefa específica pelo nome da etiqueta.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "task_id": {"type": "string"},
-                    "nome_etiqueta": {"type": "string"}
-                },
-                "required": ["task_id", "nome_etiqueta"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "designar_projeto",
+            "name": "assign_project_member",
             "description": "Adiciona um colaborador a um projeto.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "project_id": {"type": "string"},
-                    "nome_usuario": {"type": "string"},
+                    "project_name": {"type": "string"},
+                    "user_identifier": {"type": "string"},
                     "role": {"type": "string", "enum": ["admin", "member"]}
                 },
-                "required": ["project_id", "nome_usuario"]
+                "required": ["project_name", "user_identifier"]
             }
         }
     }
@@ -173,58 +144,94 @@ Data/Hora atual: {today}
 
 async def execute_tool(name: str, args: dict, user_id: str) -> str:
     try:
-        if name == "listar_tarefas":
-            tasks = await db.list_tasks(user_id, **args)
-            if not tasks: return "Você não tem tarefas pendentes."
-            res = "📋 *Suas Tarefas:*\n"
+        if name in ("list_tasks", "listar_tarefas"):
+            # Resolução de projeto por nome se necessário
+            p_id = args.get("project_id")
+            if not p_id and args.get("project_name"):
+                projects = await db.list_projects(user_id)
+                for p in projects:
+                    if p["title"].lower() == args["project_name"].lower():
+                        p_id = p["id"]
+                        break
+            
+            tasks = await db.list_tasks(user_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
+            if not tasks: return "Você não tem tarefas correspondentes."
+            res = "📋 *Tarefas:*\n"
             for t in tasks:
                 prio = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}.get(t.get("priority"), "⚪")
                 check = "✅" if t.get("status") == "completed" else "⬜"
                 res += f"{check} {prio} {t['title']} (ID: {t['id']})\n"
             return res
 
-        elif name == "criar_tarefa":
-            task = await db.create_task(user_id, **args)
+        elif name in ("create_task", "criar_tarefa"):
+            # Resolução de projeto por nome
+            p_name = args.get("project_name")
+            p_id = args.get("project_id")
+            if p_name and not p_id:
+                projects = await db.list_projects(user_id)
+                for p in projects:
+                    if p["title"].lower() == p_name.lower():
+                        p_id = p["id"]
+                        break
+            
+            task = await db.create_task(user_id, title=args["title"], description=args.get("description"), 
+                                        priority=args.get("priority", 4), due_date=args.get("due_date"), project_id=p_id)
             return f"✅ Tarefa criada: *{task['title']}*"
 
-        elif name == "concluir_tarefa":
-            await db.update_task(args["task_id"], user_id, {"status": "completed"})
-            return "✅ Tarefa marcada como concluída!"
+        elif name in ("update_status", "concluir_tarefa"):
+            status = args.get("status", "completed")
+            await db.update_task(args["task_id"], user_id, {"status": status})
+            return f"✅ Status da tarefa atualizado para: {status}"
 
-        elif name == "listar_projetos":
+        elif name in ("list_projects", "listar_projetos"):
             projects = await db.list_projects(user_id)
             if not projects: return "Você não tem projetos."
-            res = "📂 *Seus Projetos:*\n"
+            res = "📂 *Projetos:*\n"
             for p in projects:
                 res += f"- {p['title']} (ID: {p['id']})\n"
             return res
 
-        elif name == "designar_tarefa":
-            user = await db.find_user_by_name(args["nome_usuario"])
-            if not user: return f"❌ Usuário '{args['nome_usuario']}' não encontrado."
+        elif name in ("assign_task", "designar_tarefa"):
+            ident = args.get("user_identifier") or args.get("nome_usuario")
+            user = await db.find_user_by_name(ident)
+            if not user: return f"❌ Usuário '{ident}' não encontrado."
             await db.assign_user_to_task(args["task_id"], user["id"])
             return f"✅ Tarefa atribuída a *{user['full_name']}*!"
 
-        elif name == "criar_etiqueta":
+        elif name in ("criar_etiqueta"):
             label = await db.create_label(user_id, **args)
             return f"✅ Etiqueta *{label['name']}* criada!"
 
-        elif name == "adicionar_etiqueta_tarefa":
+        elif name in ("adicionar_etiqueta_tarefa"):
             label = await db.find_label_by_name(user_id, args["nome_etiqueta"])
             if not label: return f"❌ Etiqueta '{args['nome_etiqueta']}' não encontrada."
             await db.add_label_to_task(args["task_id"], label["id"])
             return f"✅ Etiqueta *{label['name']}* adicionada à tarefa!"
 
-        elif name == "concluir_subtarefa":
+        elif name in ("concluir_subtarefa"):
             sub = await db.find_subtask_by_name(args["task_id"], args["nome_subtarefa"])
             if not sub: return f"❌ Subtarefa '{args['nome_subtarefa']}' não encontrada nesta tarefa."
             await db.update_subtask(sub["id"], {"status": "completed"})
             return f"✅ Subtarefa *{sub['title']}* concluída!"
 
-        elif name == "designar_projeto":
-            user = await db.find_user_by_name(args["nome_usuario"])
-            if not user: return f"❌ Usuário '{args['nome_usuario']}' não encontrado."
-            await db.assign_user_to_project(args["project_id"], user["id"], args.get("role", "member"))
+        elif name in ("assign_project_member", "designar_projeto"):
+            ident = args.get("user_identifier") or args.get("nome_usuario")
+            p_name = args.get("project_name")
+            p_id = args.get("project_id")
+            
+            if p_name and not p_id:
+                projects = await db.list_projects(user_id)
+                for p in projects:
+                    if p["title"].lower() == p_name.lower():
+                        p_id = p["id"]
+                        break
+            
+            if not p_id: return f"❌ Projeto '{p_name}' não encontrado."
+            
+            user = await db.find_user_by_name(ident)
+            if not user: return f"❌ Usuário '{ident}' não encontrado."
+            
+            await db.assign_user_to_project(p_id, user["id"], args.get("role", "member"))
             return f"✅ *{user['full_name']}* foi adicionado ao projeto!"
 
         return "Função não implementada."
