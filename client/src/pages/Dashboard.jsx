@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useParams, useNavigate, Routes, Route, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { List, LayoutGrid } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProjects } from "../hooks/useProjects";
@@ -27,7 +27,7 @@ export default function Dashboard({ onSignOut }) {
 
   // Auto-selecionar Inbox ao carregar se estiver na raiz do app
   useEffect(() => {
-    if (projects.length > 0 && view === undefined) {
+    if (projects.length > 0 && (view === undefined || view === 'app')) {
       const inbox = projects.find((p) => p.name === "Inbox");
       if (inbox) navigate(`/app/inbox/${inbox.id}`, { replace: true });
       else navigate(`/app/today`, { replace: true });
@@ -114,16 +114,24 @@ export default function Dashboard({ onSignOut }) {
           </div>
           
           <div className={`flex-1 overflow-auto custom-scrollbar ${isFullHeight ? '' : 'p-10'}`}>
-            <Routes>
-              <Route path="today" element={<TaskList projectId={null} title="Hoje" filterToday={true} />} />
-              <Route path="inbox/:id?" element={isBoardMode ? <KanbanBoard projectId={currentProjectId} /> : <TaskList projectId={currentProjectId} title="Inbox" />} />
-              <Route path="project/:id" element={isBoardMode ? <KanbanBoard projectId={currentProjectId} /> : <TaskList projectId={currentProjectId} title={getTitle()} />} />
-              <Route path="upcoming" element={<Upcoming />} />
-              <Route path="labels" element={<LabelsPage />} />
-              <Route path="chat" element={<WhatsAppChat />} />
-              <Route path="settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="today" replace />} />
-            </Routes>
+            {currentView === "upcoming" && <Upcoming />}
+            {currentView === "labels" && <LabelsPage />}
+            {currentView === "chat" && <WhatsAppChat />}
+            {currentView === "settings" && <SettingsPage />}
+            {(currentView === "today" || currentView === "inbox" || currentView === "project") && (
+              isBoardMode ? (
+                <KanbanBoard projectId={currentView === "today" ? null : currentProjectId} />
+              ) : (
+                <TaskList
+                  projectId={currentView === "today" ? null : currentProjectId}
+                  title={getTitle()}
+                  filterToday={currentView === "today"}
+                />
+              )
+            )}
+            {!["today", "inbox", "project", "upcoming", "labels", "chat", "settings"].includes(currentView) && (
+               <Navigate to="/app/today" replace />
+            )}
           </div>
         </div>
       </main>
