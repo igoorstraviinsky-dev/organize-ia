@@ -7,8 +7,8 @@ module.exports = {
     {
       // Servidor backend Node.js
       name: "organizador-api",
-      script: "./server/src/index.js",
-      cwd: "/var/www/organizador",
+      script: "src/index.js",
+      cwd: "/var/www/organizador/server",
       env: {
         NODE_ENV: "development",
       },
