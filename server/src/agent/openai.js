@@ -58,7 +58,7 @@ export async function processMessage(userMessage, phoneNumber) {
 
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
-    console.log(`Buscando perfil para telefone limpo: ${cleanPhone}`);
+    console.log(`[Cérebro] Buscando perfil para: ${phoneNumber}`);
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, role')
@@ -68,12 +68,17 @@ export async function processMessage(userMessage, phoneNumber) {
     if (profile) {
       userName = profile.full_name;
       userRole = profile.role;
+      console.log(`[Cérebro] Usuário identificado: ${userName} (${userRole})`);
+    } else {
+      console.log(`[Cérebro] Telefone ${cleanPhone} não cadastrado.`);
     }
 
     // Buscar lista de membros da equipe para o prompt
     const { data: team } = await supabase
       .from('profiles')
       .select('full_name, email');
+    
+    console.log(`[Cérebro] Equipe: ${team?.length || 0} membros encontrados.`);
     
     const history = CHAT_MEMORY.get(phoneNumber) || [];
     const teamList = team?.map(u => `- ${u.full_name} (${u.email})`).join('\n') || 'Nenhum outro membro.';
@@ -85,8 +90,10 @@ export async function processMessage(userMessage, phoneNumber) {
       ...history,
       { role: 'user', content: userMessage },
     ];
+    
+    console.log(`[Cérebro] Enviando para OpenAI (${MODEL})...`);
   } catch (err) {
-    console.error('Error fetching profile for agent:', err.message);
+    console.error('[Cérebro] Erro na preparação:', err.message);
     const history = CHAT_MEMORY.get(phoneNumber) || [];
     messages = [
       { role: 'system', content: getSystemPrompt(null, 'collaborator', 'Nenhum membro.') },

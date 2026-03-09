@@ -1,4 +1,5 @@
 import fetch from 'node-fetch'
+import { supabase } from '../lib/supabase.js'
 
 const PYTHON_AGENT_URL = process.env.PYTHON_AGENT_URL || 'http://localhost:8001'
 
@@ -341,38 +342,18 @@ export async function searchTasks({ query }, phoneNumber) {
  * Executa: assign_task
  */
 export async function assignTask({ task_id, user_identifier }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber);
-  if (!userId) return { error: 'Usuário não encontrado.' };
-
-  // Delegar para o Corpo Python que já resolve nomes
-  const pyResult = await callPythonBody('designar_tarefa', { task_id, nome_usuario: user_identifier }, userId);
-  return pyResult.error ? pyResult : { success: true, message: pyResult.result };
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+  return callPythonBody('assign_task', { task_id, user_identifier }, userId)
 }
 
 /**
  * Executa: assign_project_member
  */
 export async function assignProjectMember({ project_name, user_identifier, role = 'member' }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber);
-  if (!userId) return { error: 'Usuário não encontrado.' };
-
-  const { data: project } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('owner_id', userId)
-    .ilike('name', project_name)
-    .single();
-
-  if (!project) return { error: `Projeto "${project_name}" não encontrado.` };
-
-  // Delegar para o Corpo Python
-  const pyResult = await callPythonBody('designar_projeto', { 
-    project_id: project.id, 
-    nome_usuario: user_identifier,
-    role 
-  }, userId);
-  
-  return pyResult.error ? pyResult : { success: true, message: pyResult.result };
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+  return callPythonBody('assign_project_member', { project_name, user_identifier, role }, userId)
 }
 
 /**
