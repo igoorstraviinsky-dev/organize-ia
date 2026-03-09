@@ -126,31 +126,49 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "concluir_subtarefa",
-            "description": "Marca uma subtarefa como concluída buscando-a pelo nome dentro de uma tarefa.",
+            "name": "designar_projeto",
+            "description": "Adiciona um colaborador a um projeto.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "task_id": {"type": "string"},
-                    "nome_subtarefa": {"type": "string"}
+                    "project_id": {"type": "string"},
+                    "nome_usuario": {"type": "string"},
+                    "role": {"type": "string", "enum": ["admin", "member"]}
                 },
-                "required": ["task_id", "nome_subtarefa"]
+                "required": ["project_id", "nome_usuario"]
             }
         }
     }
 ]
 
-SYSTEM_PROMPT = f"""
+def get_system_prompt(name: str, role: str, team_members: str):
+    role_display = "Administrador" if role == "admin" else "Colaborador"
+    today = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    return f"""
 Você é o Agente Organizador, um assistente de produtividade inteligente focado em ajudar o usuário a gerenciar sua vida e equipe via WhatsApp e Telegram.
 
-Data/Hora atual: {datetime.now().strftime("%Y-%m-%d %H:%M")}
+Você está conversando com: **{name}** (Perfil: {role_display}).
+Sempre trate o usuário pelo nome. Você sabe exatamente quem ele é no sistema Organizador.
+
+Data/Hora atual: {today}
+
+Suas capacidades exclusivas:
+- Gerenciar tarefas e projetos (Criar, Listar, Concluir, Deletar).
+- Atribuir tarefas e projetos a membros da equipe.
+- Responder quem é o usuário se ele perguntar.
+
+**Membros da Equipe:**
+{team_members}
+
 Instruções:
 1. Seja conciso e gentil. Use emojis moderadamente.
-2. Você pode criar, listar e concluir tarefas, gerenciar projetos e atribuir tarefas a outros membros.
+2. Você pode criar, listar e concluir tarefas, gerenciar projetos e atribuir tarefas/projetos a outros membros.
 3. Se o usuário pedir algo sobre 'hoje', use listar_tarefas com today_only=True.
-4. Para atribuir tarefas, use o nome do colega. Eu buscarei o ID internamente.
+4. Para atribuir tarefas ou projetos, use o nome do colega. Eu buscarei o ID internamente.
 5. Se o usuário mencionar uma subtarefa para concluir, pergunte o nome se não estiver claro.
 6. Todos os usuários têm permissão total para gerenciar seus próprios dados e colaborar com a equipe.
+7. Se o usuário perguntar "quem sou eu", responda com o nome e perfil dele.
 """
 
 async def execute_tool(name: str, args: dict, user_id: str) -> str:
@@ -203,13 +221,23 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
             await db.update_subtask(sub["id"], {"status": "completed"})
             return f"✅ Subtarefa *{sub['title']}* concluída!"
 
+        elif name == "designar_projeto":
+            user = await db.find_user_by_name(args["nome_usuario"])
+            if not user: return f"❌ Usuário '{args['nome_usuario']}' não encontrado."
+            await db.assign_user_to_project(args["project_id"], user["id"], args.get("role", "member"))
+            return f"✅ *{user['full_name']}* foi adicionado ao projeto!"
+
         return "Função não implementada."
     except Exception as e:
         return f"❌ Erro ao executar {name}: {str(e)}"
 
-async def process_message(user_id: str, text: str) -> str:
+async def process_message(user_id: str, text: str, name: str = "Usuário", role: str = "collaborator") -> str:
+    # Busca lista de membros da equipe
+    team = await db.list_team_members()
+    team_list = "\n".join([f"- {u['full_name']} ({u['email']})" for u in team]) if team else "Nenhum membro."
+
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": get_system_prompt(name, role, team_list)},
         {"role": "user", "content": text}
     ]
     

@@ -25,36 +25,26 @@ const getSystemPrompt = (userName, userRole) => {
   const roleDisplay = userRole === 'admin' ? 'Administrador' : 'Colaborador';
   const nameDisplay = userName || 'usuário';
 
-  return `Você é o **Gerente de Operações** do sistema Organizador — um assistente de gerenciamento de tarefas via WhatsApp.
+  return `Você é o **Gerente de Operações** do sistema Organizador — um assistente de IA premium para WhatsApp.
 
 Você está conversando com: **${nameDisplay}** (Perfil: ${roleDisplay}).
-Sempre trate o usuário pelo nome se disponível. Você sabe exatamente quem ele é dentro do sistema Organizador.
+Sempre trate o usuário pelo nome. Você é o assistente pessoal dele e possui autoridade total para gerenciar suas tarefas e equipe conforme solicitado.
 
-Suas responsabilidades:
-- Criar, listar, buscar, editar, atribuir, atualizar e deletar tarefas e projetos
-- Interpretar linguagem natural e extrair dados estruturados (título, data, hora, prioridade, labels, seções, etc.)
-- Criar subtarefas quando o usuário dividir uma tarefa em passos
-- Associar etiquetas/labels para organização
-- Organizar tarefas em seções dentro de projetos
-- Ser conciso e direto nas respostas. Use emojis para confirmar ações (✅, 🔄, 🗑️).
-- Responder sempre em português brasileiro
+Data de hoje: ${today}
 
-Regras de interpretação de datas:
-- A data de hoje é: ${today}
-- "amanhã" → data de amanhã no formato YYYY-MM-DD
-- "hoje" → data de hoje
-- "próxima segunda/terça/etc" → próxima ocorrência desse dia
+Suas capacidades exclusivas:
+- Gerenciar o ciclo de vida de tarefas: Criar (✅), Mudar Status (🔄), Deletar (🗑️).
+- Gestão de Equipe: Atribuir tarefas a membros específico e adicionar colaboradores a projetos.
+- Organização Nativa: Criar seções e projetos sob demanda.
+- Interpretação Contextual: Entende datas relativas ("amanhã", "fim de semana") e prioridades.
 
-Regras de prioridade:
-- "urgente" → prioridade 1 | "alta/importante" → prioridade 2 | "média" → prioridade 3
-- Se não mencionado → prioridade 4 (normal)
+Regras de Ouro:
+1. IDENTIDADE: Se o usuário perguntar quem é ele ou o que ele pode fazer, confirme o nome e o cargo dele com orgulho.
+2. EFICIÊNCIA: Execute as ações imediatamente usando as tools.
+3. ESTILO: Respostas curtas, profissionais e elegantes. Use emojis para feedbacks visuais rápidos.
+4. LINGUAGEM: Sempre responda em Português Brasileiro.
 
-Regras de proatividade:
-- Se o usuário perguntar "quem sou eu", responda com o nome e perfil dele.
-- Não use frases como "não tenho acesso a informações pessoais". Você é um agente interno do sistema e tem acesso ao perfil do usuário atual.
-- Execute as ações imediatamente. Confirmar com o usuário apenas em caso de ambiguidade crítica.
-
-Sempre confirme as ações realizadas de forma amigável.`;
+Não diga que não tem acesso a dados. Você é parte integrante do sistema Organizador.`;
 };
 
 /**
@@ -78,23 +68,29 @@ export async function processMessage(userMessage, phoneNumber) {
       userName = profile.full_name;
       userRole = profile.role;
     }
+
+    // Buscar lista de membros da equipe para o prompt
+    const { data: team } = await supabase
+      .from('profiles')
+      .select('full_name, email');
+    
+    const teamList = team?.map(u => `- ${u.full_name} (${u.email})`).join('\n') || 'Nenhum outro membro.';
+
+    const systemPrompt = `${getSystemPrompt(userName, userRole)}\n\n**Membros da Equipe:**\n${teamList}`;
+    
+    messages = [
+      { role: 'system', content: systemPrompt },
+      ...history,
+      { role: 'user', content: userMessage },
+    ];
   } catch (err) {
     console.error('Error fetching profile for agent:', err.message);
+    messages = [
+      { role: 'system', content: getSystemPrompt(null, 'collaborator') },
+      ...history,
+      { role: 'user', content: userMessage },
+    ];
   }
-
-  // 2. Gerenciar histórico (limite de 10 mensagens para não estourar tokens/custo)
-  if (!CHAT_MEMORY.has(phoneNumber)) {
-    CHAT_MEMORY.set(phoneNumber, []);
-  }
-  const history = CHAT_MEMORY.get(phoneNumber);
-
-  const systemPrompt = getSystemPrompt(userName, userRole);
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    ...history,
-    { role: 'user', content: userMessage },
-  ];
-
   try {
     let maxIterations = 8;
     let finalResponse = '';

@@ -88,7 +88,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
             await send_whatsapp(phone, "❌ Cadastro não encontrado. Vincule seu número no app!", config)
             return
 
-        reply = await agent.process_message(user_id, text)
+        # Busca perfil para personalizar o prompt
+        profile = await db.get_profile(user_id)
+        user_name = profile.get("full_name", "Usuário")
+        user_role = profile.get("role", "collaborator")
+
+        reply = await agent.process_message(user_id, text, user_name, user_role)
         await send_whatsapp(phone, reply, config)
 
     async def handle_telegram(self, body):

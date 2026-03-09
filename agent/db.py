@@ -50,7 +50,7 @@ async def get_profile(user_id: str) -> Dict[str, Any]:
     return res.data
 
 async def list_tasks(user_id: str, project_id: str = None, status_filter: str = None, today_only: bool = False) -> List[Dict[str, Any]]:
-    query = _supabase.table("tasks").select("*, projects(title)").eq("user_id", user_id)
+    query = _supabase.table("tasks").select("*, projects(name)").eq("creator_id", user_id)
     if project_id:
         query = query.eq("project_id", project_id)
     if status_filter:
@@ -64,7 +64,7 @@ async def list_tasks(user_id: str, project_id: str = None, status_filter: str = 
 
 async def create_task(user_id: str, title: str, description: str = None, priority: int = 4, due_date: str = None, project_id: str = None) -> Dict[str, Any]:
     data = {
-        "user_id": user_id,
+        "creator_id": user_id,
         "title": title,
         "description": description,
         "priority": priority,
@@ -76,19 +76,19 @@ async def create_task(user_id: str, title: str, description: str = None, priorit
     return res.data[0] if res.data else {}
 
 async def update_task(task_id: str, user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-    res = _supabase.table("tasks").update(updates).eq("id", task_id).eq("user_id", user_id).execute()
+    res = _supabase.table("tasks").update(updates).eq("id", task_id).eq("creator_id", user_id).execute()
     return res.data[0] if res.data else {}
 
 async def delete_task(task_id: str, user_id: str):
-    _supabase.table("tasks").delete().eq("id", task_id).eq("user_id", user_id).execute()
+    _supabase.table("tasks").delete().eq("id", task_id).eq("creator_id", user_id).execute()
 
 async def list_projects(user_id: str) -> List[Dict[str, Any]]:
     # Lista projetos onde o usuário é dono ou membro
     res = _supabase.rpc("get_user_projects", {"p_user_id": user_id}).execute()
     return res.data
 
-async def create_project(user_id: str, title: str, color: str = "#808080") -> Dict[str, Any]:
-    res = _supabase.table("projects").insert({"user_id": user_id, "title": title, "color": color}).execute()
+async def create_project(user_id: str, name: str, color: str = "#6366f1") -> Dict[str, Any]:
+    res = _supabase.table("projects").insert({"owner_id": user_id, "name": name, "color": color}).execute()
     return res.data[0] if res.data else {}
 
 async def list_team_members() -> List[Dict[str, Any]]:
@@ -100,14 +100,17 @@ async def find_user_by_name(name: str) -> Optional[Dict[str, Any]]:
     return res.data[0] if res.data else None
 
 async def assign_user_to_task(task_id: str, user_id: str):
-    _supabase.table("task_assignees").upsert({"task_id": task_id, "user_id": user_id}).execute()
+    _supabase.table("assignments").upsert({"task_id": task_id, "user_id": user_id}).execute()
+
+async def assign_user_to_project(project_id: str, user_id: str, role: str = "member"):
+    _supabase.table("project_members").upsert({"project_id": project_id, "user_id": user_id, "role": role}).execute()
 
 async def find_label_by_name(user_id: str, name: str) -> Optional[Dict[str, Any]]:
-    res = _supabase.table("labels").select("*").eq("user_id", user_id).ilike("name", name).execute()
+    res = _supabase.table("labels").select("*").eq("owner_id", user_id).ilike("name", name).execute()
     return res.data[0] if res.data else None
 
-async def create_label(user_id: str, name: str, color: str = "#A8A8A8") -> Dict[str, Any]:
-    res = _supabase.table("labels").insert({"user_id": user_id, "name": name, "color": color}).execute()
+async def create_label(user_id: str, name: str, color: str = "#6366f1") -> Dict[str, Any]:
+    res = _supabase.table("labels").insert({"owner_id": user_id, "name": name, "color": color}).execute()
     return res.data[0] if res.data else {}
 
 async def add_label_to_task(task_id: str, label_id: str):
