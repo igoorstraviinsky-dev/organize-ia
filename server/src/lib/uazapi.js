@@ -251,17 +251,23 @@ export function parseWebhookPayload(body) {
         ? new Date(Number(ts) > 9999999999 ? ts : ts * 1000).toISOString()
         : new Date().toISOString()
 
-      // Detecta áudio: formato Evolution API (audioMessage) OU formato UazAPI (type: ptt/audio)
+      // Detecta áudio: Evolution API (audioMessage) OU UazAPI Cloud flat (messageType=AudioMessage / type=media)
       const audioMsg = realMsg.audioMessage || realMsg.pttMessage || realMsg.audio || null
-      const isUazAudio = (realMsg.type === 'ptt' || realMsg.type === 'audio' || msg.type === 'ptt' || msg.type === 'audio')
+      const msgTypeLC = (msg.messageType || '').toLowerCase()
+      const isUazAudio = (
+        realMsg.type === 'ptt' || realMsg.type === 'audio' ||
+        msg.type === 'ptt' || msg.type === 'audio' ||
+        msgTypeLC === 'audiomessage' ||                        // UazAPI Cloud: messageType=AudioMessage
+        (msg.type === 'media' && msgTypeLC.includes('audio'))  // UazAPI Cloud: type=media + messageType contém audio
+      )
       if ((audioMsg || isUazAudio) && phone) {
         return {
           phone, fromMe, text: null, messageId, contactName, timestamp,
           messageType: 'audio',
-          isPtt: audioMsg ? audioMsg.ptt === true : (realMsg.type === 'ptt' || msg.type === 'ptt'),
+          isPtt: audioMsg ? audioMsg.ptt === true : (realMsg.type === 'ptt' || msg.type === 'ptt' || msgTypeLC === 'audiomessage'),
           fileSha256: audioMsg?.fileSha256 || null,
           audioKey: msg.key || { remoteJid, fromMe, id: messageId },
-          audioUrl: audioMsg?.url || audioMsg?.mediaUrl || realMsg.body || msg.body || null,
+          audioUrl: audioMsg?.url || audioMsg?.mediaUrl || realMsg.body || msg.body || msg.content || null,
           audioMimeType: audioMsg?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
           rawMsg: msg,
           _rawAudio: audioMsg || realMsg,
@@ -349,6 +355,29 @@ export function parseWebhookPayload(body) {
 export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, audioUrl }) {
   const base = apiUrl.replace(/\/$/, '')
   const name = instanceName || ''
+
+  // ── Método 0: UazAPI Cloud flat format — usa messageid direto ──
+  const msgId = rawMsg?.messageid || rawMsg?.id || key?.id
+  if (msgId) {
+    const uazEndpoints = [
+      `${base}/message/getMediaBase64`,
+      `${base}/chat/getMediaBase64`,
+    ]
+    for (const url of uazEndpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: buildHeaders(apiToken),
+          body: JSON.stringify({ messageid: msgId }),
+          signal: AbortSignal.timeout(15000),
+        })
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}))
+          if (data.base64) return { base64: data.base64, mimetype: data.mimetype || 'audio/ogg' }
+        }
+      } catch {}
+    }
+  }
 
   // ── Método 1: UazAPI Cloud / Evolution API — envia o message COMPLETO ──
   // O endpoint requer o objeto message inteiro (contendo key + audioMessage), não apenas key
