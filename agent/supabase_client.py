@@ -205,8 +205,18 @@ async def list_subtasks(parent_id: str, user_id: str) -> list[dict]:
     return res.data or []
 
 
-async def find_task_by_name(user_id: str, name: str) -> Optional[dict]:
-    """Busca tarefa pelo nome: primeiro como criador, depois em projetos atribuídos."""
+async def find_task_by_name(user_id: str, name: str, is_admin: bool = False) -> Optional[dict]:
+    """Busca tarefa pelo nome. Admin vê todas as tarefas do sistema."""
+    if is_admin:
+        res = (
+            _supabase.table("tasks")
+            .select("id, title, status, priority, project_id")
+            .ilike("title", f"%{name}%")
+            .limit(1)
+            .execute()
+        )
+        return res.data[0] if res.data else None
+
     # 1) Tarefas criadas pelo usuário
     res = (
         _supabase.table("tasks")
@@ -246,16 +256,12 @@ async def find_task_by_name(user_id: str, name: str) -> Optional[dict]:
 # PROJETOS
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def list_projects(user_id: str) -> list[dict]:
-    """Lista todos os projetos do usuário."""
-    res = (
-        _supabase.table("projects")
-        .select("id, name, color")
-        .eq("owner_id", user_id)
-        .order("created_at", desc=False)
-        .execute()
-    )
-    return res.data or []
+async def list_projects(user_id: str, is_admin: bool = False) -> list[dict]:
+    """Lista projetos. Admin vê todos os projetos do sistema."""
+    q = _supabase.table("projects").select("id, name, color").order("created_at", desc=False)
+    if not is_admin:
+        q = q.eq("owner_id", user_id)
+    return q.execute().data or []
 
 
 async def get_projects_map(user_id: str) -> dict[str, str]:
@@ -289,16 +295,12 @@ async def delete_project(project_id: str, user_id: str) -> bool:
     return True
 
 
-async def find_project_by_name(user_id: str, name: str) -> Optional[dict]:
-    """Busca um projeto pelo nome (parcial, case-insensitive)."""
-    res = (
-        _supabase.table("projects")
-        .select("id, name, color")
-        .eq("owner_id", user_id)
-        .ilike("name", f"%{name}%")
-        .limit(1)
-        .execute()
-    )
+async def find_project_by_name(user_id: str, name: str, is_admin: bool = False) -> Optional[dict]:
+    """Busca um projeto pelo nome. Admin vê todos os projetos do sistema."""
+    q = _supabase.table("projects").select("id, name, color").ilike("name", f"%{name}%").limit(1)
+    if not is_admin:
+        q = q.eq("owner_id", user_id)
+    res = q.execute()
     return res.data[0] if res.data else None
 
 
@@ -430,8 +432,11 @@ async def list_team_members() -> list[dict]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def assign_user_to_task(task_id: str, assignee_id: str) -> bool:
-    """Designa um usuário a uma tarefa (ignora duplicata)."""
-    _supabase.table("assignments").insert({"task_id": task_id, "user_id": assignee_id}).execute()
+    """Designa um usuário a uma tarefa (upsert — ignora se já existir)."""
+    _supabase.table("assignments").upsert(
+        {"task_id": task_id, "user_id": assignee_id},
+        on_conflict="task_id,user_id"
+    ).execute()
     return True
 
 

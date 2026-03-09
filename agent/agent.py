@@ -377,9 +377,19 @@ TOOLS = [
 ]
 
 # ─── Tools por perfil ─────────────────────────────────────────────────────────
-# LIBERAÇÃO TOTAL: Todas as ferramentas disponíveis para todos os usuários
 TOOLS_ADMIN = TOOLS
-TOOLS_COLLABORATOR = TOOLS
+
+# Colaboradores não podem gerenciar projetos, seções nem designar tarefas/membros
+_COLLABORATOR_BLOCKED = {
+    "criar_projeto",
+    "apagar_projeto",
+    "criar_secao",
+    "designar_tarefa",
+    "remover_designado_tarefa",
+    "designar_projeto",
+    "remover_membro_projeto",
+}
+TOOLS_COLLABORATOR = [t for t in TOOLS if t["function"]["name"] not in _COLLABORATOR_BLOCKED]
 
 SYSTEM_PROMPT = """Você é o Orquestrador de IA do "Organizador", um ecossistema produtivo premium. Sua missão é ser o assistente definitivo do usuário no WhatsApp e Telegram, focado em alta eficiência, organização impecável e execução proativa.
 
@@ -389,17 +399,14 @@ COMPORTAMENTO E TOM DE VOZ:
 - Use emojis sutis e modernos para organizar o texto e confirmar ações (✅, 📅, 🚨, 📁, 👤, 🚀).
 - Seja proativo: se o usuário mencionar algo que claramente deve ser uma tarefa ou projeto, execute a criação imediatamente usando suas ferramentas.
 
-SUAS CAPACIDADES (HOUSE RULES):
-1. **Gestão de Tarefas**: Você pode criar, listar, editar, concluir (✅), mover (🔄), cancelar e apagar (🗑️) tarefas e subtarefas.
-2. **Projetos e Organização**: Você gerencia Projetos (pastas) e Seções. Sempre tente organizar tarefas dentro de projetos se fizer sentido.
-3. **Colaboração e Equipe**: Você pode listar a equipe, adicionar membros a projetos e designar colaboradores a tarefas específicas.
-4. **Inteligência Temporal**: Entenda comandos como "amanhã de manhã", "próxima segunda" ou "daqui a 3 dias". Use a data de hoje ({today}) como referência.
-5. **Busca Avançada**: Você pode buscar tarefas por texto, prioridade (Urgente 🔴, Alta 🟠) ou atrasos.
+SUAS CAPACIDADES PARA O PERFIL "{user_role}":
+{capabilities}
 
 DIRETRIZES DE EXECUÇÃO:
 - Ao realizar uma ação via ferramenta, confirme de forma elegante: "✅ Pronto! Criei a tarefa 'X' no projeto 'Y' para você."
 - Em caso de áudios, processe-os com o mesmo rigor de ordens diretas.
 - Só peça esclarecimentos se a instrução for impossível de interpretar ("Faz aquilo lá"). Do contrário, tome a iniciativa.
+- Se o usuário tentar fazer algo fora do seu perfil (ex: colaborador tentando criar projeto), recuse com educação explicando que essa ação é restrita ao Administrador.
 
 CONTEXTO ATUAL:
 - Data de hoje: {today}
@@ -408,11 +415,27 @@ CONTEXTO ATUAL:
 
 Você é o motor de produtividade deste usuário. Execute com perfeição."""
 
+CAPABILITIES_ADMIN = """
+1. **Gestão Completa de Tarefas**: Criar, listar, editar, concluir, mover, cancelar, apagar tarefas e subtarefas de toda a equipe.
+2. **Projetos e Seções**: Criar, editar e apagar projetos e seções. Visualizar todos os projetos do sistema.
+3. **Gestão de Equipe**: Listar equipe, adicionar/remover membros de projetos e designar/remover colaboradores de tarefas.
+4. **Inteligência Temporal**: Entenda "amanhã de manhã", "próxima segunda", "daqui a 3 dias". Referência: {today}.
+5. **Busca Avançada**: Buscar tarefas por texto, status, prioridade, datas ou atrasos em toda a equipe."""
+
+CAPABILITIES_COLLABORATOR = """
+1. **Suas Tarefas**: Criar, listar, editar, concluir, mover, cancelar e apagar suas próprias tarefas e subtarefas.
+2. **Projetos**: Visualizar projetos aos quais você foi adicionado como membro.
+3. **Equipe (visualização)**: Listar membros da equipe e ver quem está designado em tarefas.
+4. **Inteligência Temporal**: Entenda "amanhã de manhã", "próxima segunda", "daqui a 3 dias". Referência: {today}.
+5. **Busca Avançada**: Buscar suas tarefas por texto, status, prioridade ou datas.
+⚠️ Ações restritas ao Administrador: criar/apagar projetos, criar seções, designar colaboradores a tarefas, adicionar/remover membros de projetos."""
+
 
 # ─── Executor das funções ─────────────────────────────────────────────────────
 
-async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
+async def _execute_tool(tool_name: str, args: dict, user_id: str, role: str = "collaborator") -> str:
     """Executa uma função do agente e retorna o resultado como string."""
+    is_admin = role == "admin"
     today = date.today()
 
     def resolve_date(raw: Optional[str]) -> Optional[str]:
@@ -431,7 +454,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             # Resolver projeto
             project_id = None
             if args.get("nome_projeto"):
-                projects = await db.list_projects(user_id)
+                projects = await db.list_projects(user_id, is_admin=is_admin)
                 proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
                 if proj:
                     project_id = proj["id"]
@@ -439,7 +462,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             # Resolver tarefa pai (subtarefa)
             parent_id = None
             if args.get("tarefa_pai"):
-                parent = await db.find_task_by_name(user_id, args["tarefa_pai"])
+                parent = await db.find_task_by_name(user_id, args["tarefa_pai"], is_admin=is_admin)
                 if parent:
                     parent_id = parent["id"]
 
@@ -463,7 +486,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             # Resolver projeto
             project_id = None
             if args.get("nome_projeto"):
-                projects = await db.list_projects(user_id)
+                projects = await db.list_projects(user_id, is_admin=is_admin)
                 proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
                 if proj:
                     project_id = proj["id"]
@@ -502,14 +525,14 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return "\n".join(lines)
 
         elif tool_name == "concluir_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             await db.update_task_status(task["id"], user_id, "completed")
             return f"✅ Tarefa concluída!\n*{task['title']}*"
 
         elif tool_name == "mover_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             await db.update_task_status(task["id"], user_id, args["novo_status"])
@@ -523,14 +546,14 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"🚀 Tarefa movida para *{novo}*!\n_{task['title']}_"
 
         elif tool_name == "apagar_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             await db.delete_task(task["id"], user_id)
             return f"🗑️ Tarefa *{task['title']}* apagada."
 
         elif tool_name == "apagar_projeto":
-            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"], is_admin=is_admin)
             if not proj:
                 return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
             await db.delete_project(proj["id"], user_id)
@@ -541,7 +564,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"📁 Projeto criado: *{proj['name']}*"
 
         elif tool_name == "listar_projetos":
-            projects = await db.list_projects(user_id)
+            projects = await db.list_projects(user_id, is_admin=is_admin)
             if not projects:
                 return "📁 Nenhum projeto encontrado."
             lines = ["📁 *Seus projetos:*\n"]
@@ -550,7 +573,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return "\n".join(lines)
 
         elif tool_name == "listar_subtarefas":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             subtasks = await db.list_subtasks(task["id"], user_id)
@@ -566,12 +589,12 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             # Resolve tarefa (com filtro de projeto opcional)
             project_id = None
             if args.get("nome_projeto"):
-                projects = await db.list_projects(user_id)
+                projects = await db.list_projects(user_id, is_admin=is_admin)
                 proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
                 if proj:
                     project_id = proj["id"]
 
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             if project_id and task.get("project_id") != project_id:
@@ -587,7 +610,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"👤 *{nome_curto}* designado(a) para *{task['title']}*!"
 
         elif tool_name == "remover_designado_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
 
@@ -600,7 +623,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"✅ *{nome_curto}* removido(a) da tarefa *{task['title']}*."
 
         elif tool_name == "listar_designados_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             assignees = await db.list_task_assignees(task["id"])
@@ -612,7 +635,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return "\n".join(lines)
 
         elif tool_name == "designar_projeto":
-            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"], is_admin=is_admin)
             if not proj:
                 return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
 
@@ -625,7 +648,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"📁 *{nome_curto}* adicionado(a) ao projeto *{proj['name']}*!"
 
         elif tool_name == "remover_membro_projeto":
-            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"], is_admin=is_admin)
             if not proj:
                 return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
 
@@ -638,7 +661,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"✅ *{nome_curto}* removido(a) do projeto *{proj['name']}*."
 
         elif tool_name == "listar_membros_projeto":
-            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"], is_admin=is_admin)
             if not proj:
                 return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
             membros = await db.list_project_members_with_profiles(proj["id"])
@@ -659,7 +682,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return "\n".join(lines)
 
         elif tool_name == "editar_tarefa":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             updates = {}
@@ -673,14 +696,14 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
             return f"✏️ Tarefa atualizada!\n*{updated['title']}*"
 
         elif tool_name == "criar_secao":
-            proj = await db.find_project_by_name(user_id, args["nome_projeto"])
+            proj = await db.find_project_by_name(user_id, args["nome_projeto"], is_admin=is_admin)
             if not proj:
                 return f"❌ Projeto *{args['nome_projeto']}* não encontrado."
             secao = await db.create_section(proj["id"], args["nome_secao"])
             return f"📂 Seção *{secao['name']}* criada no projeto *{proj['name']}*!"
 
         elif tool_name == "alterar_prioridade":
-            task = await db.find_task_by_name(user_id, args["nome_tarefa"])
+            task = await db.find_task_by_name(user_id, args["nome_tarefa"], is_admin=is_admin)
             if not task:
                 return f"❌ Tarefa *{args['nome_tarefa']}* não encontrada."
             nova = args["nova_prioridade"]
@@ -691,7 +714,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
         elif tool_name == "listar_urgentes":
             project_id = None
             if args.get("nome_projeto"):
-                projects = await db.list_projects(user_id)
+                projects = await db.list_projects(user_id, is_admin=is_admin)
                 proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
                 if proj:
                     project_id = proj["id"]
@@ -710,7 +733,7 @@ async def _execute_tool(tool_name: str, args: dict, user_id: str) -> str:
         elif tool_name == "buscar_tarefas":
             project_id = None
             if args.get("nome_projeto"):
-                projects = await db.list_projects(user_id)
+                projects = await db.list_projects(user_id, is_admin=is_admin)
                 proj = next((p for p in projects if args["nome_projeto"].lower() in p["name"].lower()), None)
                 if proj:
                     project_id = proj["id"]
@@ -764,11 +787,15 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
         role = "collaborator"
     user_role = "Administrador" if role == "admin" else "Colaborador"
     tools = TOOLS_ADMIN if role == "admin" else TOOLS_COLLABORATOR
+    capabilities = (
+        CAPABILITIES_ADMIN if role == "admin" else CAPABILITIES_COLLABORATOR
+    ).replace("{today}", today)
     system = (
         SYSTEM_PROMPT
         .replace("{today}", today)
         .replace("{user_info}", user_info)
         .replace("{user_role}", user_role)
+        .replace("{capabilities}", capabilities)
     )
 
     # Monta o histórico de conversa
@@ -798,7 +825,7 @@ async def process_message(phone: str, text: str, user_id: str) -> str:
         tool_results = []
         for tc in msg.tool_calls:
             args = json.loads(tc.function.arguments)
-            result = await _execute_tool(tc.function.name, args, user_id)
+            result = await _execute_tool(tc.function.name, args, user_id, role)
             tool_results.append({
                 "role": "tool",
                 "tool_call_id": tc.id,
