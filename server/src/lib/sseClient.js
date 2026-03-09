@@ -404,7 +404,21 @@ async function processAudioAsync(parsed, integration, integrationId) {
         apiToken: integration.api_token,
         instanceName: integration.instance_name,
         number: phone,
-        text: 'Não consegui entender o áudio. Pode repetir em texto?',
+        text: '🎤 Não consegui entender o áudio. Pode repetir em texto?',
+      }).catch(() => {})
+      return
+    }
+
+    // Filtro: áudio muito curto provavelmente é ruído ou teste (menos de 3 palavras)
+    const wordCount = transcribedText.trim().split(/\s+/).length
+    if (wordCount < 2) {
+      addLog(integrationId, 'warn', `Transcrição muito curta (${wordCount} palavra): "${transcribedText}" — ignorado`)
+      await sendTextMessage({
+        apiUrl: integration.api_url,
+        apiToken: integration.api_token,
+        instanceName: integration.instance_name,
+        number: phone,
+        text: `🎤 Ouvi: _"${transcribedText}"_ — pode elaborar o comando?`,
       }).catch(() => {})
       return
     }
@@ -449,12 +463,15 @@ async function processAudioAsync(parsed, integration, integrationId) {
       const aiResponse = await processMessage(transcribedText, phone)
 
       if (aiResponse) {
+        // Resposta com echo da transcrição para o usuário confirmar o que foi entendido
+        const fullResponse = `🎤 _"${transcribedText}"_\n\n${aiResponse}`
+
         const result = await sendTextMessage({
           apiUrl: integration.api_url,
           apiToken: integration.api_token,
           instanceName: integration.instance_name,
           number: phone,
-          text: aiResponse,
+          text: fullResponse,
         })
 
         await supabase.from('chat_messages').insert({
@@ -462,7 +479,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
           user_id: integration.user_id,
           phone,
           direction: 'out',
-          body: aiResponse,
+          body: fullResponse,
           message_id: result?.messageid || result?.key?.id || `ai-${Date.now()}`,
           status: 'sent',
         })
