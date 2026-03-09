@@ -1,7 +1,4 @@
-import fetch from 'node-fetch'
 import { supabase } from '../lib/supabase.js'
-
-const PYTHON_AGENT_URL = process.env.PYTHON_AGENT_URL || 'http://localhost:8001'
 
 /**
  * Resolve o user_id a partir do nome ou email.
@@ -49,27 +46,6 @@ async function resolveUserId(phoneNumber) {
   return null
 }
 
-/**
- * Chama o 'Corpo' (Agente Python) para execução de uma tool.
- */
-async function callPythonBody(tool, args, userId) {
-  try {
-    const response = await fetch(`${PYTHON_AGENT_URL}/execute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tool, args, user_id: userId })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error(`Erro ao chamar Corpo Python (${tool}):`, error.message);
-    return { error: `Erro na execução remota: ${error.message}` };
-  }
-}
 
 /**
  * Resolve ou cria labels pelo nome
@@ -344,16 +320,44 @@ export async function searchTasks({ query }, phoneNumber) {
 export async function assignTask({ task_id, user_identifier }, phoneNumber) {
   const userId = await resolveUserId(phoneNumber)
   if (!userId) return { error: 'Usuário não encontrado.' }
-  return callPythonBody('assign_task', { task_id, user_identifier }, userId)
+
+  const assignee = await resolveUser(user_identifier)
+  if (!assignee) return { error: `Usuário "${user_identifier}" não encontrado.` }
+
+  const { error } = await supabase
+    .from('assignments')
+    .upsert({ task_id, user_id: assignee.id })
+
+  if (error) return { error: error.message }
+
+  return { success: true, message: `✅ Tarefa atribuída a ${assignee.full_name}` }
 }
 
 /**
  * Executa: assign_project_member
  */
-export async function assignProjectMember({ project_name, user_identifier, role = 'member' }, phoneNumber) {
+export async function assignProjectMember({ project_name, user_identifier }, phoneNumber) {
   const userId = await resolveUserId(phoneNumber)
   if (!userId) return { error: 'Usuário não encontrado.' }
-  return callPythonBody('assign_project_member', { project_name, user_identifier, role }, userId)
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id, name')
+    .ilike('name', project_name)
+    .maybeSingle()
+
+  if (!project) return { error: `Projeto "${project_name}" não encontrado.` }
+
+  const assignee = await resolveUser(user_identifier)
+  if (!assignee) return { error: `Usuário "${user_identifier}" não encontrado.` }
+
+  const { error } = await supabase
+    .from('project_members')
+    .upsert({ project_id: project.id, user_id: assignee.id })
+
+  if (error) return { error: error.message }
+
+  return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
 /**

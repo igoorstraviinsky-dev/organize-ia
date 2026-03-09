@@ -8,10 +8,16 @@ from dotenv import load_dotenv
 import db
 import agent
 import httpx
+import sys
+
+print(f"DEBUG: Python sys.path: {sys.path}")
+print(f"DEBUG: Agent module location: {agent.__file__}")
+with open(agent.__file__, 'r', encoding='utf-8') as f:
+    print(f"DEBUG: First lines of agent.py:\n{''.join(f.readlines()[:5])}")
 
 load_dotenv()
 
-PORT = int(os.environ.get("AGENT_PORT", 8001))
+PORT = int(os.environ.get("AGENT_PORT", 8005))
 
 async def send_whatsapp(phone, text, instance_config):
     url = f"{instance_config['api_url'].rstrip('/')}/send/text"
@@ -37,13 +43,17 @@ class WebhookHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_POST(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        
         try:
             body = json.loads(post_data.decode('utf-8'))
         except:
             self.send_error(400, "Invalid JSON")
             return
 
-        # Roteamento manual de webhooks
+        # Roteamento manual de webhooks e execuções
         if self.path == "/webhook":
             asyncio.run(self.handle_whatsapp(body))
         elif self.path == "/telegram/webhook":
@@ -51,6 +61,9 @@ class WebhookHandler(BaseHTTPRequestHandler):
         elif self.path == "/execute":
             asyncio.run(self.handle_execute(body))
             return # handle_execute já envia a resposta
+        else:
+            self.send_error(404)
+            return
         
         self.send_response(200)
         self.send_header("Content-Type", "application/json")

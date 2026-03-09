@@ -1,6 +1,7 @@
 import os
 import json
 import httpx
+import traceback
 from datetime import datetime
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
@@ -143,100 +144,99 @@ Data/Hora atual: {today}
 """
 
 async def execute_tool(name: str, args: dict, user_id: str) -> str:
-    try:
-        if name in ("list_tasks", "listar_tarefas"):
-            # Resolução de projeto por nome se necessário
-            p_id = args.get("project_id")
-            if not p_id and args.get("project_name"):
-                projects = await db.list_projects(user_id)
-                for p in projects:
-                    if p["title"].lower() == args["project_name"].lower():
-                        p_id = p["id"]
-                        break
-            
-            tasks = await db.list_tasks(user_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
-            if not tasks: return "Você não tem tarefas correspondentes."
-            res = "📋 *Tarefas:*\n"
-            for t in tasks:
-                prio = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}.get(t.get("priority"), "⚪")
-                check = "✅" if t.get("status") == "completed" else "⬜"
-                res += f"{check} {prio} {t['title']} (ID: {t['id']})\n"
-            return res
-
-        elif name in ("create_task", "criar_tarefa"):
-            # Resolução de projeto por nome
-            p_name = args.get("project_name")
-            p_id = args.get("project_id")
-            if p_name and not p_id:
-                projects = await db.list_projects(user_id)
-                for p in projects:
-                    if p["title"].lower() == p_name.lower():
-                        p_id = p["id"]
-                        break
-            
-            task = await db.create_task(user_id, title=args["title"], description=args.get("description"), 
-                                        priority=args.get("priority", 4), due_date=args.get("due_date"), project_id=p_id)
-            return f"✅ Tarefa criada: *{task['title']}*"
-
-        elif name in ("update_status", "concluir_tarefa"):
-            status = args.get("status", "completed")
-            await db.update_task(args["task_id"], user_id, {"status": status})
-            return f"✅ Status da tarefa atualizado para: {status}"
-
-        elif name in ("list_projects", "listar_projetos"):
+    if name in ("list_tasks", "listar_tarefas"):
+        # Resolução de projeto por nome se necessário
+        p_id = args.get("project_id")
+        if not p_id and args.get("project_name"):
             projects = await db.list_projects(user_id)
-            if not projects: return "Você não tem projetos."
-            res = "📂 *Projetos:*\n"
             for p in projects:
-                res += f"- {p['title']} (ID: {p['id']})\n"
-            return res
+                if p.get("name", "").lower() == args["project_name"].lower():
+                    p_id = p["id"]
+                    break
+        
+        tasks = await db.list_tasks(user_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
+        if not tasks: return "Você não tem tarefas correspondentes."
+        res = "📋 *Tarefas:*\n"
+        for t in tasks:
+            prio = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}.get(t.get("priority"), "⚪")
+            check = "✅" if t.get("status") == "completed" else "⬜"
+            res += f"{check} {prio} {t['title']} (ID: {t['id']})\n"
+        return res
 
-        elif name in ("assign_task", "designar_tarefa"):
-            ident = args.get("user_identifier") or args.get("nome_usuario")
-            user = await db.find_user_by_name(ident)
-            if not user: return f"❌ Usuário '{ident}' não encontrado."
-            await db.assign_user_to_task(args["task_id"], user["id"])
-            return f"✅ Tarefa atribuída a *{user['full_name']}*!"
+    elif name in ("create_task", "criar_tarefa"):
+        # Resolução de projeto por nome
+        p_name = args.get("project_name")
+        p_id = args.get("project_id")
+        if p_name and not p_id:
+            projects = await db.list_projects(user_id)
+            for p in projects:
+                if p.get("name", "").lower() == p_name.lower():
+                    p_id = p["id"]
+                    break
+        
+        task = await db.create_task(user_id, title=args["title"], description=args.get("description"), 
+                                    priority=args.get("priority", 4), due_date=args.get("due_date"), project_id=p_id)
+        return f"✅ Tarefa criada: *{task['title']}*"
 
-        elif name in ("criar_etiqueta"):
-            label = await db.create_label(user_id, **args)
-            return f"✅ Etiqueta *{label['name']}* criada!"
+    elif name in ("update_status", "concluir_tarefa"):
+        status = args.get("status", "completed")
+        await db.update_task(args["task_id"], user_id, {"status": status})
+        return f"✅ Status da tarefa atualizado para: {status}"
 
-        elif name in ("adicionar_etiqueta_tarefa"):
-            label = await db.find_label_by_name(user_id, args["nome_etiqueta"])
-            if not label: return f"❌ Etiqueta '{args['nome_etiqueta']}' não encontrada."
-            await db.add_label_to_task(args["task_id"], label["id"])
-            return f"✅ Etiqueta *{label['name']}* adicionada à tarefa!"
+    elif name in ("list_projects", "listar_projetos"):
+        projects = await db.list_projects(user_id)
+        print(f"DEBUG Projects: {projects}")
+        if not projects: return "Você não tem projetos."
+        res = "📂 *Projetos (v2):*\n"
+        for p in projects:
+            print(f"DEBUG Project item: {p}")
+            res += f"- {p.get('name', 'Sem nome')} (ID: {p['id']})\n"
+        return res
 
-        elif name in ("concluir_subtarefa"):
-            sub = await db.find_subtask_by_name(args["task_id"], args["nome_subtarefa"])
-            if not sub: return f"❌ Subtarefa '{args['nome_subtarefa']}' não encontrada nesta tarefa."
-            await db.update_subtask(sub["id"], {"status": "completed"})
-            return f"✅ Subtarefa *{sub['title']}* concluída!"
+    elif name in ("assign_task", "designar_tarefa"):
+        ident = args.get("user_identifier") or args.get("nome_usuario")
+        user = await db.find_user_by_name(ident)
+        if not user: return f"❌ Usuário '{ident}' não encontrado."
+        await db.assign_user_to_task(args["task_id"], user["id"])
+        return f"✅ Tarefa atribuída a *{user['full_name']}*!"
 
-        elif name in ("assign_project_member", "designar_projeto"):
-            ident = args.get("user_identifier") or args.get("nome_usuario")
-            p_name = args.get("project_name")
-            p_id = args.get("project_id")
-            
-            if p_name and not p_id:
-                projects = await db.list_projects(user_id)
-                for p in projects:
-                    if p["title"].lower() == p_name.lower():
-                        p_id = p["id"]
-                        break
-            
-            if not p_id: return f"❌ Projeto '{p_name}' não encontrado."
-            
-            user = await db.find_user_by_name(ident)
-            if not user: return f"❌ Usuário '{ident}' não encontrado."
-            
-            await db.assign_user_to_project(p_id, user["id"], args.get("role", "member"))
-            return f"✅ *{user['full_name']}* foi adicionado ao projeto!"
+    elif name in ("criar_etiqueta"):
+        label = await db.create_label(user_id, **args)
+        return f"✅ Etiqueta *{label['name']}* criada!"
 
-        return "Função não implementada."
-    except Exception as e:
-        return f"❌ Erro ao executar {name}: {str(e)}"
+    elif name in ("adicionar_etiqueta_tarefa"):
+        label = await db.find_label_by_name(user_id, args["nome_etiqueta"])
+        if not label: return f"❌ Etiqueta '{args['nome_etiqueta']}' não encontrada."
+        await db.add_label_to_task(args["task_id"], label["id"])
+        return f"✅ Etiqueta *{label['name']}* adicionada à tarefa!"
+
+    elif name in ("concluir_subtarefa"):
+        sub = await db.find_subtask_by_name(args["task_id"], args["nome_subtarefa"])
+        if not sub: return f"❌ Subtarefa '{args['nome_subtarefa']}' não encontrada nesta tarefa."
+        await db.update_subtask(sub["id"], {"status": "completed"})
+        return f"✅ Subtarefa *{sub['title']}* concluída!"
+
+    elif name in ("assign_project_member", "designar_projeto"):
+        ident = args.get("user_identifier") or args.get("nome_usuario")
+        p_name = args.get("project_name")
+        p_id = args.get("project_id")
+        
+        if p_name and not p_id:
+            projects = await db.list_projects(user_id)
+            for p in projects:
+                if p.get("name", "").lower() == p_name.lower():
+                    p_id = p["id"]
+                    break
+        
+        if not p_id: return f"❌ Projeto '{p_name}' não encontrado."
+        
+        user = await db.find_user_by_name(ident)
+        if not user: return f"❌ Usuário '{ident}' não encontrado."
+        
+        await db.assign_user_to_project(p_id, user["id"], args.get("role", "member"))
+        return f"✅ *{user['full_name']}* foi adicionado ao projeto!"
+
+    return "Função não implementada."
 
 async def process_message(user_id: str, text: str, name: str = "Usuário", role: str = "collaborator") -> str:
     # Busca lista de membros da equipe
