@@ -54,7 +54,17 @@ export default function TaskItem({ task }) {
   const hasSubtasks = subtasks.length > 0
 
   const isCold = !isCompleted && ((Date.now() - new Date(task.updated_at || task.created_at)) / (1000 * 60 * 60) > 48)
-  const originBadge = user?.id && task.creator_id ? (task.creator_id === user.id ? 'De: Mim' : 'Para: Mim') : null
+  
+  let originBadge = null;
+  if (user?.id) {
+    const isCreator = task.creator_id === user.id;
+    const hasAssignments = task.assignments && task.assignments.length > 0;
+    const isAssignedToMe = hasAssignments && task.assignments.some(a => a.user_id === user.id);
+
+    if (isAssignedToMe && isCreator) originBadge = 'De: Mim';
+    else if (isAssignedToMe && !isCreator) originBadge = 'Para: Mim';
+    else if (!hasAssignments && isCreator) originBadge = 'De: Mim';
+  }
 
   const toggleComplete = (e) => {
     e.stopPropagation()

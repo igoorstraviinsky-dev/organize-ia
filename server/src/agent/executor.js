@@ -846,11 +846,22 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
   const { data: tasks, error } = await query
   if (error) return { error: error.message }
 
-  let filteredTasks = tasks.map(t => ({ 
-    ...t, 
-    project_name: t.projects?.name,
-    identification: t.creator_id === targetUserId ? 'Criada por mim' : 'Atribuída a mim'
-  }))
+  let filteredTasks = tasks.map(t => {
+    const hasAssignments = t.assignments && t.assignments.length > 0
+    const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === targetUserId)
+    const isCreator = t.creator_id === targetUserId
+
+    let identification = 'Criada por mim'
+    if (isAssignedToMe && !isCreator) identification = 'Atribuída a mim'
+    else if (isAssignedToMe && isCreator) identification = 'Criada e Atribuída a mim'
+    else if (hasAssignments && isCreator && !isAssignedToMe) identification = 'Delegada'
+
+    return { 
+      ...t, 
+      project_name: t.projects?.name,
+      identification
+    }
+  })
 
   // 2. Busca labels para todas as tarefas coletadas
   if (filteredTasks.length > 0) {
@@ -907,19 +918,20 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
     }
   })
 
-  const average_completion_hours = completedCountWithDates > 0 
-    ? Math.round(totalCompletionMs / completedCountWithDates / (1000 * 60 * 60)) 
-    : 0
-
-  if (filteredTasks.length === 0) {
-    return 'Nenhuma tarefa encontrada correspondente a esses filtros.';
-  }
+  const assigned_to_me_count = filteredTasks.filter(t => {
+    if (t.status === 'completed') return false;
+    const hasAssignments = t.assignments && t.assignments.length > 0;
+    const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === targetUserId);
+    const isCreator = t.creator_id === targetUserId;
+    return isAssignedToMe || (!hasAssignments && isCreator);
+  }).length;
 
   return { 
     count: filteredTasks.length, 
     average_completion_hours,
     critical_tasks_count: criticalTasksCount,
-    assigned_to_me_count: filteredTasks.filter(t => t.identification === 'Atribuída a mim').length,
+    volume_atribuido: assigned_to_me_count,
+    assigned_to_me_count,
     tasks: filteredTasks,
     is_admin_view: isRequesterAdmin && !!user_email
   }

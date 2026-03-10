@@ -57,9 +57,15 @@ export default function TaskList({ projectId, title, filterToday }) {
         completedCount++
       }
 
-      // Atribuições a mim (criador diferente de mim ou tem assignment meu)
-      if (t.creator_id && user?.id && t.creator_id !== user.id) {
-        assignedCount++
+      // Atribuições a mim (Responsabilidade)
+      if (t.status !== 'completed' && user?.id) {
+        const hasAssignments = t.assignments && t.assignments.length > 0
+        const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === user.id)
+        const isCreator = t.creator_id === user.id
+        
+        if (isAssignedToMe || (!hasAssignments && isCreator)) {
+          assignedCount++
+        }
       }
     })
 
@@ -123,7 +129,7 @@ export default function TaskList({ projectId, title, filterToday }) {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume Atribuído</p>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <p className="text-xl font-black text-slate-800 leading-none">{assignedCount}</p>
+                <p className="text-xl font-black text-slate-800 leading-none">{assignedCount || 0}</p>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">para mim</p>
               </div>
             </div>
