@@ -393,15 +393,11 @@ export const tools = [
     type: "function",
     function: {
       name: "list_projects",
-      description: "Recupera a lista de projetos e IDs vinculados ao usuário ou ao e-mail fornecido (Visão Macro). Retorna apenas os nomes e identificadores dos projetos.",
+      description: "Recupera a lista de projetos vinculados ao usuário logado, junto de suas respectivas tarefas (Visão Macro e Dashboard).",
       parameters: {
         type: "object",
-        properties: {
-          user_email: {
-            type: "string",
-            description: "Opcional: E-mail de um colaborador para ver a lista de projetos dele (apenas para Administradores).",
-          },
-        },
+        properties: {},
+        required: [],
       },
     },
   },

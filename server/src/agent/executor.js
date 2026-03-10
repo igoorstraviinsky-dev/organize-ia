@@ -657,7 +657,7 @@ export async function assignProjectMember({ project_name, user_identifier, phone
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
-export async function listProjects({ user_email, phoneNumber }) {
+export async function listProjects({ phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
 
@@ -730,35 +730,9 @@ export async function listProjects({ user_email, phoneNumber }) {
       }))
   }
 
-  // CENÁRIO 1: Admin pedindo visão global (todos os usuários)
-  if (isRequesterAdmin && !user_email) {
-    const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
-    const results = []
-    for (const p of (profiles || [])) {
-      const { data: memberData } = await supabase.from('project_members').select('project_id').eq('user_id', p.id)
-      const memberProjectIds = memberData?.map(m => m.project_id) || []
-      const { data: userProjects } = await supabase.from('projects').select('id, name').or(`owner_id.eq.${p.id},id.in.(${memberProjectIds.join(',')})`)
-      
-      if (userProjects && userProjects.length > 0) {
-        results.push({ user_name: p.full_name, user_email: p.email, projects: userProjects })
-      }
-    }
-    if (results.length === 0) {
-      return 'Nenhum usuário no sistema possui projetos criados ou compartilhados no momento.';
-    }
-    return { global: true, total_users: results.length, users: results }
-  }
-
-  // CENÁRIO 2: Alvo específico (Admin acessando outro, ou Usuário acessando si mesmo)
+  // Busca sempre baseada na própria conta do remetente
   let targetUserId = requesterId
   let targetName = profile.full_name
-
-  if (user_email && isRequesterAdmin) {
-    const { data: targetProfile } = await supabase.from('profiles').select('id, full_name').ilike('email', user_email).maybeSingle()
-    if (!targetProfile) return { error: `Usuário ${user_email} não encontrado.` }
-    targetUserId = targetProfile.id
-    targetName = targetProfile.full_name
-  }
 
   const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
   
