@@ -128,7 +128,7 @@ function phonesMatch(a, b) {
 }
 
 /**
- * Resolve o owner_id a partir do número de telefone do WhatsApp.
+ * Resolve o perfil completo a partir do número de telefone do WhatsApp.
  * Reconhece números com ou sem o nono dígito brasileiro.
  */
 async function resolveUserId(phoneNumber) {
@@ -139,7 +139,7 @@ async function resolveUserId(phoneNumber) {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, phone, role, full_name')
+    .select('id, phone, role, full_name, email')
     .not('phone', 'is', null)
 
   if (!profiles) return null;
@@ -147,7 +147,7 @@ async function resolveUserId(phoneNumber) {
   for (const p of profiles) {
     const dbPhone = String(p.phone).replace(/[^0-9]/g, '');
     if (phonesMatch(cleanPhone, dbPhone)) {
-      return p.id;
+      return p; // Retorna o objeto perfil completo
     }
   }
 
@@ -271,8 +271,9 @@ async function resolveProject(projectName, userId) {
  * Executa: create_task
  */
 export async function createTask({ title, description, due_date, due_time, priority, project_name, section_name, parent_task_id, labels }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado no sistema.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado no sistema.' }
+  const userId = profile.id
 
   const projectId = await resolveProject(project_name, userId)
 
@@ -327,8 +328,9 @@ export async function createTask({ title, description, due_date, due_time, prior
  * Executa: edit_task
  */
 export async function editTask({ task_id, title, description, due_date, due_time, priority, project_name, section_name, labels }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado no sistema.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado no sistema.' }
+  const userId = profile.id
 
   const updates = {}
   if (title !== undefined) updates.title = title
@@ -402,8 +404,9 @@ export async function deleteProject({ project_name }, phoneNumber) {
     return { error: 'O projeto Inbox não pode ser deletado.' }
   }
 
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado no sistema.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado no sistema.' }
+  const userId = profile.id
 
   const { data: project } = await supabase
     .from('projects')
@@ -421,11 +424,35 @@ export async function deleteProject({ project_name }, phoneNumber) {
 }
 
 /**
+ * Executa: create_project
+ */
+export async function createProject({ name, description }, phoneNumber) {
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
+
+  const { data, error } = await supabase
+    .from('projects')
+    .insert({
+      name,
+      description: description || null,
+      owner_id: userId
+    })
+    .select()
+    .single()
+
+  if (error) return { error: error.message }
+
+  return { success: true, project: data }
+}
+
+/**
  * Executa: search_tasks
  */
 export async function searchTasks({ query }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
   // Resolve projetos e atribuições do usuário para escopo correto
   const [{ data: ownedProjects }, { data: memberProjects }, { data: assignedRows }] = await Promise.all([
@@ -471,10 +498,11 @@ export async function searchTasks({ query }, phoneNumber) {
  * Executa: search_projects
  */
 export async function searchProjects({ name }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
-  const isRequesterAdmin = await isAdmin(userId)
+  const isRequesterAdmin = profile.role === 'admin'
 
   // 1. Resolve projetos onde o usuário é dono ou membro
   const { data: projects, error } = await supabase
@@ -494,8 +522,9 @@ export async function searchProjects({ name }, phoneNumber) {
  * Executa: search_labels
  */
 export async function searchLabels({ name }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
   const { data: labels, error } = await supabase
     .from('labels')
@@ -509,11 +538,31 @@ export async function searchLabels({ name }, phoneNumber) {
 }
 
 /**
+ * Executa: list_labels
+ */
+export async function listLabels({}, phoneNumber) {
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
+
+  const { data, error } = await supabase
+    .from('labels')
+    .select('id, name, color')
+    .eq('owner_id', userId)
+    .order('name', { ascending: true })
+
+  if (error) return { error: error.message }
+
+  return { count: data?.length || 0, labels: data || [] }
+}
+
+/**
  * Executa: assign_task
  */
 export async function assignTask({ task_id, user_identifier }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
   const assignee = await resolveUser(user_identifier)
   if (!assignee) return { error: `Usuário "${user_identifier}" não encontrado.` }
@@ -540,8 +589,9 @@ export async function assignTask({ task_id, user_identifier }, phoneNumber) {
  * Executa: remove_project_member
  */
 export async function removeProjectMember({ project_name, user_identifier }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
   const { data: project } = await supabase
     .from('projects')
@@ -569,8 +619,9 @@ export async function removeProjectMember({ project_name, user_identifier }, pho
  * Executa: assign_project_member
  */
 export async function assignProjectMember({ project_name, user_identifier }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
 
   const { data: project } = await supabase
     .from('projects')
@@ -599,10 +650,11 @@ export async function assignProjectMember({ project_name, user_identifier }, pho
 }
 
 export async function listProjects({ user_email }, phoneNumber) {
-  const requesterId = await resolveUserId(phoneNumber)
-  if (!requesterId) return { error: 'Usuário não encontrado.' }
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
 
-  const isRequesterAdmin = await isAdmin(requesterId)
+  const requesterId = profile.id
+  const isRequesterAdmin = profile.role === 'admin'
 
   /**
    * Função auxiliar para buscar inventário (projetos e suas tarefas)
@@ -645,56 +697,65 @@ export async function listProjects({ user_email }, phoneNumber) {
       accessibleProjectIds = accessibleProjectIds.filter(id => requesterAccessible.includes(id))
     }
 
-    if (accessibleProjectIds.length === 0) return []
-
-    // 4. Busca tarefas dos projetos acessíveis
-    const { data: tasks } = await supabase
+    const { data: assignments } = await supabase.from('assignments').select('task_id').eq('user_id', ownerId)
+    const assignedTaskIds = assignments?.map(a => a.task_id) || []
+    
+    let queryTasks = supabase
       .from('tasks')
-      .select('id, title, status, priority, due_date, project_id, parent_id')
-      .in('project_id', accessibleProjectIds)
+      .select('id, title, status, priority, due_date, project_id, parent_id, creator_id')
       .order('position', { ascending: true })
+
+    if (assignedTaskIds.length > 0) {
+      queryTasks = queryTasks.or(`project_id.in.(${accessibleProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')})`)
+    } else {
+      queryTasks = queryTasks.in('project_id', accessibleProjectIds)
+    }
+
+    const { data: tasks } = await queryTasks
 
     // 5. Estrutura consolidada
     return projects
       .filter(p => accessibleProjectIds.includes(p.id))
       .map(p => ({
         ...p,
-        tasks: tasks?.filter(t => t.project_id === p.id) || []
+        tasks: tasks?.filter(t => t.project_id === p.id || assignedTaskIds.includes(t.id)) || []
       }))
   }
 
-  // CENÁRIO 1: Admin pedindo visão global
+  // CENÁRIO 1: Admin pedindo visão global (todos os usuários)
   if (isRequesterAdmin && !user_email) {
     const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
     const results = []
     for (const p of (profiles || [])) {
-      const inventory = await getInventory(p.id, requesterId, true)
-      if (inventory.length > 0) {
-        results.push({ user_name: p.full_name, user_email: p.email, projects: inventory })
+      const { data: memberData } = await supabase.from('project_members').select('project_id').eq('user_id', p.id)
+      const memberProjectIds = memberData?.map(m => m.project_id) || []
+      const { data: userProjects } = await supabase.from('projects').select('id, name').or(`owner_id.eq.${p.id},id.in.(${memberProjectIds.join(',')})`)
+      
+      if (userProjects && userProjects.length > 0) {
+        results.push({ user_name: p.full_name, user_email: p.email, projects: userProjects })
       }
     }
-    return { global: true, users: results }
+    return { global: true, total_users: results.length, users: results }
   }
 
-  // CENÁRIO 2: Alvo específico (Admin acessando outro, ou Usuário acessando outro)
+  // CENÁRIO 2: Alvo específico (Admin acessando outro, ou Usuário acessando si mesmo)
   let targetUserId = requesterId
-  if (user_email) {
+  if (user_email && isRequesterAdmin) {
     const { data: targetProfile } = await supabase.from('profiles').select('id, full_name').ilike('email', user_email).maybeSingle()
     if (!targetProfile) return { error: `Usuário ${user_email} não encontrado.` }
     targetUserId = targetProfile.id
   }
 
-  const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
+  // Busca projetos do alvo (simplificado para list_projects)
+  const { data: memberData } = await supabase.from('project_members').select('project_id').eq('user_id', targetUserId)
+  const memberProjectIds = memberData?.map(m => m.project_id) || []
+  const { data: projects } = await supabase.from('projects').select('id, name').or(`owner_id.eq.${targetUserId},id.in.(${memberProjectIds.join(',')})`)
   
-  if (inventory.length === 0 && targetUserId !== requesterId) {
-    return { error: 'Você não tem permissão para acessar os projetos privados deste usuário.' }
-  }
+  if (!projects || projects.length === 0) return { projects: [] }
 
   return { 
-    count: inventory.length, 
-    projects: inventory, 
-    target_user: targetUserId,
-    target_is_self: targetUserId === requesterId
+    user: user_email || profile.email, 
+    projects: projects.map(p => ({ id: p.id, name: p.name })) 
   }
 }
 
@@ -702,34 +763,81 @@ export async function listProjects({ user_email }, phoneNumber) {
  * Executa: list_tasks
  */
 export async function listTasks({ filter, project_name, label_name, user_email }, phoneNumber) {
-  // listTasks agora usa listProjects internamente para garantir o MESMO isolamento e organização
-  const projectsData = await listProjects({ user_email }, phoneNumber)
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+
+  const requesterId = profile.id
+  const isRequesterAdmin = profile.role === 'admin'
+
+  // Para list_tasks (visão MICRO), precisamos do inventário completo com tarefas
+  // Como listProjects agora é macro, vamos implementar a busca completa aqui ou reusar getInventory se estivesse disponível
+  // Vou ajustar para buscar as tarefas diretamente conforme os filtros
   
-  if (projectsData.error) return projectsData
+  let targetUserId = requesterId
+  if (user_email && isRequesterAdmin) {
+    const { data: targetProfile } = await supabase.from('profiles').select('id').ilike('email', user_email).maybeSingle()
+    if (targetProfile) targetUserId = targetProfile.id
+  }
 
-  // Achata as tarefas dos projetos respeitando o filtro
-  let allTasks = []
-  const sources = projectsData.global ? projectsData.users : [{ projects: projectsData.projects }]
+  // 1. Busca tarefas (Lógica similar ao getInventory antigo, mas otimizada para filtros)
+  const { data: memberData } = await supabase.from('project_members').select('project_id').eq('user_id', targetUserId)
+  const accessibleProjectIds = memberData?.map(m => m.project_id) || []
+  
+  const { data: ownedProjects } = await supabase.from('projects').select('id').eq('owner_id', targetUserId)
+  const allProjectIds = [...accessibleProjectIds, ...(ownedProjects?.map(p => p.id) || [])]
 
-  for (const s of sources) {
-    for (const p of s.projects) {
-      allTasks.push(...p.tasks.map(t => ({ ...t, project_name: p.name })))
+  const { data: assignments } = await supabase.from('assignments').select('task_id').eq('user_id', targetUserId)
+  const assignedTaskIds = assignments?.map(a => a.task_id) || []
+
+  let query = supabase
+    .from('tasks')
+    .select('*, projects(name)')
+    .order('position', { ascending: true })
+
+  if (assignedTaskIds.length > 0) {
+    query = query.or(`project_id.in.(${allProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')})`)
+  } else {
+    query = query.in('project_id', allProjectIds)
+  }
+
+  if (project_name) {
+    const { data: proj } = await supabase.from('projects').select('id').ilike('name', project_name).maybeSingle()
+    if (proj) query = query.eq('project_id', proj.id)
+  }
+
+  const { data: tasks, error } = await query
+  if (error) return { error: error.message }
+
+  let filteredTasks = tasks.map(t => ({ ...t, project_name: t.projects?.name }))
+  // 2. Busca labels para todas as tarefas coletadas
+  if (filteredTasks.length > 0) {
+    const taskIds = filteredTasks.map(t => t.id)
+    const { data: labelsData } = await supabase
+      .from('task_labels')
+      .select('task_id, labels(name)')
+      .in('task_id', taskIds)
+
+    if (labelsData) {
+      filteredTasks = filteredTasks.map(t => ({
+        ...t,
+        labels: labelsData.filter(l => l.task_id === t.id).map(l => l.labels?.name).filter(Boolean)
+      }))
     }
   }
 
-  // Aplica filtros adicionais
-  if (filter === 'pending') allTasks = allTasks.filter(t => t.status !== 'completed')
-  if (filter === 'completed') allTasks = allTasks.filter(t => t.status === 'completed')
-  if (filter === 'today') allTasks = allTasks.filter(t => t.due_date === new Date().toISOString().split('T')[0])
+  // 3. Aplica filtros adicionais
+  if (filter === 'pending') filteredTasks = filteredTasks.filter(t => t.status !== 'completed')
+  if (filter === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'completed')
+  if (filter === 'today') filteredTasks = filteredTasks.filter(t => t.due_date === new Date().toISOString().split('T')[0])
   
-  if (project_name) {
-    allTasks = allTasks.filter(t => t.project_name.toLowerCase().includes(project_name.toLowerCase()))
+  if (label_name) {
+    filteredTasks = filteredTasks.filter(t => t.labels?.some(l => l.toLowerCase().includes(label_name.toLowerCase())))
   }
 
   return { 
-    count: allTasks.length, 
-    tasks: allTasks,
-    is_admin_view: !!projectsData.global || (user_email && !projectsData.target_is_self)
+    count: filteredTasks.length, 
+    tasks: filteredTasks,
+    is_admin_view: isRequesterAdmin && !!user_email
   }
 }
 

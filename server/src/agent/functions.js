@@ -159,6 +159,27 @@ export const tools = [
   {
     type: "function",
     function: {
+      name: "create_project",
+      description: "Cria um novo projeto no Organizador.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Nome do projeto a ser criado.",
+          },
+          description: {
+            type: "string",
+            description: "Descrição opcional do projeto.",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "search_tasks",
       description:
         "Busca tarefas por texto no título ou descrição. Use para verificar se uma tarefa já existe antes de criá-la ou para encontrar o ID de uma tarefa específica.",
@@ -205,6 +226,17 @@ export const tools = [
           },
         },
         required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_labels",
+      description: "Lista todas as etiquetas/labels cadastradas do usuário. Use para conhecer as opções de filtragem disponíveis.",
+      parameters: {
+        type: "object",
+        properties: {},
       },
     },
   },
@@ -286,24 +318,26 @@ export const tools = [
     type: "function",
     function: {
       name: "list_tasks",
-      description:
-        "Lista tarefas detalhadas com filtros. Se for Admin, use user_email para ver de outros. A resposta é consolidada: as tarefas já vêm agrupadas por projeto para facilitar a exibição organizada (Projeto em cima, Tarefas embaixo).",
+      description: "Lista tarefas com filtros específicos por projeto, etiqueta ou e-mail (Visão Micro). Use para detalhar o conteúdo de um projeto ou buscar tarefas pendentes.",
       parameters: {
         type: "object",
         properties: {
-          filter: {
-            type: "string",
-            enum: ["all", "pending", "completed", "today", "overdue"],
-            description:
-              "Filtro: all=todas, pending=pendentes, completed=concluídas, today=para hoje, overdue=atrasadas",
-          },
           project_name: {
             type: "string",
-            description: "Filtrar por nome do projeto",
+            description: "Filtrar por nome do projeto.",
+          },
+          label_name: {
+            type: "string",
+            description: "Filtrar por nome da etiqueta.",
           },
           user_email: {
             type: "string",
-            description: "Opcional: E-mail de um colaborador para ver as tarefas dele (apenas para administradores).",
+            description: "Opcional: Filtrar por e-mail do usuário (apenas para Admins).",
+          },
+          filter: {
+            type: "string",
+            enum: ["all", "pending", "completed", "today", "overdue"],
+            description: "Filtro de status ou data.",
           },
         },
       },
@@ -359,14 +393,13 @@ export const tools = [
     type: "function",
     function: {
       name: "list_projects",
-      description:
-        'Lista os projetos e suas respectivas tarefas de forma aninhada. Administradores podem usar user_email para visão total. O output deve ser organizado: nome do projeto em negrito e suas tarefas em lista logo abaixo.',
+      description: "Recupera a lista de projetos e IDs vinculados ao usuário ou ao e-mail fornecido (Visão Macro). Retorna apenas os nomes e identificadores dos projetos.",
       parameters: {
         type: "object",
         properties: {
           user_email: {
             type: "string",
-            description: "Opcional: E-mail de um colaborador para ver os projetos e tarefas dele (apenas para administradores).",
+            description: "Opcional: E-mail de um colaborador para ver a lista de projetos dele (apenas para Administradores).",
           },
         },
       },

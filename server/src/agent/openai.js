@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
+import { createTask, editTask, deleteTask, deleteProject, createProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
@@ -12,7 +12,11 @@ const functionExecutors = {
   edit_task:      { fn: editTask,      needsPhone: true },
   delete_task:    { fn: deleteTask,    needsPhone: false },
   delete_project: { fn: deleteProject, needsPhone: true },
+  create_project: { fn: createProject, needsPhone: true },
   search_tasks:   { fn: searchTasks,   needsPhone: true },
+  search_projects: { fn: searchProjects, needsPhone: true },
+  search_labels:  { fn: searchLabels,  needsPhone: true },
+  list_labels:    { fn: listLabels,    needsPhone: true },
   assign_task:    { fn: assignTask,    needsPhone: true },
   assign_project_member: { fn: assignProjectMember, needsPhone: true },
   remove_project_member: { fn: removeProjectMember, needsPhone: true },
@@ -59,22 +63,41 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     let history = CHAT_MEMORY.get(phoneNumber) || [];
     const cleanPhone = phoneNumber.replace(/\D/g, '')
 
-    const { data: profiles } = await supabase.from('profiles').select('id, phone, full_name')
+    const { data: profiles } = await supabase.from('profiles').select('id, phone, full_name, role')
     const currentUser = (profiles || []).find(p => p.phone && brPhonesMatch(cleanPhone, p.phone)) || null;
+
+    if (!currentUser) {
+      console.log(`[Security Guard] Bloqueio: Telefone ${phoneNumber} não cadastrado.`)
+      return "Desculpe, você ainda não está cadastrado em nosso sistema. Por favor, acesse o Organizador Web e verifique seu cadastro ou entre em contato com o suporte para obter acesso.";
+    }
 
     const { data: settings } = await supabase.from('ai_agent_settings').select('system_prompt, openai_api_key').eq('user_id', currentUser?.id).maybeSingle()
     const openaiKey = settings?.openai_api_key || process.env.OPENAI_API_KEY
     if (!openaiKey) throw new Error('OpenAI API Key não encontrada.')
     
     const ai = new OpenAI({ apiKey: openaiKey })
-    const systemPrompt = (settings?.system_prompt || 'Você é um assistente de produtividade premium...') + `
+    const systemPrompt = `Você é o CÉREBRO do Organizador, uma inteligência artificial administrativa de alto nível. Sua missão é orquestrar projetos, tarefas e etiquetas com precisão.
+
+Diretrizes de Identidade e Autoridade:
+1. Super Admin: Você atua com autoridade total. Modifique os dados diretamente conforme solicitado.
+2. Visibilidade Total: Você acessa tarefas criadas pelo usuários, atribuídas a eles e projetos compartilhados. Administradores têm visão global via 'user_email'.
+3. Padrão de Ferramentas (Macro vs Micro):
+   - Use 'list_projects' para visão MACRO (apenas pastas e nomes de projetos).
+   - Use 'list_tasks' para visão MICRO (detalhar tarefas de um projeto ou aplicar filtros como etiquetas e prazos).
+
+Diretrizes de Formatação Visual (OBRIGATÓRIO):
+1. Nomes de Projetos: Sempre em **Negrito** (Ex: **Projeto X**).
+2. Listagem de Tarefas: Use bullets com hífen (-) para cada tarefa (Ex: - Comprar café).
+3. Espaçamento: Use uma quebra de linha entre projetos diferentes para clareza visual.
+4. Emojis: Use emojis discretos para status (✅ concluída, ⏳ em progresso, 📌 pendente).
+
 Regras Críticas:
-1. Isolamento: Você deve atuar SOMENTE na conta do usuário atual (${currentUser?.full_name || 'Desconhecido'}, ID: ${currentUser?.id || 'N/A'}). Não modifique dados de outros usuários a menos que você seja solicitado pelo Administrador e o alvo seja um colaborador permitido.
-2. Organização: Ao listar projetos e tarefas, use sempre o formato: Nome do Projeto em negrito, seguido pela lista de suas tarefas logo abaixo. Repita para cada projeto.
-3. Status: Você entende status naturais como "pendente", "em progresso" e "concluída". Use a ferramenta update_status para mover cards/itens entre estágios conforme solicitado.
-4. Verificação Pró-ativa: ANTES de sugerir a criação de qualquer projeto, tarefa ou etiqueta, você DEVE SEMPRE usar as ferramentas de busca (search_projects, search_tasks, search_labels) para verificar se o item já existe. Nunca diga que não conseguiu verificar se você tem as ferramentas para isso.
-5. Identificação: Use as informações do cabeçalho para saber quem está falando.
-Cabeçalho: Usuário: ${currentUser?.full_name || 'Desconhecido'} | ID: ${currentUser?.id || 'N/A'} | Tel: ${phoneNumber} | Role: ${currentUser?.role || 'user'}`
+1. Isolamento: Atue na conta: ${currentUser?.full_name} (ID: ${currentUser?.id}).
+2. Busca Pró-ativa: Use 'search_projects'/'search_tasks' antes de criar novos itens.
+3. Sincronização: Informe que as mudanças refletem instantaneamente no site.
+
+Cabeçalho de Sessão:
+Usuário: ${currentUser?.full_name} | ID: ${currentUser?.id} | Role: ${currentUser?.role} | Tel: ${phoneNumber}`
 
     // Prepara o conteúdo do usuário (Multi-modal se houver imagem)
     let userContent = userMessage;
