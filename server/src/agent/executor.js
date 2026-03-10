@@ -609,35 +609,52 @@ export async function listProjects({ user_email }, phoneNumber) {
    * Respeita o isolamento: usuário comum só vê o que é dele ou o que é compartilhado com ele.
    */
   const getInventory = async (ownerId, requesterId, isAdminFlag) => {
-    // 1. Resolve projetos onde o ownerId é dono ou membro
-    const { data: projects } = await supabase
+    // 1. Busca IDs de projetos onde o usuário é membro
+    const { data: memberData } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', ownerId)
+    
+    const memberProjectIds = memberData?.map(m => m.project_id) || []
+
+    // 2. Busca projetos onde o usuário é dono OU membro
+    let query = supabase
       .from('projects')
       .select('id, name, owner_id')
-      .or(`owner_id.eq.${ownerId},id.in.(${
-        (await supabase.from('project_members').select('project_id').eq('user_id', ownerId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
-      })`)
+    
+    if (memberProjectIds.length > 0) {
+      query = query.or(`owner_id.eq.${ownerId},id.in.(${memberProjectIds.join(',')})`)
+    } else {
+      query = query.eq('owner_id', ownerId)
+    }
 
-    if (!projects) return []
+    const { data: projects } = await query
 
-    // 2. Filtra projetos que o REQUISITANTE tem acesso (se não for admin e não for o dono)
+    if (!projects || projects.length === 0) return []
+
+    // 3. Filtra projetos que o REQUISITANTE tem acesso (se não for admin e não for o próprio dono)
     let accessibleProjectIds = projects.map(p => p.id)
     if (!isAdminFlag && ownerId !== requesterId) {
-      const { data: requesterMemberOf } = await supabase.from('project_members').select('project_id').eq('user_id', requesterId)
-      const requesterOwned = (await supabase.from('projects').select('id').eq('owner_id', requesterId)).data?.map(p => p.id) || []
-      const requesterAccessible = [...(requesterMemberOf?.map(m => m.project_id) || []), ...requesterOwned]
+      const { data: reqMemberData } = await supabase.from('project_members').select('project_id').eq('user_id', requesterId)
+      const { data: reqOwnedData } = await supabase.from('projects').select('id').eq('owner_id', requesterId)
+      
+      const requesterAccessible = [
+        ...(reqMemberData?.map(m => m.project_id) || []),
+        ...(reqOwnedData?.map(p => p.id) || [])
+      ]
       accessibleProjectIds = accessibleProjectIds.filter(id => requesterAccessible.includes(id))
     }
 
     if (accessibleProjectIds.length === 0) return []
 
-    // 3. Busca tarefas apenas dos projetos acessíveis
+    // 4. Busca tarefas dos projetos acessíveis
     const { data: tasks } = await supabase
       .from('tasks')
       .select('id, title, status, priority, due_date, project_id, parent_id')
       .in('project_id', accessibleProjectIds)
       .order('position', { ascending: true })
 
-    // 4. Monta a estrutura consolidada
+    // 5. Estrutura consolidada
     return projects
       .filter(p => accessibleProjectIds.includes(p.id))
       .map(p => ({
