@@ -84,26 +84,55 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     let messages = [{ role: 'system', content: systemPrompt }, ...history];
     if (base64Image) messages[messages.length - 1].content = userContent;
 
-    let maxIterations = 5;
-    let finalResponse = '';
-
     while (maxIterations-- > 0) {
-      const completion = await ai.chat.completions.create({ model: MODEL, messages, functions: tools, function_call: 'auto' });
+      // Usando 'tools' em vez de 'functions' para compatibilidade com a estrutura de functions.js
+      const completion = await ai.chat.completions.create({ 
+        model: MODEL, 
+        messages, 
+        tools: tools, 
+        tool_choice: 'auto' 
+      });
+      
       const responseMessage = completion.choices[0].message;
 
-      if (responseMessage.function_call) {
-        const { name: functionName, arguments: argsString } = responseMessage.function_call;
-        const args = JSON.parse(argsString);
-        const executor = functionExecutors[functionName];
+      if (responseMessage.tool_calls) {
+        messages.push(responseMessage);
+        
+        for (const toolCall of responseMessage.tool_calls) {
+          const functionName = toolCall.function.name;
+          const argsString = toolCall.function.arguments;
+          const args = JSON.parse(argsString);
+          const executor = functionExecutors[functionName];
 
-        if (executor) {
-          if (executor.needsPhone) args.phoneNumber = phoneNumber;
-          const result = await executor.fn(args);
-          messages.push(responseMessage);
-          messages.push({ role: 'function', name: functionName, content: JSON.stringify(result) });
-        } else {
-          messages.push(responseMessage);
-          messages.push({ role: 'function', name: functionName, content: JSON.stringify({ error: `Função "${functionName}" não encontrada.` }) });
+          console.log(`[AI Function] Chamando: ${functionName}`, args);
+
+          if (executor) {
+            if (executor.needsPhone) args.phoneNumber = phoneNumber;
+            try {
+              const result = await executor.fn(args);
+              messages.push({ 
+                role: 'tool', 
+                tool_call_id: toolCall.id, 
+                name: functionName, 
+                content: JSON.stringify(result) 
+              });
+            } catch (execErr) {
+              console.error(`[AI Executor Error] ${functionName}:`, execErr.message);
+              messages.push({ 
+                role: 'tool', 
+                tool_call_id: toolCall.id, 
+                name: functionName, 
+                content: JSON.stringify({ error: `Erro ao executar ${functionName}: ${execErr.message}` }) 
+              });
+            }
+          } else {
+            messages.push({ 
+              role: 'tool', 
+              tool_call_id: toolCall.id, 
+              name: functionName, 
+              content: JSON.stringify({ error: `Função "${functionName}" não encontrada.` }) 
+            });
+          }
         }
       } else {
         finalResponse = responseMessage.content;
@@ -111,12 +140,14 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
       }
     }
 
-    history.push({ role: 'assistant', content: finalResponse });
-    CHAT_MEMORY.set(phoneNumber, history);
+    if (finalResponse) {
+      history.push({ role: 'assistant', content: finalResponse });
+      CHAT_MEMORY.set(phoneNumber, history);
+    }
     return finalResponse;
 
   } catch (e) {
-    console.error('[AI Agent Error]', e.message);
+    console.error('[AI Agent Error Full]', e);
     return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
   }
 }
