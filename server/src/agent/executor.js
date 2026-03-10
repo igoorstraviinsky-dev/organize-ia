@@ -561,14 +561,33 @@ export async function listProjects({ user_email }, phoneNumber) {
   const requesterId = await resolveUserId(phoneNumber)
   if (!requesterId) return { error: 'Usuário não encontrado.' }
 
+  const isRequesterAdmin = await isAdmin(requesterId)
+
+  // Se for admin e NÃO passar e-mail, listar de TODOS
+  if (isRequesterAdmin && !user_email) {
+    const { data: allProfiles } = await supabase.from('profiles').select('id, full_name, email')
+    const results = []
+
+    for (const profile of (allProfiles || [])) {
+      const { data: userProjects } = await supabase.rpc('get_user_projects', { p_user_id: profile.id })
+      results.push({
+        user_name: profile.full_name,
+        user_email: profile.email,
+        projects: userProjects || []
+      })
+    }
+
+    return { global: true, users: results }
+  }
+
   let targetUserId = requesterId
 
-  // Se for admin e passou email, trocar alvo
+  // Se passou e-mail, tentar listar desse usuário específico (apenas se for admin)
   if (user_email) {
-    if (await isAdmin(requesterId)) {
+    if (isRequesterAdmin) {
       const { data: targetProfile } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, full_name')
         .ilike('email', user_email)
         .maybeSingle()
       
@@ -578,13 +597,12 @@ export async function listProjects({ user_email }, phoneNumber) {
         return { error: `Colaborador com e-mail ${user_email} não encontrado.` }
       }
     } else {
-      console.log(`[Agente] Usuário ${requesterId} tentou listar projetos de ${user_email} sem permissão de admin.`)
+      return { error: 'Você não tem permissão para listar projetos de outros usuários.' }
     }
   }
 
   const { data: projects, error } = await supabase.rpc('get_user_projects', { p_user_id: targetUserId })
   if (error) {
-    // Fallback se a RPC falhar
     const [{ data: owned }, { data: member }] = await Promise.all([
       supabase.from('projects').select('id, name, owner_id').eq('owner_id', targetUserId),
       supabase.from('project_members').select('project:projects(id, name, owner_id)').eq('user_id', targetUserId),
