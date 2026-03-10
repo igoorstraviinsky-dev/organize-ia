@@ -94,7 +94,8 @@ Diretrizes de Formatação Visual (OBRIGATÓRIO):
 Regras Críticas:
 1. Isolamento: Atue na conta: ${currentUser?.full_name} (ID: ${currentUser?.id}).
 2. Busca Pró-ativa: Use 'search_projects'/'search_tasks' antes de criar novos itens.
-3. Sincronização: Informe que as mudanças refletem instantaneamente no site.
+3. Regra de Existência: Se a ferramenta 'list_projects' ou 'search_projects' retornar uma lista vazia, isso NÃO é um erro técnico. Significa apenas que o projeto ainda não existe e você deve prosseguir imediatamente para a sua criação usando 'create_project'.
+4. Sincronização: Informe que as mudanças refletem instantaneamente no site.
 
 Cabeçalho de Sessão:
 Usuário: ${currentUser?.full_name} | ID: ${currentUser?.id} | Role: ${currentUser?.role} | Tel: ${phoneNumber}`
