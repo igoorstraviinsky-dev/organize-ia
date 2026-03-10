@@ -312,6 +312,8 @@ export async function createTask({ title, description, due_date, due_time, prior
     }
   }
   
+  // Atribuição: se especificou outra pessoa → atribui a ela. 
+  // Caso contrário → auto-atribui o criador (para refletir no Volume Atribuído do Dashboard)
   if (assigned_user_identifier) {
     try {
       const assignee = await resolveUser(assigned_user_identifier)
@@ -325,6 +327,20 @@ export async function createTask({ title, description, due_date, due_time, prior
       }
     } catch (err) {
       console.error('[CreateTask Assignment Error]', err.message)
+    }
+  } else {
+    // Auto-atribuição ao criador → garante que a tarefa apareça no Volume Atribuído
+    try {
+      await supabase
+        .from('assignments')
+        .insert({ task_id: data.id, user_id: userId })
+        .then(({ error: aErr }) => {
+          if (aErr && !aErr.message.includes('duplicate')) {
+            console.warn('[CreateTask AutoAssign]', aErr.message)
+          }
+        })
+    } catch (err) {
+      console.error('[CreateTask AutoAssign Error]', err.message)
     }
   }
 
