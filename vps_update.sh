@@ -2,7 +2,7 @@
 set -e
 
 REPO_URL="https://github.com/igoorstraviinsky-dev/organize-ia.git"
-BRANCH="001-mobile-design"
+BRANCH="main"
 PROJECT_DIR="/root/organizador"
 
 echo "================================================"

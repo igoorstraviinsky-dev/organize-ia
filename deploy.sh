@@ -19,8 +19,8 @@ echo ""
 echo "=== [2/7] ATUALIZANDO CODIGO (GITHUB) ==="
 cd /var/www/organizador
 git fetch --all
-git reset --hard origin/001-mobile-design
-echo "Codigo atualizado na branch 001-mobile-design."
+git reset --hard origin/main
+echo "Codigo atualizado na branch main."
 
 echo ""
 echo "=== [3/7] CONFIGURANDO SISTEMA (DEPS) ==="
