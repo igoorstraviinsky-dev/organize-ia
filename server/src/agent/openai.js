@@ -212,11 +212,11 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     }
 
     // Atualiza histórico (mantendo as últimas 10 trocas)
-    const history = CHAT_MEMORY.get(phoneNumber) || [];
-    history.push({ role: 'user', content: userMessage });
-    history.push({ role: 'assistant', content: finalResponse });
-    if (history.length > 10) history.splice(0, 2); 
-    CHAT_MEMORY.set(phoneNumber, history);
+    const historyToUpdate = CHAT_MEMORY.get(phoneNumber) || [];
+    historyToUpdate.push({ role: 'user', content: userContent });
+    historyToUpdate.push({ role: 'assistant', content: finalResponse });
+    if (historyToUpdate.length > 20) historyToUpdate.splice(0, 2); 
+    CHAT_MEMORY.set(phoneNumber, historyToUpdate);
 
     return finalResponse;
   } catch (error) {
