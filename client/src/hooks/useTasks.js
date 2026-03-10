@@ -28,7 +28,7 @@ export function normalizeTasks(tasks, subtasksMap = {}) {
 export const TASK_SELECT = `
   id, title, description, status, priority, due_date, due_time,
   parent_id, section_id, project_id, position, creator_id,
-  created_at, updated_at,
+  created_at, updated_at, completed_at,
   project:projects(id, name, color),
   section:sections(id, name),
   assignments(user_id, profiles:profiles(full_name, email, avatar_url)),

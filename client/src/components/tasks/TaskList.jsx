@@ -4,11 +4,13 @@ import { useSections, useCreateSection } from '../../hooks/useSections'
 import TaskItem from './TaskItem'
 import TaskForm from './TaskForm'
 import SectionGroup from './SectionGroup'
-import { Loader2, ClipboardList, Plus } from 'lucide-react'
+import { Loader2, ClipboardList, Plus, Activity, ClockAlert, Users } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../hooks/useAuth'
 
 export default function TaskList({ projectId, title, filterToday }) {
+  const { user } = useAuth()
   const { data: tasks = [], isLoading } = useTasks(projectId)
   const queryClient = useQueryClient()
   const { data: sections = [] } = useSections(projectId)
@@ -30,6 +32,43 @@ export default function TaskList({ projectId, title, filterToday }) {
   // Tarefas sem seção
   const unsectioned = pendingTasks.filter((t) => !t.section_id)
   const completedUnsectioned = completedTasks.filter((t) => !t.section_id)
+
+  // Cálculos de KPI para Inbox/Today
+  const isInboxOrToday = title === 'Inbox' || filterToday
+  let avgCompletionText = '-'
+  let criticalCount = 0
+  let assignedCount = 0
+
+  if (isInboxOrToday && tasks.length > 0) {
+    const now = Date.now()
+    let sumCompletionMs = 0
+    let completedCount = 0
+
+    tasks.forEach(t => {
+      // Atenção Crítica
+      if (t.status !== 'completed') {
+        const updatedAt = new Date(t.updated_at || t.created_at).getTime()
+        if ((now - updatedAt) / (1000 * 60 * 60) > 48) {
+          criticalCount++
+        }
+      } else if (t.completed_at && t.created_at) {
+        // Velocidade
+        sumCompletionMs += (new Date(t.completed_at).getTime() - new Date(t.created_at).getTime())
+        completedCount++
+      }
+
+      // Atribuições a mim (criador diferente de mim ou tem assignment meu)
+      if (t.creator_id && user?.id && t.creator_id !== user.id) {
+        assignedCount++
+      }
+    })
+
+    if (completedCount > 0) {
+      const avgHours = Math.round(sumCompletionMs / completedCount / (1000 * 60 * 60))
+      if (avgHours < 24) avgCompletionText = `${avgHours}h`
+      else avgCompletionText = `${Math.round(avgHours / 24)}d`
+    }
+  }
 
   const handleAddSection = async (e) => {
     e.preventDefault()
@@ -53,6 +92,45 @@ export default function TaskList({ projectId, title, filterToday }) {
 
   return (
     <div className="space-y-6">
+      {/* KPIs Dashboard */}
+      {isInboxOrToday && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-lg bg-blue-50 p-3 text-blue-600">
+              <Activity size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Velocidade Média</p>
+              <p className="text-xl font-black text-slate-800 leading-none mt-1">{avgCompletionText}</p>
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
+            <div className={`rounded-lg p-3 ${criticalCount > 0 ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}>
+              <ClockAlert size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atenção Crítica</p>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <p className="text-xl font-black text-slate-800 leading-none">{criticalCount}</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">frias {'>'} 48h</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
+            <div className="rounded-lg bg-purple-50 p-3 text-brand-purple">
+              <Users size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume Atribuído</p>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <p className="text-xl font-black text-slate-800 leading-none">{assignedCount}</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">para mim</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tarefas sem seção */}
       <div className="space-y-3">
         {unsectioned.map((task) => (

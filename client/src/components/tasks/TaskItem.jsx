@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CalendarDays, Flag, Trash2, Hash, Clock, CheckCircle2, Circle } from 'lucide-react'
 import { useUpdateTask, useDeleteTask } from '../../hooks/useTasks'
 import TaskDetailModal from './TaskDetailModal'
+import { useAuth } from '../../hooks/useAuth'
 
 const PRIORITY_COLORS = {
   1: 'border-red-500 text-red-500',
@@ -29,7 +30,16 @@ function formatTime(timeStr) {
   return timeStr.slice(0, 5)
 }
 
+function getRelativeTime(dateStr) {
+  if (!dateStr) return ''
+  const diffHours = Math.floor((Date.now() - new Date(dateStr)) / (1000 * 60 * 60))
+  if (diffHours < 1) return 'Atualizada agora'
+  if (diffHours < 24) return `Atualizada há ${diffHours}h`
+  return `Atualizada há ${Math.floor(diffHours / 24)}d`
+}
+
 export default function TaskItem({ task }) {
+  const { user } = useAuth()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
   const [showDetail, setShowDetail] = useState(false)
@@ -37,10 +47,14 @@ export default function TaskItem({ task }) {
   const isCompleted = task.status === 'completed'
   const dateInfo = formatDate(task.due_date)
   const time = formatTime(task.due_time)
+  const relativeUpdate = getRelativeTime(task.updated_at || task.created_at)
   const labels = (task.task_labels || []).map((tl) => tl.label).filter(Boolean)
   const subtasks = task.subtasks || []
   const completedSubs = subtasks.filter((s) => s.status === 'completed').length
   const hasSubtasks = subtasks.length > 0
+
+  const isCold = !isCompleted && ((Date.now() - new Date(task.updated_at || task.created_at)) / (1000 * 60 * 60) > 48)
+  const originBadge = user?.id && task.creator_id ? (task.creator_id === user.id ? 'De: Mim' : 'Para: Mim') : null
 
   const toggleComplete = (e) => {
     e.stopPropagation()
@@ -59,7 +73,8 @@ export default function TaskItem({ task }) {
     <>
       <div
         onClick={() => setShowDetail(true)}
-        className={`group relative flex cursor-pointer items-start gap-4 rounded-xl p-4 transition-all duration-300 border border-slate-100 bg-white hover:border-brand-purple/30 hover:shadow-md ${isCompleted ? 'opacity-60 bg-slate-50' : ''}`}
+        className={`group relative flex cursor-pointer items-start gap-4 rounded-xl p-4 transition-all duration-300 border bg-white hover:shadow-md 
+        ${isCompleted ? 'opacity-60 bg-slate-50 border-slate-100' : isCold ? 'border-yellow-400 ring-1 ring-yellow-400/50 hover:border-yellow-500' : 'border-slate-100 hover:border-brand-purple/30'}`}
       >
         <button
           onClick={toggleComplete}
@@ -145,6 +160,19 @@ export default function TaskItem({ task }) {
                   </span>
                 ))}
               </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            {originBadge && (
+              <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${originBadge === 'De: Mim' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                {originBadge}
+              </span>
+            )}
+            {relativeUpdate && !isCompleted && (
+              <span className="text-[10px] font-semibold text-slate-400">
+                {relativeUpdate}
+              </span>
             )}
           </div>
 

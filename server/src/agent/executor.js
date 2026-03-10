@@ -829,13 +829,13 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
 
   let query = supabase
     .from('tasks')
-    .select('*, projects(name)')
+    .select('*, projects(name), assignments(user_id)')
     .order('position', { ascending: true })
 
   if (assignedTaskIds.length > 0) {
-    query = query.or(`project_id.in.(${allProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')})`)
+    query = query.or(`project_id.in.(${allProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')}),creator_id.eq.${targetUserId}`)
   } else {
-    query = query.in('project_id', allProjectIds)
+    query = query.or(`project_id.in.(${allProjectIds.join(',')}),creator_id.eq.${targetUserId}`)
   }
 
   if (project_name) {
@@ -846,7 +846,12 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
   const { data: tasks, error } = await query
   if (error) return { error: error.message }
 
-  let filteredTasks = tasks.map(t => ({ ...t, project_name: t.projects?.name }))
+  let filteredTasks = tasks.map(t => ({ 
+    ...t, 
+    project_name: t.projects?.name,
+    identification: t.creator_id === targetUserId ? 'Criada por mim' : 'Atribuída a mim'
+  }))
+
   // 2. Busca labels para todas as tarefas coletadas
   if (filteredTasks.length > 0) {
     const taskIds = filteredTasks.map(t => t.id)
@@ -872,12 +877,49 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
     filteredTasks = filteredTasks.filter(t => t.labels?.some(l => l.toLowerCase().includes(label_name.toLowerCase())))
   }
 
+  // Cálculos de KPIs Analíticos
+  const now = new Date()
+  let totalCompletionMs = 0
+  let completedCountWithDates = 0
+  let criticalTasksCount = 0
+
+  filteredTasks = filteredTasks.map(t => {
+    let idle_time_hours = null
+    const updatedAt = new Date(t.updated_at || t.created_at)
+    const diffHours = (now - updatedAt) / (1000 * 60 * 60)
+
+    if (t.status === 'completed') {
+      if (t.completed_at && t.created_at) {
+        const timeToCompleteMs = new Date(t.completed_at) - new Date(t.created_at)
+        totalCompletionMs += timeToCompleteMs
+        completedCountWithDates++
+      }
+    } else {
+      idle_time_hours = Math.round(diffHours)
+      if (diffHours >= 48) {
+        criticalTasksCount++
+      }
+    }
+
+    return {
+      ...t,
+      idle_time_hours
+    }
+  })
+
+  const average_completion_hours = completedCountWithDates > 0 
+    ? Math.round(totalCompletionMs / completedCountWithDates / (1000 * 60 * 60)) 
+    : 0
+
   if (filteredTasks.length === 0) {
     return 'Nenhuma tarefa encontrada correspondente a esses filtros.';
   }
 
   return { 
     count: filteredTasks.length, 
+    average_completion_hours,
+    critical_tasks_count: criticalTasksCount,
+    assigned_to_me_count: filteredTasks.filter(t => t.identification === 'Atribuída a mim').length,
     tasks: filteredTasks,
     is_admin_view: isRequesterAdmin && !!user_email
   }
