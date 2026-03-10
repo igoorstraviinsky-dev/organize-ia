@@ -305,7 +305,9 @@ router.post('/webhook', async (req, res) => {
             instanceName: integration.instance_name,
             key: audioKey,
             rawMsg,
-            audioUrl
+            mediaUrl: audioUrl,
+            mediaMediaKey: parsed.audioMediaKey, // Adicionado explicitamente para UazAPI Cloud
+            mediaType: 'audio'
           })
 
           if (media?.base64) {
@@ -317,6 +319,34 @@ router.post('/webhook', async (req, res) => {
         }
       } catch (err) {
         console.error('[UazAPI Webhook] Erro ao transcrever áudio:', err.message)
+      }
+    }
+
+    // --- SE FOR IMAGEM, BAIXA PARA VISÃO ---
+    let base64ImageForAI = null
+    if (messageType === 'image' && direction === 'in') {
+      try {
+        const { downloadMediaBase64 } = await import('../lib/uazapi.js')
+        const { imageKey, imageUrl, imageMediaKey, rawMsg: fullRaw } = parsed
+        
+        const media = await downloadMediaBase64({
+          apiUrl: integration.api_url,
+          apiToken: integration.api_token,
+          instanceName: integration.instance_name,
+          key: imageKey,
+          rawMsg: fullRaw,
+          mediaUrl: imageUrl,
+          mediaMediaKey: imageMediaKey,
+          mediaType: 'image'
+        })
+
+        if (media?.base64) {
+          base64ImageForAI = media.base64
+          // Se não houver texto/legenda, definimos um padrão para a IA analisar
+          if (!text) text = 'Analise esta imagem.'
+        }
+      } catch (err) {
+        console.error('[UazAPI Webhook] Erro ao baixar imagem para visão:', err.message)
       }
     }
 
@@ -364,7 +394,7 @@ router.post('/webhook', async (req, res) => {
 
         // O Node.js atua como o Cérebro centralizado.
         const { processMessage } = await import('../agent/openai.js')
-        const aiResponse = await processMessage(text, phone)
+        const aiResponse = await processMessage(text, phone, base64ImageForAI)
 
         if (aiResponse) {
           const result = await sendTextMessage({

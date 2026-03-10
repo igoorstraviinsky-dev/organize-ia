@@ -99,51 +99,33 @@ Ao listar projetos e tarefas, organize SEMPRE a resposta na seguinte ordem hier�
  * @param {string} [base64Image] - A imagem em base64 (opcional)
  */
 export async function processMessage(userMessage, phoneNumber, base64Image = null) {
-  let currentUser = null; // { id, full_name, role, phone }
+  let currentUser = null;
   let messages = [];
+  let userContent = null;
+  let finalResponse = 'Desculpe, ocorreu um erro ao processar sua mensagem.';
 
   try {
     const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
-    console.log(`[Cérebro] Buscando perfil para: ${phoneNumber}`);
-
-    // Busca TODOS os membros (com e sem telefone) numa única query
-    const { data: allProfiles } = await supabase
+    
+    // Busca perfis para identificação
+    const { data: profiles } = await supabase
       .from('profiles')
       .select('id, full_name, role, email, phone');
 
-    const profiles = allProfiles || [];
+    const teamList = (profiles || []).map(u => {
+      const phone = u.phone ? String(u.phone).replace(/[^0-9]/g, '') : null;
+      return `- **${u.full_name}** | email: ${u.email} | cargo: ${u.role} | ${phone ? 'telefone: '+phone : 'sem telefone'}`;
+    }).join('\n') || 'Nenhum membro cadastrado.';
 
-    // Identifica quem está conversando pelo telefone (com suporte ao nono dígito)
-    const matched = profiles.find(p => {
-      if (!p.phone) return false;
-      const dbPhone = String(p.phone).replace(/[^0-9]/g, '');
-      return dbPhone.length >= 8 && brPhonesMatch(cleanPhone, dbPhone);
-    });
-
-    if (matched) {
-      currentUser = matched;
-      console.log(`[Cérebro] Usuário identificado: ${currentUser.full_name} (${currentUser.role}) | ID: ${currentUser.id}`);
-    } else {
-      console.log(`[Cérebro] Telefone ${cleanPhone} não cadastrado.`);
-    }
-
-    // Monta lista de equipe com id, email, telefone e cargo para o prompt
-    const teamList = profiles.length > 0
-      ? profiles.map(u => {
-          const phone = u.phone ? String(u.phone).replace(/[^0-9]/g, '') : null;
-          const phoneLine = phone ? `telefone: ${phone}` : 'sem telefone cadastrado';
-          return `- **${u.full_name}** | email: ${u.email} | cargo: ${u.role} | ${phoneLine}`;
-        }).join('\n')
-      : 'Nenhum membro cadastrado.';
-
-    console.log(`[Cérebro] Equipe: ${profiles.length} membros encontrados.`);
+    currentUser = (profiles || []).find(p => p.phone && brPhonesMatch(cleanPhone, p.phone)) || null;
 
     const history = CHAT_MEMORY.get(phoneNumber) || [];
     const systemPrompt = getSystemPrompt(currentUser, teamList);
 
-    const userContent = base64Image 
+    // Define o conteúdo da mensagem atual (multi-modal ou texto)
+    userContent = base64Image 
       ? [
-          { type: "text", text: userMessage },
+          { type: "text", text: userMessage || "Analise esta imagem." },
           { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
         ]
       : userMessage;
@@ -155,30 +137,17 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     ];
 
     console.log(`[Cérebro] Enviando para OpenAI (${MODEL})...`);
-  } catch (err) {
-    console.error('[Cérebro] Erro na preparação:', err.message);
-    const history = CHAT_MEMORY.get(phoneNumber) || [];
-    messages = [
-      { role: 'system', content: getSystemPrompt(null, 'Nenhum membro.') },
-      ...history,
-      { role: 'user', content: userMessage },
-    ];
-  }
-  try {
-    let maxIterations = 8;
-    let finalResponse = '';
 
+    let maxIterations = 8;
     while (maxIterations-- > 0) {
-      const response = await openai.chat.completions.create({
+      const completion = await openai.chat.completions.create({
         model: MODEL,
         messages,
         tools,
         tool_choice: 'auto',
       });
 
-      const choice = response.choices[0];
-      const assistantMessage = choice.message;
-
+      const assistantMessage = completion.choices[0].message;
       messages.push(assistantMessage);
 
       if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
@@ -189,19 +158,10 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
       for (const toolCall of assistantMessage.tool_calls) {
         const functionName = toolCall.function.name;
         const args = JSON.parse(toolCall.function.arguments);
-
-        console.log(`Executing: ${functionName}(${JSON.stringify(args)})`);
-
         const executor = functionExecutors[functionName];
-        let result;
-
-        if (executor) {
-          result = executor.needsPhone
-            ? await executor.fn(args, phoneNumber)
-            : await executor.fn(args);
-        } else {
-          result = { error: `Função "${functionName}" não encontrada.` };
-        }
+        let result = executor 
+          ? await executor.fn(args, executor.needsPhone ? phoneNumber : undefined)
+          : { error: `Função "${functionName}" não encontrada.` };
 
         messages.push({
           role: 'tool',
@@ -211,16 +171,21 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
       }
     }
 
-    // Atualiza histórico (mantendo as últimas 10 trocas)
+    // Atualiza histórico otimizado (sem base64 para evitar estouro de tokens)
     const historyToUpdate = CHAT_MEMORY.get(phoneNumber) || [];
-    historyToUpdate.push({ role: 'user', content: userContent });
+    historyToUpdate.push(base64Image 
+      ? { role: 'user', content: `${userMessage || 'Imagem'} [Imagem]` }
+      : { role: 'user', content: userContent }
+    );
     historyToUpdate.push({ role: 'assistant', content: finalResponse });
-    if (historyToUpdate.length > 20) historyToUpdate.splice(0, 2); 
-    CHAT_MEMORY.set(phoneNumber, historyToUpdate);
+    
+    // Mantém as últimas 10 trocas (20 mensagens)
+    CHAT_MEMORY.set(phoneNumber, historyToUpdate.slice(-20));
 
     return finalResponse;
+
   } catch (error) {
-    console.error('OpenAI error:', error);
-    return 'Desculpe, ocorreu um erro ao processar sua mensagem. Tente novamente.';
+    console.error('[Cérebro] Erro crítico:', error);
+    return finalResponse;
   }
 }
