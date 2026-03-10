@@ -878,14 +878,12 @@ export async function listProjects({ target_user, phoneNumber }) {
 
   const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
   
-  if (!inventory || inventory.length === 0) {
-    return `Olá ${targetName}, não encontrei nenhum projeto vinculado. Deseja criar o primeiro?`;
-  }
-
-  return inventory.map(p => ({ 
-    name: p.name, 
-    tasks: p.tasks.map(t => ({ title: t.title, status: t.status })) 
-  }))
+  return inventory
+    .filter(p => p.name.toLowerCase() !== 'inbox')
+    .map(p => ({ 
+      name: p.name, 
+      tasks: p.tasks.map(t => ({ title: t.title, status: t.status })) 
+    }))
 }
 
 /**
@@ -1032,6 +1030,20 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
       else avgCompletionText = `${Math.round(average_completion_hours / 24)}d`;
   }
 
+  // Agrupamento para facilitar a resposta do Agente (Inbox vs Projetos)
+  const grouped = {
+    inbox: filteredTasks.filter(t => !t.project_id),
+    projects: {}
+  }
+
+  filteredTasks.forEach(t => {
+    if (t.project_id) {
+      const pName = t.project_name || 'Sem Nome'
+      if (!grouped.projects[pName]) grouped.projects[pName] = []
+      grouped.projects[pName].push(t)
+    }
+  })
+
   return { 
     count: filteredTasks.length, 
     analytics: {
@@ -1039,7 +1051,7 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
       atencao_critica: criticalTasksCount,
       volume_atribuido: assigned_to_me_count
     },
-    tasks: filteredTasks,
+    grouped,
     is_admin_view: isRequesterAdmin && !!user_email
   }
 }
