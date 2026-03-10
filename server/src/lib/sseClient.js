@@ -275,6 +275,15 @@ async function handleSSEEvent(eventName, rawData, integration) {
     return
   }
 
+  // Imagem recebida: processar para visão
+  if (parsed.messageType === 'image' && direction === 'in') {
+    addLog(integrationId, 'info', `🖼️ Imagem de ${phone} — iniciando processamento para visão`)
+    processImageAsync(parsed, integration, integrationId).catch((err) =>
+      addLog(integrationId, 'warn', `Erro no processamento de imagem: ${err.message}`)
+    )
+    return
+  }
+
   if (!phone || !text) {
     addLog(integrationId, 'warn', `phone ou text vazio — ignorado (phone="${phone}" text="${text}")`)
     return
@@ -391,8 +400,9 @@ async function processAudioAsync(parsed, integration, integrationId) {
       instanceName: integration.instance_name,
       key: parsed.audioKey,
       rawMsg: parsed.rawMsg,
-      audioUrl: parsed.audioUrl,
-      audioMediaKey: parsed.audioMediaKey,
+      mediaUrl: parsed.audioUrl,
+      mediaMediaKey: parsed.audioMediaKey,
+      mediaType: 'audio',
       log: (msg) => addLog(integrationId, 'info', msg),
     })
 
@@ -506,5 +516,81 @@ async function processAudioAsync(parsed, integration, integrationId) {
     }
   } catch (aiErr) {
     addLog(integrationId, 'warn', `Erro no agente AI (áudio): ${aiErr.message}`)
+  }
+}
+/**
+ * Processa uma imagem de forma assíncrona.
+ */
+async function processImageAsync(parsed, integration, integrationId) {
+  const { phone, text: caption, messageId, contactName, timestamp } = parsed
+
+  addLog(integrationId, 'info', `[image] Baixando imagem de ${phone}...`)
+  const mediaData = await downloadMediaBase64({
+    apiUrl: integration.api_url,
+    apiToken: integration.api_token,
+    instanceName: integration.instance_name,
+    key: parsed.imageKey,
+    rawMsg: parsed.rawMsg,
+    mediaUrl: parsed.imageUrl,
+    mediaMediaKey: parsed.imageMediaKey,
+    mediaType: 'image',
+    log: (msg) => addLog(integrationId, 'info', msg),
+  })
+
+  if (!mediaData?.base64) {
+    addLog(integrationId, 'warn', `Download de imagem falhou`)
+    return
+  }
+
+  // Salva no banco
+  const textToSave = caption || '[Imagem]'
+  await supabase.from('chat_messages').insert({
+    integration_id: integration.id,
+    user_id: integration.user_id,
+    phone,
+    contact_name: contactName,
+    direction: 'in',
+    body: textToSave,
+    message_id: messageId,
+    status: 'read',
+    created_at: timestamp,
+    message_type: 'image',
+  })
+
+  // Chamar IA
+  try {
+    const { data: agentSettings } = await supabase
+      .from('ai_agent_settings')
+      .select('openai_api_key, is_active')
+      .eq('user_id', integration.user_id)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (agentSettings?.openai_api_key) {
+      const { processMessage } = await import('../agent/openai.js')
+      const aiResponse = await processMessage(caption || 'Analise esta imagem.', phone, mediaData.base64)
+
+      if (aiResponse) {
+        const result = await sendTextMessage({
+          apiUrl: integration.api_url,
+          apiToken: integration.api_token,
+          instanceName: integration.instance_name,
+          number: phone,
+          text: aiResponse,
+        })
+
+        await supabase.from('chat_messages').insert({
+          integration_id: integration.id,
+          user_id: integration.user_id,
+          phone,
+          direction: 'out',
+          body: aiResponse,
+          message_id: result?.messageid || result?.key?.id || `ai-${Date.now()}`,
+          status: 'sent',
+        })
+      }
+    }
+  } catch (aiErr) {
+    addLog(integrationId, 'warn', `Erro no agente AI (imagem): ${aiErr.message}`)
   }
 }

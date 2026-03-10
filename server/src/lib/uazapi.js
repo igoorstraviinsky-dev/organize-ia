@@ -417,10 +417,19 @@ async function decryptWhatsAppMedia(encData, mediaKeyB64, mediaType = 'audio') {
   return Buffer.concat([decipher.update(cipherData), decipher.final()])
 }
 
-export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key, rawMsg, mediaUrl, mediaMediaKey, mediaType = 'audio', log }) {
+export async function downloadMediaBase64({ 
+  apiUrl, apiToken, instanceName, key, rawMsg, 
+  mediaUrl, mediaMediaKey, 
+  audioUrl, audioMediaKey, 
+  imageUrl, imageMediaKey,
+  mediaType = 'audio', log 
+}) {
   const base = apiUrl.replace(/\/$/, '')
   const name = instanceName || ''
   const _log = log || (() => {})
+
+  const finalUrl = mediaUrl || audioUrl || imageUrl
+  const finalKey = mediaMediaKey || audioMediaKey || imageMediaKey
 
   async function tryFetch(url, options = {}) {
     const method = options.method || 'GET'
@@ -445,21 +454,21 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
   }
 
   // ── Método 1: CDN + Decrypt ──
-  if (mediaUrl && mediaMediaKey) {
+  if (finalUrl && finalKey) {
     try {
-      _log(`[dl] CDN + decrypt: ${mediaUrl.slice(0, 80)}`)
-      const res = await fetch(mediaUrl, { signal: AbortSignal.timeout(30000) })
+      _log(`[dl] CDN + decrypt: ${finalUrl.slice(0, 80)}`)
+      const res = await fetch(finalUrl, { signal: AbortSignal.timeout(30000) })
       if (res.ok) {
         const encBuffer = Buffer.from(await res.arrayBuffer())
-        const decrypted = await decryptWhatsAppMedia(encBuffer, mediaMediaKey, mediaType)
+        const decrypted = await decryptWhatsAppMedia(encBuffer, finalKey, mediaType)
         return { base64: decrypted.toString('base64'), mimetype: mediaType === 'audio' ? 'audio/ogg; codecs=opus' : 'image/jpeg' }
       }
     } catch (e) {
       _log(`[dl] CDN decrypt ERRO: ${e.message}`)
     }
-  } else if (mediaUrl) {
+  } else if (finalUrl) {
     try {
-      const res = await fetch(mediaUrl, {
+      const res = await fetch(finalUrl, {
         headers: buildHeaders(apiToken),
         signal: AbortSignal.timeout(20000),
       })
@@ -468,7 +477,7 @@ export async function downloadMediaBase64({ apiUrl, apiToken, instanceName, key,
         return { base64: Buffer.from(buffer).toString('base64'), mimetype: res.headers.get('content-type') }
       }
     } catch (e) {
-      _log(`[dl] GET mediaUrl → ERRO: ${e.message}`)
+      _log(`[dl] GET finalUrl → ERRO: ${e.message}`)
     }
   }
 
