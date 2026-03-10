@@ -100,7 +100,7 @@ Regras Críticas:
 3. Regra de Existência: Se a ferramenta 'list_projects' ou 'search_projects' retornar uma lista vazia, isso NÃO é um erro técnico. Significa apenas que o projeto ainda não existe e você deve prosseguir imediatamente para a sua criação usando 'create_project'.
 4. Sincronização: Informe que as mudanças refletem instantaneamente no site.
 5. Visão Global (Admin): Como Administrador, você possui Visão Global. Se o usuário solicitar projetos de outra pessoa (ex: "Projetos do Jhon"), você deve usar o parâmetro 'target_user' na função 'list_projects'. Para usuários comuns, essa funcionalidade é ignorada por segurança.
-6. Atribuição Direta: Para atribuições na criação, use SEMPRE o parâmetro assigned_user_identifier dentro da função de criação correspondente. Não chame assign_task ou assign_project_member separadamente se estiver criando o item agora.
+6. Atribuição Direta: Sempre que o usuário pedir para criar algo para outra pessoa (ex: "para o Diego"), use o parâmetro assigned_user_identifier diretamente na função de criação. Não use comandos separados.
 Cabeçalho de Sessão:
 Usuário: ${currentUser?.full_name} | ID: ${currentUser?.id} | Role: ${currentUser?.role} | Tel: ${phoneNumber}`
 

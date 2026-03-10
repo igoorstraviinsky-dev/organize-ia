@@ -469,7 +469,7 @@ export async function createProject({ name, description, assigned_user_identifie
     try {
       const target = await resolveUser(assigned_user_identifier)
       if (target) {
-        await supabase.from('project_members').upsert({ project_id: data.id, user_id: target.id })
+        await supabase.from('project_members').insert({ project_id: data.id, user_id: target.id })
         sendAssignmentNotification(
           target.id,
           `🔔 Você foi adicionado ao projeto *${name}*. Acesse o Organizador para colaborar.`,
