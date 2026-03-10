@@ -128,17 +128,22 @@ export const tools = [
     function: {
       name: "delete_task",
       description:
-        "Deleta permanentemente uma tarefa e todas as suas subtarefas. Use somente quando o usuário confirmar explicitamente que quer apagar/deletar/excluir uma tarefa.",
+        "Deleta permanentemente uma tarefa. Aceita o UUID ou o título da tarefa — se passar o título, o sistema resolve o ID automaticamente. Use somente quando o usuário confirmar que quer apagar/deletar/excluir a tarefa.",
       parameters: {
         type: "object",
         properties: {
           task_id: {
             type: "string",
             description:
-              "ID da tarefa (UUID). Use search_tasks ou list_tasks para encontrar o ID pelo título.",
+              "ID da tarefa (UUID). Prefira passar o UUID. Se não souber o UUID, pode passar o título e o sistema localiza.",
+          },
+          task_title: {
+            type: "string",
+            description:
+              "Título/nome da tarefa. Usado como fallback quando o task_id não for um UUID válido.",
           },
         },
-        required: ["task_id"],
+        required: [],
       },
     },
   },
@@ -157,6 +162,24 @@ export const tools = [
           },
         },
         required: ["project_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_all_user_tasks",
+      description:
+        "Apaga TODAS as tarefas criadas pelo usuário. Use somente quando o usuário disser explicitamente 'apague tudo', 'limpe todas as tarefas' ou similar. Requer confirm: true.",
+      parameters: {
+        type: "object",
+        properties: {
+          confirm: {
+            type: "boolean",
+            description: "Deve ser true para confirmar a operação de limpeza total.",
+          },
+        },
+        required: ["confirm"],
       },
     },
   },

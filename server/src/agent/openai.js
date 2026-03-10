@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, createProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
+import { createTask, editTask, deleteTask, deleteAllUserTasks, deleteProject, createProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
@@ -10,8 +10,9 @@ const CHAT_MEMORY = new Map(); // Simple in-memory history: phoneNumber -> messa
 const functionExecutors = {
   create_task:    { fn: createTask,    needsPhone: true },
   edit_task:      { fn: editTask,      needsPhone: true },
-  delete_task:    { fn: deleteTask,    needsPhone: false },
-  delete_project: { fn: deleteProject, needsPhone: true },
+  delete_task:             { fn: deleteTask,            needsPhone: true },
+  delete_all_user_tasks:   { fn: deleteAllUserTasks,    needsPhone: true },
+  delete_project:          { fn: deleteProject,         needsPhone: true },
   create_project: { fn: createProject, needsPhone: true },
   search_tasks:   { fn: searchTasks,   needsPhone: true },
   search_projects: { fn: searchProjects, needsPhone: true },

@@ -399,20 +399,95 @@ export async function editTask({ task_id, title, description, due_date, due_time
 
 /**
  * Executa: delete_task
+ * Aceita UUID ou título (resolve automaticamente pelo banco)
  */
-export async function deleteTask({ task_id }) {
+export async function deleteTask({ task_id, task_title, phoneNumber }) {
+  let resolvedId = task_id
+  let resolvedTitle = task_title
+
+  // Se o que veio não parece um UUID (ou veio vazio), tentar resolver pelo título
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const isUUID = UUID_REGEX.test(task_id)
+
+  if (!isUUID) {
+    // Tenta usar o task_id como título para busca
+    const searchTitle = task_id || task_title
+    if (!searchTitle) return { error: 'Informe o ID (UUID) ou o título da tarefa a ser deletada.' }
+
+    // Busca com resolvência pelo usuário se tiver phoneNumber
+    let query = supabase
+      .from('tasks')
+      .select('id, title, creator_id')
+      .ilike('title', `%${searchTitle}%`)
+      .is('parent_id', null)
+      .limit(5)
+
+    if (phoneNumber) {
+      const profile = await resolveUserId(phoneNumber)
+      if (profile) query = query.eq('creator_id', profile.id)
+    }
+
+    const { data: matches } = await query
+
+    if (!matches || matches.length === 0) {
+      return { error: `Nenhuma tarefa encontrada com o título "${searchTitle}". Tente usar o ID exato.` }
+    }
+    if (matches.length > 1) {
+      const lista = matches.map(t => `• "${t.title}" (id: ${t.id})`).join('\n')
+      return { error: `Encontrei ${matches.length} tarefas com esse nome. Seja mais específico ou passe o ID:\n${lista}` }
+    }
+
+    resolvedId = matches[0].id
+    resolvedTitle = matches[0].title
+  }
+
+  // Confirma que existe antes de deletar
   const { data: task } = await supabase
     .from('tasks')
     .select('id, title')
-    .eq('id', task_id)
+    .eq('id', resolvedId)
     .single()
 
-  if (!task) return { error: 'Tarefa não encontrada.' }
+  if (!task) return { error: 'Tarefa não encontrada com o ID informado.' }
 
-  const { error } = await supabase.from('tasks').delete().eq('id', task_id)
+  const { error } = await supabase.from('tasks').delete().eq('id', resolvedId)
   if (error) return { error: error.message }
 
   return { success: true, deleted_task: task.title }
+}
+
+/**
+ * Executa: delete_all_user_tasks
+ * Apaga TODAS as tarefas do usuário logado (limpeza total)
+ */
+export async function deleteAllUserTasks({ phoneNumber, confirm }) {
+  if (!confirm || confirm !== true) {
+    return { error: 'Confirmação necessária. Passe confirm: true para executar a limpeza total.' }
+  }
+
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+
+  // Busca todos os IDs antes de deletar
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select('id, title')
+    .eq('creator_id', profile.id)
+    .is('parent_id', null) // Apenas tarefas raíz (subtarefas somem via CASCADE)
+
+  if (!tasks || tasks.length === 0) {
+    return { success: true, message: 'Nenhuma tarefa encontrada para deletar.' }
+  }
+
+  const ids = tasks.map(t => t.id)
+  const { error } = await supabase.from('tasks').delete().in('id', ids)
+  if (error) return { error: error.message }
+
+  return {
+    success: true,
+    deleted_count: ids.length,
+    message: `${ids.length} tarefa(s) deletada(s) com sucesso.`
+  }
 }
 
 /**
