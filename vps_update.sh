@@ -3,6 +3,7 @@ set -e
 
 # Configurações de Caminho
 PROJECT_DIR="/root/organizador"
+STAGING_DIR="/var/www/organizador"
 BRANCH="main"
 
 # Função para a Animação STRAVINSKY
@@ -28,35 +29,30 @@ cd $PROJECT_DIR
 git fetch origin
 git reset --hard origin/$BRANCH
 
-# 2. Update Backend (Node.js)
-echo -e "\e[1;34m[2/5]\e[0m 🧠 Atualizando Backend (Server)..."
-cd "$PROJECT_DIR/server"
-npm install --silent
-pm2 restart organizador-api --update-env
+# 2. Sincronização de Configurações (.env) - SUA NOVA LÓGICA
+echo -e "\e[1;34m[2/5]\e[0m 🔑 Sincronizando arquivos de ambiente..."
+cp $STAGING_DIR/server/.env $PROJECT_DIR/server/.env
+cp $STAGING_DIR/agent/.env $PROJECT_DIR/agent/.env
+echo "✅ Arquivos .env sincronizados com sucesso."
 
-# 3. Update Frontend (React + Vite)
-echo -e "\e[1;34m[3/5]\e[0m 💻 Fazendo Build do Frontend (Client)..."
-cd "$PROJECT_DIR/client" # ou /var/www/organizador/client conforme sua estrutura
-npm install --silent
-npm run build
-# Nota: Se você usa Nginx para servir a pasta 'dist', o build já reflete na hora.
+# 3. Update Backend e Frontend
+echo -e "\e[1;34m[3/5]\e[0m 🧠 Preparando Server e Build do Client..."
+cd "$PROJECT_DIR/server" && npm install --silent
+cd "$PROJECT_DIR/client" && npm install --silent && npm run build
 
-# 4. Update Agente (Python)
-echo -e "\e[1;34m[4/5]\e[0m 🤖 Atualizando Agente (Python)..."
+# 4. Update Agente Python
+echo -e "\e[1;34m[4/5]\e[0m 🤖 Atualizando dependências do Agente..."
 cd "$PROJECT_DIR/agent"
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-fi
-source venv/bin/activate
-pip install -r requirements.txt --quiet
-deactivate
-pm2 restart organizador-agente --update-env
+source venv/bin/activate && pip install -r requirements.txt --quiet && deactivate
 
-# 5. Finalização
-echo -e "\e[1;34m[5/5]\e[0m 🏁 Salvando estado do PM2..."
+# 5. Reinicialização Total (PM2) - SUA NOVA LÓGICA
+echo -e "\e[1;34m[5/5]\e[0m 🔄 Reiniciando serviços e limpando logs..."
+cd $PROJECT_DIR
+pm2 restart all --update-env
+pm2 flush
 pm2 save --force
 
 stravinsky_animation
-echo -e "\e[1;32m✅ SISTEMA ATUALIZADO COM SUCESSO!\e[0m"
+echo -e "\e[1;32m✅ SISTEMA ATUALIZADO E RODANDO LIMPO!\e[0m"
 echo "--------------------------------------------------------------------------------"
 pm2 list
