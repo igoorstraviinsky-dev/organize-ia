@@ -657,7 +657,7 @@ export async function assignProjectMember({ project_name, user_identifier, phone
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
-export async function listProjects({ phoneNumber }) {
+export async function listProjects({ target_user, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
 
@@ -730,9 +730,22 @@ export async function listProjects({ phoneNumber }) {
       }))
   }
 
-  // Busca sempre baseada na própria conta do remetente
+  // Busca baseada na própria conta do remetente
   let targetUserId = requesterId
   let targetName = profile.full_name
+
+  if (isRequesterAdmin && target_user) {
+    const { data: targetProfile } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .or(`full_name.ilike.%${target_user}%,email.ilike.%${target_user}%`)
+      .maybeSingle()
+      
+    if (!targetProfile) return { error: `Usuário '${target_user}' não encontrado no sistema.` }
+    
+    targetUserId = targetProfile.id
+    targetName = targetProfile.full_name
+  }
 
   const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
   

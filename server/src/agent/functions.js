@@ -396,7 +396,12 @@ export const tools = [
       description: "Recupera a lista de projetos vinculados ao usuário logado, junto de suas respectivas tarefas (Visão Macro e Dashboard).",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          target_user: {
+            type: "string",
+            description: "Opcional. Nome ou e-mail de um usuário específico para buscar projetos (apenas permitido para Admins)."
+          }
+        },
         required: [],
       },
     },
