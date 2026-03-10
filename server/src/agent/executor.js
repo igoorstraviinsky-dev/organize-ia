@@ -139,21 +139,31 @@ async function resolveUserId(phoneNumber) {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, phone')
+    .select('id, phone, role, full_name')
     .not('phone', 'is', null)
 
   if (!profiles) return null;
 
-  for (const row of profiles) {
-    const dbPhone = String(row.phone).replace(/[^0-9]/g, '');
-    if (dbPhone.length < 8) continue;
+  for (const p of profiles) {
+    const dbPhone = String(p.phone).replace(/[^0-9]/g, '');
     if (phonesMatch(cleanPhone, dbPhone)) {
-      return row.id;
+      return p.id;
     }
   }
 
-  console.log(`User with phone ${cleanPhone} not found in profiles.`);
-  return null
+  return null;
+}
+
+/**
+ * Verifica se um usuário é administrador por ID
+ */
+async function isAdmin(userId) {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+  return profile?.role === 'admin'
 }
 
 
@@ -547,53 +557,87 @@ export async function assignProjectMember({ project_name, user_identifier }, pho
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
-export async function listProjects({}, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+export async function listProjects({ user_email }, phoneNumber) {
+  const requesterId = await resolveUserId(phoneNumber)
+  if (!requesterId) return { error: 'Usuário não encontrado.' }
 
-  const { data: projects, error } = await supabase.rpc('get_user_projects', { p_user_id: userId })
+  let targetUserId = requesterId
+
+  // Se for admin e passou email, trocar alvo
+  if (user_email) {
+    if (await isAdmin(requesterId)) {
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('email', user_email)
+        .maybeSingle()
+      
+      if (targetProfile) {
+        targetUserId = targetProfile.id
+      } else {
+        return { error: `Colaborador com e-mail ${user_email} não encontrado.` }
+      }
+    } else {
+      console.log(`[Agente] Usuário ${requesterId} tentou listar projetos de ${user_email} sem permissão de admin.`)
+    }
+  }
+
+  const { data: projects, error } = await supabase.rpc('get_user_projects', { p_user_id: targetUserId })
   if (error) {
-    // Fallback se a RPC falhar ou não estiver disponível conforme esperado
+    // Fallback se a RPC falhar
     const [{ data: owned }, { data: member }] = await Promise.all([
-      supabase.from('projects').select('id, name, owner_id').eq('owner_id', userId),
-      supabase.from('project_members').select('project:projects(id, name, owner_id)').eq('user_id', userId),
+      supabase.from('projects').select('id, name, owner_id').eq('owner_id', targetUserId),
+      supabase.from('project_members').select('project:projects(id, name, owner_id)').eq('user_id', targetUserId),
     ])
     const results = [
       ...(owned || []),
       ...(member?.map(m => m.project).filter(Boolean) || [])
     ]
-    return { count: results.length, projects: results }
+    return { count: results.length, projects: results, target_user: targetUserId }
   }
 
-  // Se a RPC não retornar owner_id, garantimos que ele venha
-  return { count: projects.length, projects }
+  return { count: projects.length, projects, target_user: targetUserId }
 }
 
 /**
  * Executa: list_tasks
  */
-export async function listTasks({ filter, project_name, label_name }, phoneNumber) {
-  const userId = await resolveUserId(phoneNumber)
-  if (!userId) return { error: 'Usuário não encontrado.' }
+export async function listTasks({ filter, project_name, label_name, user_email }, phoneNumber) {
+  const requesterId = await resolveUserId(phoneNumber)
+  if (!requesterId) return { error: 'Usuário não encontrado.' }
 
-  // Resolve projetos acessíveis pelo usuário (dono ou membro)
+  let targetUserId = requesterId
+
+  // Se for admin e passou email, trocar alvo
+  if (user_email) {
+    if (await isAdmin(requesterId)) {
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('email', user_email)
+        .maybeSingle()
+      
+      if (targetProfile) {
+        targetUserId = targetProfile.id
+      } else {
+        return { error: `Colaborador com e-mail ${user_email} não encontrado.` }
+      }
+    }
+  }
+
+  // Resolve projetos acessíveis pelo usuário alvo (dono ou membro)
   const [{ data: ownedProjects }, { data: memberProjects }, { data: assignedRows }] = await Promise.all([
-    supabase.from('projects').select('id').eq('owner_id', userId),
-    supabase.from('project_members').select('project_id').eq('user_id', userId),
-    supabase.from('assignments').select('task_id').eq('user_id', userId),
+    supabase.from('projects').select('id').eq('owner_id', targetUserId),
+    supabase.from('project_members').select('project_id').eq('user_id', targetUserId),
+    supabase.from('assignments').select('task_id').eq('user_id', targetUserId),
   ])
 
   const ownedIds = ownedProjects?.map((p) => p.id) || []
   const memberIds = memberProjects?.map((p) => p.project_id) || []
   const assignedTaskIds = assignedRows?.map((a) => a.task_id) || []
 
-  // Monta filtro OR para escopo do usuário
-  // 1. Sou criador da tarefa
-  // 2. Tarefa está em um projeto que eu sou dono (vejo tudo do meu projeto)
-  // 3. Tarefa está em um projeto que sou membro E (sou o criador OU estou atribuído) -> PRIVACIDADE
-  // 4. Estou explicitamente atribuído por ID
-  
-  const orParts = [`creator_id.eq.${userId}`]
+  // Monta filtro OR para escopo do usuário alvo
+  const orParts = [`creator_id.eq.${targetUserId}`]
   if (ownedIds.length > 0) orParts.push(`project_id.in.(${ownedIds.join(',')})`)
   
   // Para projetos onde sou apenas membro, só vejo o que me diz respeito ou o que eu criei

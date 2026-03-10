@@ -271,6 +271,10 @@ export const tools = [
             type: "string",
             description: "Filtrar por nome da etiqueta/label",
           },
+          user_email: {
+            type: "string",
+            description: "Opcional: E-mail de um colaborador para ver as tarefas dele (apenas para administradores).",
+          },
         },
       },
     },
@@ -330,7 +334,12 @@ export const tools = [
         'Lista todos os projetos que o usuário tem acesso (próprios ou compartilhado com ele). Use quando o usuário perguntar "quais são meus projetos" ou quiser ver a lista de pastas.',
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          user_email: {
+            type: "string",
+            description: "Opcional: E-mail de um colaborador para ver os projetos dele (apenas para administradores).",
+          },
+        },
       },
     },
   },
