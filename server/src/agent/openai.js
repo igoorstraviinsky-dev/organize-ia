@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage } from './executor.js'
+import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
