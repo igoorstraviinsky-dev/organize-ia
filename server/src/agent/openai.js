@@ -20,6 +20,7 @@ const functionExecutors = {
   list_tasks:     { fn: listTasks,     needsPhone: true },
   update_status:  { fn: updateStatus,  needsPhone: false },
   send_message:   { fn: sendMessage,   needsPhone: true },
+  list_projects:  { fn: listProjects,  needsPhone: true },
 }
 
 function getBrPhoneVariants(rawPhone) {

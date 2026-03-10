@@ -222,6 +222,24 @@ async function resolveProject(projectName, userId) {
 
     if (project) return project.id
 
+    // Tenta por membro de projeto se não for o dono
+    const { data: memberOf } = await supabase
+      .from('project_members')
+      .select('project_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+
+    if (memberOf) {
+      const { data: memberProject } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', memberOf.project_id)
+        .ilike('name', projectName)
+        .single()
+      if (memberProject) return memberProject.id
+    }
+
     const { data: newProject } = await supabase
       .from('projects')
       .insert({ name: projectName, owner_id: userId })
@@ -529,6 +547,27 @@ export async function assignProjectMember({ project_name, user_identifier }, pho
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
+export async function listProjects({}, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+
+  const { data: projects, error } = await supabase.rpc('get_user_projects', { p_user_id: userId })
+  if (error) {
+    // Fallback se a RPC falhar ou não estiver disponível conforme esperado
+    const [{ data: owned }, { data: member }] = await Promise.all([
+      supabase.from('projects').select('id, name').eq('owner_id', userId),
+      supabase.from('project_members').select('project:projects(id, name)').eq('user_id', userId),
+    ])
+    const results = [
+      ...(owned || []),
+      ...(member?.map(m => m.project).filter(Boolean) || [])
+    ]
+    return { count: results.length, projects: results }
+  }
+
+  return { count: projects.length, projects }
+}
+
 /**
  * Executa: list_tasks
  */
@@ -543,15 +582,21 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
     supabase.from('assignments').select('task_id').eq('user_id', userId),
   ])
 
-  const projectIds = [
-    ...(ownedProjects?.map((p) => p.id) || []),
-    ...(memberProjects?.map((p) => p.project_id) || []),
-  ]
+  const ownedIds = ownedProjects?.map((p) => p.id) || []
+  const memberIds = memberProjects?.map((p) => p.project_id) || []
   const assignedTaskIds = assignedRows?.map((a) => a.task_id) || []
 
   // Monta filtro OR para escopo do usuário
+  // 1. Sou criador da tarefa
+  // 2. Tarefa está em um projeto que eu sou dono (vejo tudo do meu projeto)
+  // 3. Tarefa está em um projeto que sou membro E (sou o criador OU estou atribuído) -> PRIVACIDADE
+  // 4. Estou explicitamente atribuído por ID
+  
   const orParts = [`creator_id.eq.${userId}`]
-  if (projectIds.length > 0) orParts.push(`project_id.in.(${projectIds.join(',')})`)
+  if (ownedIds.length > 0) orParts.push(`project_id.in.(${ownedIds.join(',')})`)
+  
+  // Para projetos onde sou apenas membro, só vejo o que me diz respeito ou o que eu criei
+  // (O creator_id.eq já cobre o que eu criei em qualquer lugar)
   if (assignedTaskIds.length > 0) orParts.push(`id.in.(${assignedTaskIds.join(',')})`)
 
   let query = supabase
@@ -568,7 +613,8 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
   if (filter === 'overdue') query = query.lt('due_date', new Date().toISOString().split('T')[0]).neq('status', 'completed')
 
   if (project_name) {
-    const accessibleIds = projectIds.length > 0 ? projectIds : ['00000000-0000-0000-0000-000000000000']
+    const accessibleIds = [...ownedIds, ...memberIds]
+    if (accessibleIds.length === 0) accessibleIds.push('00000000-0000-0000-0000-000000000000')
     const { data: project } = await supabase
       .from('projects')
       .select('id')
