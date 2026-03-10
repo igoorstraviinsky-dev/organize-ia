@@ -253,7 +253,7 @@ export const tools = [
     function: {
       name: "list_tasks",
       description:
-        "Lista tarefas com filtros opcionais. Use quando o usuário quiser ver, consultar ou verificar tarefas.",
+        "Lista tarefas detalhadas com filtros. Se for Admin, use user_email para ver de outros. A resposta é consolidada: as tarefas já vêm agrupadas por projeto para facilitar a exibição organizada (Projeto em cima, Tarefas embaixo).",
       parameters: {
         type: "object",
         properties: {
@@ -266,10 +266,6 @@ export const tools = [
           project_name: {
             type: "string",
             description: "Filtrar por nome do projeto",
-          },
-          label_name: {
-            type: "string",
-            description: "Filtrar por nome da etiqueta/label",
           },
           user_email: {
             type: "string",
@@ -307,7 +303,7 @@ export const tools = [
     function: {
       name: "update_status",
       description:
-        "Atualiza o status de uma tarefa. Use para marcar como concluída, reabrir, cancelar ou alterar o status.",
+        'Atualiza o status de uma tarefa ou subtarefa. Aceita termos naturais como "em progresso", "concluída", "pendente". Use para mover cards entre colunas ou finalizar itens.',
       parameters: {
         type: "object",
         properties: {
@@ -318,8 +314,7 @@ export const tools = [
           },
           status: {
             type: "string",
-            enum: ["pending", "in_progress", "completed", "cancelled"],
-            description: "Novo status da tarefa",
+            description: 'Novo status. Exemplos: "pending", "in_progress", "completed", "cancelled".',
           },
         },
         required: ["task_id", "status"],
@@ -331,13 +326,13 @@ export const tools = [
     function: {
       name: "list_projects",
       description:
-        'Lista projetos que o usuário tem acesso. Se for Administrador, use o parâmetro user_email para listar os projetos de QUALQUER colaborador da equipe.',
+        'Lista os projetos e suas respectivas tarefas de forma aninhada. Administradores podem usar user_email para visão total. O output deve ser organizado: nome do projeto em negrito e suas tarefas em lista logo abaixo.',
       parameters: {
         type: "object",
         properties: {
           user_email: {
             type: "string",
-            description: "Opcional: E-mail de um colaborador para ver os projetos dele (apenas para administradores).",
+            description: "Opcional: E-mail de um colaborador para ver os projetos e tarefas dele (apenas para administradores).",
           },
         },
       },

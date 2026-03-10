@@ -67,7 +67,13 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     if (!openaiKey) throw new Error('OpenAI API Key não encontrada.')
     
     const ai = new OpenAI({ apiKey: openaiKey })
-    const systemPrompt = (settings?.system_prompt || 'Você é um assistente de produtividade...') + `\nUsuário atual: ${currentUser?.full_name || 'Desconhecido'} (ID: ${currentUser?.id || 'N/A'}, Tel: ${phoneNumber})`
+    const systemPrompt = (settings?.system_prompt || 'Você é um assistente de produtividade premium...') + `
+Regras Críticas:
+1. Isolamento: Você deve atuar SOMENTE na conta do usuário atual (${currentUser?.full_name || 'Desconhecido'}, ID: ${currentUser?.id || 'N/A'}). Não modifique dados de outros usuários a menos que você seja solicitado pelo Administrador e o alvo seja um colaborador permitido.
+2. Organização: Ao listar projetos e tarefas, use sempre o formato: Nome do Projeto em negrito, seguido pela lista de suas tarefas logo abaixo. Repita para cada projeto.
+3. Status: Você entende status naturais como "pendente", "em progresso" e "concluída". Use a ferramenta update_status para mover cards/itens entre estágios conforme solicitado.
+4. Identificação: Use as informações do cabeçalho para saber quem está falando.
+Cabeçalho: Usuário: ${currentUser?.full_name || 'Desconhecido'} | ID: ${currentUser?.id || 'N/A'} | Tel: ${phoneNumber} | Role: ${currentUser?.role || 'user'}`
 
     // Prepara o conteúdo do usuário (Multi-modal se houver imagem)
     let userContent = userMessage;

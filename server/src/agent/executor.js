@@ -563,60 +563,80 @@ export async function listProjects({ user_email }, phoneNumber) {
 
   const isRequesterAdmin = await isAdmin(requesterId)
 
-  // Função auxiliar para buscar projetos e tarefas de um usuário
-  const getInventory = async (userId) => {
+  /**
+   * Função auxiliar para buscar inventário (projetos e suas tarefas)
+   * Respeita o isolamento: usuário comum só vê o que é dele ou o que é compartilhado com ele.
+   */
+  const getInventory = async (ownerId, requesterId, isAdminFlag) => {
+    // 1. Resolve projetos onde o ownerId é dono ou membro
     const { data: projects } = await supabase
       .from('projects')
-      .select('id, name, owner_id, tasks(id, title, status, priority, due_date)')
-      .or(`owner_id.eq.${userId},id.in.(${
-        (await supabase.from('project_members').select('project_id').eq('user_id', userId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
+      .select('id, name, owner_id')
+      .or(`owner_id.eq.${ownerId},id.in.(${
+        (await supabase.from('project_members').select('project_id').eq('user_id', ownerId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
       })`)
-    return projects || []
-  }
 
-  // Se for admin e NÃO passar e-mail, listar de TODOS
-  if (isRequesterAdmin && !user_email) {
-    const { data: allProfiles } = await supabase.from('profiles').select('id, full_name, email')
-    const results = []
+    if (!projects) return []
 
-    for (const profile of (allProfiles || [])) {
-      const projectsWithTasks = await getInventory(profile.id)
-      results.push({
-        user_name: profile.full_name,
-        user_email: profile.email,
-        projects: projectsWithTasks
-      })
+    // 2. Filtra projetos que o REQUISITANTE tem acesso (se não for admin e não for o dono)
+    let accessibleProjectIds = projects.map(p => p.id)
+    if (!isAdminFlag && ownerId !== requesterId) {
+      const { data: requesterMemberOf } = await supabase.from('project_members').select('project_id').eq('user_id', requesterId)
+      const requesterOwned = (await supabase.from('projects').select('id').eq('owner_id', requesterId)).data?.map(p => p.id) || []
+      const requesterAccessible = [...(requesterMemberOf?.map(m => m.project_id) || []), ...requesterOwned]
+      accessibleProjectIds = accessibleProjectIds.filter(id => requesterAccessible.includes(id))
     }
 
+    if (accessibleProjectIds.length === 0) return []
+
+    // 3. Busca tarefas apenas dos projetos acessíveis
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('id, title, status, priority, due_date, project_id, parent_id')
+      .in('project_id', accessibleProjectIds)
+      .order('position', { ascending: true })
+
+    // 4. Monta a estrutura consolidada
+    return projects
+      .filter(p => accessibleProjectIds.includes(p.id))
+      .map(p => ({
+        ...p,
+        tasks: tasks?.filter(t => t.project_id === p.id) || []
+      }))
+  }
+
+  // CENÁRIO 1: Admin pedindo visão global
+  if (isRequesterAdmin && !user_email) {
+    const { data: profiles } = await supabase.from('profiles').select('id, full_name, email')
+    const results = []
+    for (const p of (profiles || [])) {
+      const inventory = await getInventory(p.id, requesterId, true)
+      if (inventory.length > 0) {
+        results.push({ user_name: p.full_name, user_email: p.email, projects: inventory })
+      }
+    }
     return { global: true, users: results }
   }
 
+  // CENÁRIO 2: Alvo específico (Admin acessando outro, ou Usuário acessando outro)
   let targetUserId = requesterId
-
-  // Se passou e-mail, tentar listar desse usuário específico (apenas se for admin)
   if (user_email) {
-    if (isRequesterAdmin) {
-      const { data: targetProfile } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .ilike('email', user_email)
-        .maybeSingle()
-      
-      if (targetProfile) {
-        targetUserId = targetProfile.id
-      } else {
-        return { error: `Colaborador com e-mail ${user_email} não encontrado.` }
-      }
-    } else {
-      return { error: 'Você não tem permissão para listar projetos de outros usuários.' }
-    }
+    const { data: targetProfile } = await supabase.from('profiles').select('id, full_name').ilike('email', user_email).maybeSingle()
+    if (!targetProfile) return { error: `Usuário ${user_email} não encontrado.` }
+    targetUserId = targetProfile.id
   }
 
-  const projectsWithTasks = await getInventory(targetUserId)
+  const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
+  
+  if (inventory.length === 0 && targetUserId !== requesterId) {
+    return { error: 'Você não tem permissão para acessar os projetos privados deste usuário.' }
+  }
+
   return { 
-    count: projectsWithTasks.length, 
-    projects: projectsWithTasks, 
-    target_user: targetUserId 
+    count: inventory.length, 
+    projects: inventory, 
+    target_user: targetUserId,
+    target_is_self: targetUserId === requesterId
   }
 }
 
@@ -624,95 +644,35 @@ export async function listProjects({ user_email }, phoneNumber) {
  * Executa: list_tasks
  */
 export async function listTasks({ filter, project_name, label_name, user_email }, phoneNumber) {
-  const requesterId = await resolveUserId(phoneNumber)
-  if (!requesterId) return { error: 'Usuário não encontrado.' }
+  // listTasks agora usa listProjects internamente para garantir o MESMO isolamento e organização
+  const projectsData = await listProjects({ user_email }, phoneNumber)
+  
+  if (projectsData.error) return projectsData
 
-  let targetUserId = requesterId
+  // Achata as tarefas dos projetos respeitando o filtro
+  let allTasks = []
+  const sources = projectsData.global ? projectsData.users : [{ projects: projectsData.projects }]
 
-  // Se for admin e passou email, trocar alvo
-  if (user_email) {
-    if (await isAdmin(requesterId)) {
-      const { data: targetProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('email', user_email)
-        .maybeSingle()
-      
-      if (targetProfile) {
-        targetUserId = targetProfile.id
-      } else {
-        return { error: `Colaborador com e-mail ${user_email} não encontrado.` }
-      }
+  for (const s of sources) {
+    for (const p of s.projects) {
+      allTasks.push(...p.tasks.map(t => ({ ...t, project_name: p.name })))
     }
   }
 
-  // Resolve projetos acessíveis pelo usuário alvo (dono ou membro)
-  const [{ data: ownedProjects }, { data: memberProjects }, { data: assignedRows }] = await Promise.all([
-    supabase.from('projects').select('id').eq('owner_id', targetUserId),
-    supabase.from('project_members').select('project_id').eq('user_id', targetUserId),
-    supabase.from('assignments').select('task_id').eq('user_id', targetUserId),
-  ])
-
-  const ownedIds = ownedProjects?.map((p) => p.id) || []
-  const memberIds = memberProjects?.map((p) => p.project_id) || []
-  const assignedTaskIds = assignedRows?.map((a) => a.task_id) || []
-
-  // Monta filtro OR para escopo do usuário alvo
-  const orParts = [`creator_id.eq.${targetUserId}`]
-  if (ownedIds.length > 0) orParts.push(`project_id.in.(${ownedIds.join(',')})`)
+  // Aplica filtros adicionais
+  if (filter === 'pending') allTasks = allTasks.filter(t => t.status !== 'completed')
+  if (filter === 'completed') allTasks = allTasks.filter(t => t.status === 'completed')
+  if (filter === 'today') allTasks = allTasks.filter(t => t.due_date === new Date().toISOString().split('T')[0])
   
-  // Para projetos onde sou apenas membro, só vejo o que me diz respeito ou o que eu criei
-  // (O creator_id.eq já cobre o que eu criei em qualquer lugar)
-  if (assignedTaskIds.length > 0) orParts.push(`id.in.(${assignedTaskIds.join(',')})`)
-
-  let query = supabase
-    .from('tasks')
-    .select('id, title, status, priority, due_date, due_time, creator_id, project:projects(name), task_labels(label:labels(name))')
-    .is('parent_id', null)
-    .or(orParts.join(','))
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  if (filter === 'pending') query = query.eq('status', 'pending')
-  if (filter === 'completed') query = query.eq('status', 'completed')
-  if (filter === 'today') query = query.eq('due_date', new Date().toISOString().split('T')[0])
-  if (filter === 'overdue') query = query.lt('due_date', new Date().toISOString().split('T')[0]).neq('status', 'completed')
-
   if (project_name) {
-    const accessibleIds = [...ownedIds, ...memberIds]
-    if (accessibleIds.length === 0) accessibleIds.push('00000000-0000-0000-0000-000000000000')
-    const { data: project } = await supabase
-      .from('projects')
-      .select('id')
-      .in('id', accessibleIds)
-      .ilike('name', project_name)
-      .maybeSingle()
-
-    if (project) query = query.eq('project_id', project.id)
+    allTasks = allTasks.filter(t => t.project_name.toLowerCase().includes(project_name.toLowerCase()))
   }
 
-  const { data, error } = await query
-  if (error) return { error: error.message }
-
-  let results = data.map((t) => ({
-    id: t.id,
-    title: t.title,
-    status: t.status,
-    priority: t.priority,
-    due_date: t.due_date,
-    due_time: t.due_time,
-    creator_id: t.creator_id,
-    project: t.project?.name || 'Inbox',
-    labels: t.task_labels?.map((tl) => tl.label?.name).filter(Boolean) || [],
-  }))
-
-  if (label_name) {
-    results = results.filter((t) =>
-      t.labels.some((l) => l.toLowerCase() === label_name.toLowerCase())
-    )
+  return { 
+    count: allTasks.length, 
+    tasks: allTasks,
+    is_admin_view: !!projectsData.global || (user_email && !projectsData.target_is_self)
   }
-
-  return { count: results.length, tasks: results }
 }
 
 /**
@@ -782,14 +742,29 @@ export async function sendMessage({ user_identifier, message }, phoneNumber) {
  * Executa: update_status
  */
 export async function updateStatus({ task_id, status }) {
+  // Lida com status amigáveis (em progresso, concluída, etc)
+  const statusMap = {
+    'pendente': 'pending',
+    'em progresso': 'in_progress',
+    'andamento': 'in_progress',
+    'concluida': 'completed',
+    'concluída': 'completed',
+    'finalizada': 'completed',
+    'cancelada': 'cancelled'
+  }
+  
+  const normalizedStatus = statusMap[status.toLowerCase()] || status
+
   const { data, error } = await supabase
     .from('tasks')
-    .update({ status })
+    .update({ status: normalizedStatus })
     .eq('id', task_id)
     .select('id, title, status')
     .single()
 
   if (error) return { error: error.message }
 
-  return { success: true, task: data }
+  // Se for uma subtarefa e estiver sendo concluída, poderíamos verificar lógica de pai aqui no futuro.
+  
+  return { success: true, task: data, message: `✅ Status de "${data.title}" atualizado para "${normalizedStatus}".` }
 }
