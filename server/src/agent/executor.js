@@ -270,7 +270,7 @@ async function resolveProject(projectName, userId) {
 /**
  * Executa: create_task
  */
-export async function createTask({ title, description, due_date, due_time, priority, project_name, section_name, parent_task_id, labels }, phoneNumber) {
+export async function createTask({ title, description, due_date, due_time, priority, project_name, section_name, parent_task_id, labels, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado no sistema.' }
   const userId = profile.id
@@ -327,7 +327,7 @@ export async function createTask({ title, description, due_date, due_time, prior
 /**
  * Executa: edit_task
  */
-export async function editTask({ task_id, title, description, due_date, due_time, priority, project_name, section_name, labels }, phoneNumber) {
+export async function editTask({ task_id, title, description, due_date, due_time, priority, project_name, section_name, labels, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado no sistema.' }
   const userId = profile.id
@@ -399,7 +399,7 @@ export async function deleteTask({ task_id }) {
 /**
  * Executa: delete_project
  */
-export async function deleteProject({ project_name }, phoneNumber) {
+export async function deleteProject({ project_name, phoneNumber }) {
   if (project_name.toLowerCase() === 'inbox') {
     return { error: 'O projeto Inbox não pode ser deletado.' }
   }
@@ -426,7 +426,7 @@ export async function deleteProject({ project_name }, phoneNumber) {
 /**
  * Executa: create_project
  */
-export async function createProject({ name, description }, phoneNumber) {
+export async function createProject({ name, description, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -449,7 +449,7 @@ export async function createProject({ name, description }, phoneNumber) {
 /**
  * Executa: search_tasks
  */
-export async function searchTasks({ query }, phoneNumber) {
+export async function searchTasks({ query, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -497,7 +497,7 @@ export async function searchTasks({ query }, phoneNumber) {
 /**
  * Executa: search_projects
  */
-export async function searchProjects({ name }, phoneNumber) {
+export async function searchProjects({ name, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -521,7 +521,7 @@ export async function searchProjects({ name }, phoneNumber) {
 /**
  * Executa: search_labels
  */
-export async function searchLabels({ name }, phoneNumber) {
+export async function searchLabels({ name, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -540,7 +540,7 @@ export async function searchLabels({ name }, phoneNumber) {
 /**
  * Executa: list_labels
  */
-export async function listLabels({}, phoneNumber) {
+export async function listLabels({ phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -559,7 +559,7 @@ export async function listLabels({}, phoneNumber) {
 /**
  * Executa: assign_task
  */
-export async function assignTask({ task_id, user_identifier }, phoneNumber) {
+export async function assignTask({ task_id, user_identifier, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -588,7 +588,7 @@ export async function assignTask({ task_id, user_identifier }, phoneNumber) {
 /**
  * Executa: remove_project_member
  */
-export async function removeProjectMember({ project_name, user_identifier }, phoneNumber) {
+export async function removeProjectMember({ project_name, user_identifier, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -618,7 +618,7 @@ export async function removeProjectMember({ project_name, user_identifier }, pho
 /**
  * Executa: assign_project_member
  */
-export async function assignProjectMember({ project_name, user_identifier }, phoneNumber) {
+export async function assignProjectMember({ project_name, user_identifier, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -649,7 +649,7 @@ export async function assignProjectMember({ project_name, user_identifier }, pho
   return { success: true, message: `✅ ${assignee.full_name} adicionado ao projeto ${project.name} com sucesso.` }
 }
 
-export async function listProjects({ user_email }, phoneNumber) {
+export async function listProjects({ user_email, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
 
@@ -762,7 +762,7 @@ export async function listProjects({ user_email }, phoneNumber) {
 /**
  * Executa: list_tasks
  */
-export async function listTasks({ filter, project_name, label_name, user_email }, phoneNumber) {
+export async function listTasks({ filter, project_name, label_name, user_email, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
 
@@ -844,7 +844,7 @@ export async function listTasks({ filter, project_name, label_name, user_email }
 /**
  * Executa: send_message
  */
-export async function sendMessage({ user_identifier, message }, phoneNumber) {
+export async function sendMessage({ user_identifier, message, phoneNumber }) {
   const senderUserId = await resolveUserId(phoneNumber)
   if (!senderUserId) return { error: 'Usuário remetente não encontrado.' }
 

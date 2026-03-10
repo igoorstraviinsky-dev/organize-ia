@@ -50,7 +50,19 @@ async def get_profile(user_id: str) -> Dict[str, Any]:
     return res.data
 
 async def list_tasks(user_id: str, project_id: str = None, status_filter: str = None, today_only: bool = False) -> List[Dict[str, Any]]:
-    query = _supabase.table("tasks").select("*, projects(name)").eq("creator_id", user_id)
+    # 1. Busca tarefas criadas pelo usuário
+    # 2. Busca tarefas atribuídas ao usuário
+    res_assign = _supabase.table("assignments").select("task_id").eq("user_id", user_id).execute()
+    assigned_ids = [r["task_id"] for r in res_assign.data] if res_assign.data else []
+    
+    query = _supabase.table("tasks").select("*, projects(name)")
+    
+    # Filtro de visibilidade (Criador OU Atribuído)
+    if assigned_ids:
+        query = query.or_(f"creator_id.eq.{user_id},id.in.({','.join(assigned_ids)})")
+    else:
+        query = query.eq("creator_id", user_id)
+        
     if project_id:
         query = query.eq("project_id", project_id)
     if status_filter:
@@ -83,9 +95,27 @@ async def delete_task(task_id: str, user_id: str):
     _supabase.table("tasks").delete().eq("id", task_id).eq("creator_id", user_id).execute()
 
 async def list_projects(user_id: str) -> List[Dict[str, Any]]:
-    # Lista projetos onde o usuário é dono ou membro
-    res = _supabase.rpc("get_user_projects", {"p_user_id": user_id}).execute()
-    return res.data
+    """Lista projetos onde o usuário é dono ou membro de forma robusta."""
+    print(f"🔍 DEBUG: list_projects para user_id={user_id}")
+    try:
+        # Busca IDs de projetos onde é membro
+        res_mem = _supabase.table("project_members").select("project_id").eq("user_id", user_id).execute()
+        mem_ids = [m["project_id"] for m in res_mem.data] if res_mem.data else []
+        
+        query = _supabase.table("projects").select("id, name")
+        if mem_ids:
+            query = query.or_(f"owner_id.eq.{user_id},id.in.({','.join(mem_ids)})")
+        else:
+            query = query.eq("owner_id", user_id)
+            
+        res = query.execute()
+        print(f"✅ DEBUG: Projetos encontrados: {len(res.data)}")
+        return res.data
+    except Exception as e:
+        print(f"❌ DEBUG Erro ao listar projetos: {e}")
+        # Fallback para RPC se as tabelas falharem
+        res = _supabase.rpc("get_user_projects", {"p_user_id": user_id}).execute()
+        return res.data
 
 async def create_project(user_id: str, name: str, color: str = "#6366f1") -> Dict[str, Any]:
     res = _supabase.table("projects").insert({"owner_id": user_id, "name": name, "color": color}).execute()

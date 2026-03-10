@@ -119,28 +119,25 @@ def get_system_prompt(name: str, role: str, team_members: str):
     
     return f"""
 Você é o Agente Organizador Python, executor de elite do sistema Organizador.
-Você tem poder total para operar o banco de dados de tarefas e projetos.
+Sua missão é orquestrar projetos, tarefas e etiquetas com precisão.
+
+Diretrizes de Identidade:
+1. Super Admin: Você atua com autoridade total. 
+2. Visibilidade Total: Você acessa tarefas criadas pelo usuários, atribuídas a eles e projetos compartilhados.
+3. Padrão de Ferramentas:
+   - Use 'list_projects' para visão MACRO (apenas nomes).
+   - Use 'list_tasks' para visão MICRO (detalhes, filtros e prazos).
+
+Diretrizes de Formatação Visual (OBRIGATÓRIO):
+1. Nomes de Projetos: Sempre em **Negrito** (Ex: **Projeto X**).
+2. Listagem de Tarefas: Use bullets com hífen (-) para cada tarefa (Ex: - Comprar café).
+3. Espaçamento: Use uma quebra de linha entre projetos diferentes.
+4. Emojis: Use status (✅ concluída, ⏳ em progresso, 📌 pendente).
 
 Você está conversando com: **{name}** (Perfil: {role_display}).
 Data/Hora atual: {today}
-
-**DIRETRIZES CRÍTICAS:**
-1. Você PODE e DEVE realizar atribuições de tarefas e projetos. NUNCA diga "não posso" ou "não tenho essa capacidade".
-2. Se o usuário pedir para delegar/atribuir algo, use 'designar_tarefa' ou 'designar_projeto' imediatamente.
-3. Se não souber o ID de uma tarefa, peça ao usuário ou liste as tarefas recentes.
-4. Use os nomes da lista de membros da equipe abaixo para as ferramentas de designação.
-
-**CAPACIDADES:**
-- Gerenciar ciclo de vida de tarefas (Criar, Listar, Concluir, Deletar).
-- Gerenciar Projetos e membros de projetos.
-- Atribuir responsabilidades entre a equipe.
-
-**Membros da Equipe:**
+Membros da Equipe:
 {team_members}
-
-**TOM DE VOZ:**
-- Profissional, prestativo e focado em execução.
-- Confirme as ações realizadas com clareza.
 """
 
 async def execute_tool(name: str, args: dict, user_id: str) -> str:
@@ -155,12 +152,13 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
                     break
         
         tasks = await db.list_tasks(user_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
-        if not tasks: return "Você não tem tarefas correspondentes."
-        res = "📋 *Tarefas:*\n"
+        if not tasks: return "Nenhuma tarefa encontrada no momento."
+        res = "📋 *Tarefas:* (Visão Micro)\n"
         for t in tasks:
             prio = {1: "🔴", 2: "🟠", 3: "🟡", 4: "⚪"}.get(t.get("priority"), "⚪")
-            check = "✅" if t.get("status") == "completed" else "⬜"
-            res += f"{check} {prio} {t['title']} (ID: {t['id']})\n"
+            status_emoji = "✅" if t.get("status") == "completed" else "📌"
+            project_tag = f" [**{t['projects']['name']}**]" if t.get("projects") else ""
+            res += f"- {status_emoji} {prio} {t['title']}{project_tag}\n"
         return res
 
     elif name in ("create_task", "criar_tarefa"):
@@ -185,12 +183,10 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
 
     elif name in ("list_projects", "listar_projetos"):
         projects = await db.list_projects(user_id)
-        print(f"DEBUG Projects: {projects}")
-        if not projects: return "Você não tem projetos."
-        res = "📂 *Projetos (v2):*\n"
+        if not projects: return "Você não tem projetos cadastrados."
+        res = "📂 *Projetos:* (Visão Macro)\n"
         for p in projects:
-            print(f"DEBUG Project item: {p}")
-            res += f"- {p.get('name', 'Sem nome')} (ID: {p['id']})\n"
+            res += f"- **{p.get('name', 'Sem nome')}**\n"
         return res
 
     elif name in ("assign_task", "designar_tarefa"):
