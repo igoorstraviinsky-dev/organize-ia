@@ -483,15 +483,12 @@ async function processAudioAsync(parsed, integration, integrationId) {
       const aiResponse = await processMessage(transcribedText, phone)
 
       if (aiResponse) {
-        // Resposta com echo da transcrição para o usuário confirmar o que foi entendido
-        const fullResponse = `🎤 _"${transcribedText}"_\n\n${aiResponse}`
-
         const result = await sendTextMessage({
           apiUrl: integration.api_url,
           apiToken: integration.api_token,
           instanceName: integration.instance_name,
           number: phone,
-          text: fullResponse,
+          text: aiResponse,
         })
 
         await supabase.from('chat_messages').insert({
@@ -499,7 +496,7 @@ async function processAudioAsync(parsed, integration, integrationId) {
           user_id: integration.user_id,
           phone,
           direction: 'out',
-          body: fullResponse,
+          body: aiResponse,
           message_id: result?.messageid || result?.key?.id || `ai-${Date.now()}`,
           status: 'sent',
         })
