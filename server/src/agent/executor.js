@@ -969,9 +969,18 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
   }
 
   // 3. Aplica filtros adicionais
-  if (filter === 'pending') filteredTasks = filteredTasks.filter(t => t.status !== 'completed')
-  if (filter === 'completed') filteredTasks = filteredTasks.filter(t => t.status === 'completed')
-  if (filter === 'today') filteredTasks = filteredTasks.filter(t => t.due_date === new Date().toISOString().split('T')[0])
+  // Se o filtro for 'all' ou não definido, padrão é mostrar apenas pendentes para não confundir
+  if (filter === 'all' || !filter) {
+    filteredTasks = filteredTasks.filter(t => t.status !== 'completed')
+  } else if (filter === 'pending') {
+    filteredTasks = filteredTasks.filter(t => t.status !== 'completed')
+  } else if (filter === 'completed') {
+    filteredTasks = filteredTasks.filter(t => t.status === 'completed')
+  }
+  
+  if (filter === 'today') {
+    filteredTasks = filteredTasks.filter(t => t.due_date === new Date().toISOString().split('T')[0])
+  }
   
   if (label_name) {
     filteredTasks = filteredTasks.filter(t => t.labels?.some(l => l.toLowerCase().includes(label_name.toLowerCase())))
