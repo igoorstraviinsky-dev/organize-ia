@@ -24,6 +24,24 @@ O agente atua como um **Super Admin** via WhatsApp, interagindo diretamente com 
 
 ## 🗄️ 2. Estrutura do Banco de Dados (Supabase)
 
+**🛡️ Segurança (RLS - Row Level Security):**
+_Todas _ as tabelas do projeto (`todoit`) estão com o **RLS HABILITADO (`rls_enabled: true`)**, garantindo proteção total aos dados de cada usuário.
+
+### 📋 Lista Completa de Tabelas (Status RLS: ✅ Ativado)
+
+1. `ai_agent_settings`: Configurações do Agente IA para cada usuário.
+2. `assignments`: Atribuições de tarefas (Relação M:N).
+3. `chat_messages`: Histórico de conversas (se aplicável).
+4. `integrations`: Tokens e credenciais (ex: UazAPI WhatsApp).
+5. `labels`: Etiquetas personalizadas de projetos/tarefas.
+6. `profiles`: Dados de usuários (telefone, e-mail, role).
+7. `project_members`: Membros e convidados de projetos.
+8. `projects`: Estrutura macro de pastas/áreas de trabalho.
+9. `sections`: Seções (colunas Kanban) dentro dos projetos.
+10. `task_labels`: Vínculo entre tarefas e etiquetas.
+11. `tasks`: As tarefas (micro) propriamente ditas.
+12. `whatsapp_users`: Vínculos específicos de WhatsApp (sessões/histórico).
+
 ### Tabela: `profiles`
 
 - **id**: UUID (Primary Key)
@@ -73,6 +91,10 @@ O agente atua como um **Super Admin** via WhatsApp, interagindo diretamente com 
 
 1.  **Kanban UI**: A web já reflete as mudanças, mas a IA pode ser ensinada a "mover cards" entre colunas com mais fluidez.
 2.  **Segurança**: O `.gitignore` foi atualizado para **NUNCA** permitir o push de arquivos `.env`. Mantenha as chaves locais e use variáveis de ambiente.
-3.  **Prompt**: Sempre que adicionar uma tabela no banco, atualize o `systemPrompt` no `openai.js` para que o Cérebro saiba que ela existe.
+3.  **CORREÇÃO CRÍTICA (10/03)**: Foi resolvido um erro onde as funções no `executor.js` falhavam por receber o `phoneNumber` no lugar errado do objeto. Isso causava o "apagão" de dados no WhatsApp.
+4.  **Sincronização Python**: O Agente Python (`agent/db.py`) foi atualizado para espelhar a lógica do Node.js, garantindo que tarefas atribuídas e projetos onde o usuário é membro sejam listados corretamente.
+5.  **Prompt**: Sempre que adicionar uma tabela no banco, atualize o `systemPrompt` no `openai.js` para que o Cérebro saiba que ela existe.
 
-**Sincronizado com Git em: 10/03/2026** 🦾🚀
+---
+
+**Última Atualização de Transferência: 10/03/2026 - Status: Estável e Sincronizado.** 🦾🚀
