@@ -98,3 +98,9 @@ _Todas _ as tabelas do projeto (`todoit`) estão com o **RLS HABILITADO (`rls_en
 ---
 
 **Última Atualização de Transferência: 10/03/2026 - Status: Estável e Sincronizado.** 🦾🚀
+
+### 🛠️ Correções Críticas Realizadas em Produção (VPS) - 10/03:
+
+1.  **Tratamento de Strings (Retorno Vazio)**: A IA parou de dar "pane" ao procurar projetos/tarefas que não existem. As funções `listProjects`, `searchProjects`, `listTasks` e `searchTasks` no `executor.js` agora retornam uma mensagem em texto claro (ex: `"Nenhum projeto encontrado"`) em vez de um array vazio `[]`, instruindo a IA a não considerar isso uma falha e sim a criar um novo registro usando `create_project` ou `create_task`.
+2.  **Lógica do OpenAI (Loop & Tools)**: Corrigida a ausência da variável `maxIterations` no loop do `openai.js`, que estava causando o erro `ReferenceError: maxIterations is not defined`. Também garantimos que a API esteja recebendo explicitamente o bloco `tools` (e não o antigo `functions`).
+3.  **Variáveis de Ambiente do Agente Python**: Resolvida a "cegueira" do script Python na VPS, garantindo a configuração adequada do `/root/organizador/agent/.env` contendo a `SUPABASE_URL` e a chave `SUPABASE_SERVICE_KEY` para as validações de banco contornarem bloqueios de RLS no backend de processamento de WhatsApp.
