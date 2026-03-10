@@ -331,7 +331,7 @@ export const tools = [
     function: {
       name: "list_projects",
       description:
-        'Lista todos os projetos que o usuário tem acesso (próprios ou compartilhado com ele). Use quando o usuário perguntar "quais são meus projetos" ou quiser ver a lista de pastas.',
+        'Lista projetos que o usuário tem acesso. Se for Administrador, use o parâmetro user_email para listar os projetos de QUALQUER colaborador da equipe.',
       parameters: {
         type: "object",
         properties: {
