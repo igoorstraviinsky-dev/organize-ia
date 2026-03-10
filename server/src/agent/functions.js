@@ -57,6 +57,10 @@ export const tools = [
             description:
               "Lista de nomes de etiquetas/labels para associar à tarefa. Labels inexistentes serão criadas.",
           },
+          assigned_user_identifier: {
+            type: "string",
+            description: 'Nome ou Email do usuário para atribuir a tarefa na hora da criação. Ex: "Diego".',
+          },
         },
         required: ["title"],
       },
@@ -171,6 +175,10 @@ export const tools = [
           description: {
             type: "string",
             description: "Descrição opcional do projeto.",
+          },
+          assigned_user_identifier: {
+            type: "string",
+            description: 'Nome ou Email do usuário para adicionar como membro do projeto na criação. Ex: "Diego".',
           },
         },
         required: ["name"],

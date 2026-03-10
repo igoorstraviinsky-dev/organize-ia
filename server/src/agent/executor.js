@@ -270,7 +270,7 @@ async function resolveProject(projectName, userId) {
 /**
  * Executa: create_task
  */
-export async function createTask({ title, description, due_date, due_time, priority, project_name, section_name, parent_task_id, labels, phoneNumber }) {
+export async function createTask({ title, description, due_date, due_time, priority, project_name, section_name, parent_task_id, labels, assigned_user_identifier, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado no sistema.' }
   const userId = profile.id
@@ -306,6 +306,22 @@ export async function createTask({ title, description, due_date, due_time, prior
       await supabase
         .from('task_labels')
         .insert(labelIds.map((label_id) => ({ task_id: data.id, label_id })))
+    }
+  }
+  
+  if (assigned_user_identifier) {
+    try {
+      const assignee = await resolveUser(assigned_user_identifier)
+      if (assignee) {
+        await supabase.from('assignments').insert({ task_id: data.id, user_id: assignee.id })
+        sendAssignmentNotification(
+          assignee.id,
+          `🔔 Você recebeu uma nova tarefa: *${title}*. Acesse o Organizador para ver detalhes.`,
+          userId
+        )
+      }
+    } catch (err) {
+      console.error('[CreateTask Assignment Error]', err.message)
     }
   }
 
@@ -426,7 +442,7 @@ export async function deleteProject({ project_name, phoneNumber }) {
 /**
  * Executa: create_project
  */
-export async function createProject({ name, description, phoneNumber }) {
+export async function createProject({ name, description, assigned_user_identifier, phoneNumber }) {
   const profile = await resolveUserId(phoneNumber)
   if (!profile) return { error: 'Usuário não encontrado.' }
   const userId = profile.id
@@ -442,6 +458,22 @@ export async function createProject({ name, description, phoneNumber }) {
     .single()
 
   if (error) return { error: error.message }
+
+  if (assigned_user_identifier) {
+    try {
+      const target = await resolveUser(assigned_user_identifier)
+      if (target) {
+        await supabase.from('project_members').upsert({ project_id: data.id, user_id: target.id })
+        sendAssignmentNotification(
+          target.id,
+          `🔔 Você foi adicionado ao projeto *${name}*. Acesse o Organizador para colaborar.`,
+          userId
+        )
+      }
+    } catch (err) {
+      console.error('[CreateProject Member Error]', err.message)
+    }
+  }
 
   return { success: true, project: data }
 }
