@@ -84,6 +84,9 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     let messages = [{ role: 'system', content: systemPrompt }, ...history];
     if (base64Image) messages[messages.length - 1].content = userContent;
 
+    let maxIterations = 5;
+    let finalResponse = '';
+
     while (maxIterations-- > 0) {
       // Usando 'tools' em vez de 'functions' para compatibilidade com a estrutura de functions.js
       const completion = await ai.chat.completions.create({ 
