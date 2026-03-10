@@ -59,7 +59,7 @@ export const tools = [
           },
           assigned_user_identifier: {
             type: "string",
-            description: 'Nome ou Email do usuário para atribuir a tarefa na hora da criação. Ex: "Diego".',
+            description: 'Nome ou e-mail do usuário para atribuir/adicionar como membro na hora da criação. Ex: "Diego".',
           },
         },
         required: ["title"],
@@ -178,7 +178,7 @@ export const tools = [
           },
           assigned_user_identifier: {
             type: "string",
-            description: 'Nome ou Email do usuário para adicionar como membro do projeto na criação. Ex: "Diego".',
+            description: 'Nome ou e-mail do usuário para atribuir/adicionar como membro na hora da criação. Ex: "Diego".',
           },
         },
         required: ["name"],

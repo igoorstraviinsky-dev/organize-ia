@@ -298,7 +298,10 @@ export async function createTask({ title, description, due_date, due_time, prior
     .select()
     .single()
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('[Supabase Error] tasks:', error.message)
+    return { error: error.message }
+  }
 
   if (labels && labels.length > 0) {
     const labelIds = await resolveLabels(labels, userId)
@@ -457,7 +460,10 @@ export async function createProject({ name, description, assigned_user_identifie
     .select()
     .single()
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('[Supabase Error] projects:', error.message)
+    return { error: error.message }
+  }
 
   if (assigned_user_identifier) {
     try {
