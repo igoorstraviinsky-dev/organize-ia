@@ -491,6 +491,10 @@ export async function searchTasks({ query, phoneNumber }) {
     is_subtask: !!t.parent_id,
   }))
 
+  if (results.length === 0) {
+    return 'Nenhuma tarefa encontrada correspondente a essa pesquisa.';
+  }
+
   return { count: results.length, tasks: results }
 }
 
@@ -515,7 +519,11 @@ export async function searchProjects({ name, phoneNumber }) {
 
   if (error) return { error: error.message }
 
-  return { count: projects?.length || 0, projects: projects || [] }
+  if (!projects || projects.length === 0) {
+    return `Nenhum projeto encontrado contendo "${name}" para ${profile.full_name}.`;
+  }
+
+  return { count: projects.length, projects: projects }
 }
 
 /**
@@ -735,6 +743,9 @@ export async function listProjects({ user_email, phoneNumber }) {
         results.push({ user_name: p.full_name, user_email: p.email, projects: userProjects })
       }
     }
+    if (results.length === 0) {
+      return 'Nenhum usuário no sistema possui projetos criados ou compartilhados no momento.';
+    }
     return { global: true, total_users: results.length, users: results }
   }
 
@@ -751,7 +762,9 @@ export async function listProjects({ user_email, phoneNumber }) {
   const memberProjectIds = memberData?.map(m => m.project_id) || []
   const { data: projects } = await supabase.from('projects').select('id, name').or(`owner_id.eq.${targetUserId},id.in.(${memberProjectIds.join(',')})`)
   
-  if (!projects || projects.length === 0) return { projects: [] }
+  if (!projects || projects.length === 0) {
+    return `Olá ${targetProfile ? targetProfile.full_name : profile.full_name}, não encontrei nenhum projeto vinculado. Deseja criar o primeiro?`;
+  }
 
   return { 
     user: user_email || profile.email, 
@@ -832,6 +845,10 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
   
   if (label_name) {
     filteredTasks = filteredTasks.filter(t => t.labels?.some(l => l.toLowerCase().includes(label_name.toLowerCase())))
+  }
+
+  if (filteredTasks.length === 0) {
+    return 'Nenhuma tarefa encontrada correspondente a esses filtros.';
   }
 
   return { 
