@@ -751,25 +751,25 @@ export async function listProjects({ user_email, phoneNumber }) {
 
   // CENÁRIO 2: Alvo específico (Admin acessando outro, ou Usuário acessando si mesmo)
   let targetUserId = requesterId
+  let targetName = profile.full_name
+
   if (user_email && isRequesterAdmin) {
     const { data: targetProfile } = await supabase.from('profiles').select('id, full_name').ilike('email', user_email).maybeSingle()
     if (!targetProfile) return { error: `Usuário ${user_email} não encontrado.` }
     targetUserId = targetProfile.id
+    targetName = targetProfile.full_name
   }
 
-  // Busca projetos do alvo (simplificado para list_projects)
-  const { data: memberData } = await supabase.from('project_members').select('project_id').eq('user_id', targetUserId)
-  const memberProjectIds = memberData?.map(m => m.project_id) || []
-  const { data: projects } = await supabase.from('projects').select('id, name').or(`owner_id.eq.${targetUserId},id.in.(${memberProjectIds.join(',')})`)
+  const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
   
-  if (!projects || projects.length === 0) {
-    return `Olá ${targetProfile ? targetProfile.full_name : profile.full_name}, não encontrei nenhum projeto vinculado. Deseja criar o primeiro?`;
+  if (!inventory || inventory.length === 0) {
+    return `Olá ${targetName}, não encontrei nenhum projeto vinculado. Deseja criar o primeiro?`;
   }
 
-  return { 
-    user: user_email || profile.email, 
-    projects: projects.map(p => ({ id: p.id, name: p.name })) 
-  }
+  return inventory.map(p => ({ 
+    name: p.name, 
+    tasks: p.tasks.map(t => ({ title: t.title, status: t.status })) 
+  }))
 }
 
 /**
