@@ -399,12 +399,27 @@ export async function searchTasks({ query }, phoneNumber) {
   const userId = await resolveUserId(phoneNumber)
   if (!userId) return { error: 'Usuário não encontrado.' }
 
-  // Buscar tarefas onde o usuário é criador OU está atribuído OU faz parte do projeto
-  // Como usamos o service key, precisamos fazer uma query mais inteligente ou simplificar
-  // por agora, vamos permitir que encontre todas as tarefas que o usuário PODE ver no frontend
+  // Resolve projetos e atribuições do usuário para escopo correto
+  const [{ data: ownedProjects }, { data: memberProjects }, { data: assignedRows }] = await Promise.all([
+    supabase.from('projects').select('id').eq('owner_id', userId),
+    supabase.from('project_members').select('project_id').eq('user_id', userId),
+    supabase.from('assignments').select('task_id').eq('user_id', userId),
+  ])
+
+  const projectIds = [
+    ...(ownedProjects?.map((p) => p.id) || []),
+    ...(memberProjects?.map((p) => p.project_id) || []),
+  ]
+  const assignedTaskIds = assignedRows?.map((a) => a.task_id) || []
+
+  const scopeParts = [`creator_id.eq.${userId}`]
+  if (projectIds.length > 0) scopeParts.push(`project_id.in.(${projectIds.join(',')})`)
+  if (assignedTaskIds.length > 0) scopeParts.push(`id.in.(${assignedTaskIds.join(',')})`)
+
   const { data, error } = await supabase
     .from('tasks')
     .select('id, title, status, priority, due_date, parent_id, project:projects(name)')
+    .or(scopeParts.join(','))
     .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
     .order('created_at', { ascending: false })
     .limit(10)
@@ -521,10 +536,29 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
   const userId = await resolveUserId(phoneNumber)
   if (!userId) return { error: 'Usuário não encontrado.' }
 
+  // Resolve projetos acessíveis pelo usuário (dono ou membro)
+  const [{ data: ownedProjects }, { data: memberProjects }, { data: assignedRows }] = await Promise.all([
+    supabase.from('projects').select('id').eq('owner_id', userId),
+    supabase.from('project_members').select('project_id').eq('user_id', userId),
+    supabase.from('assignments').select('task_id').eq('user_id', userId),
+  ])
+
+  const projectIds = [
+    ...(ownedProjects?.map((p) => p.id) || []),
+    ...(memberProjects?.map((p) => p.project_id) || []),
+  ]
+  const assignedTaskIds = assignedRows?.map((a) => a.task_id) || []
+
+  // Monta filtro OR para escopo do usuário
+  const orParts = [`creator_id.eq.${userId}`]
+  if (projectIds.length > 0) orParts.push(`project_id.in.(${projectIds.join(',')})`)
+  if (assignedTaskIds.length > 0) orParts.push(`id.in.(${assignedTaskIds.join(',')})`)
+
   let query = supabase
     .from('tasks')
     .select('id, title, status, priority, due_date, due_time, project:projects(name), task_labels(label:labels(name))')
     .is('parent_id', null)
+    .or(orParts.join(','))
     .order('created_at', { ascending: false })
     .limit(20)
 
@@ -534,12 +568,13 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
   if (filter === 'overdue') query = query.lt('due_date', new Date().toISOString().split('T')[0]).neq('status', 'completed')
 
   if (project_name) {
+    const accessibleIds = projectIds.length > 0 ? projectIds : ['00000000-0000-0000-0000-000000000000']
     const { data: project } = await supabase
       .from('projects')
       .select('id')
-      .eq('owner_id', userId)
+      .in('id', accessibleIds)
       .ilike('name', project_name)
-      .single()
+      .maybeSingle()
 
     if (project) query = query.eq('project_id', project.id)
   }

@@ -8,6 +8,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.96",
     "@supabase/supabase-js": "^2.49.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
