@@ -563,17 +563,28 @@ export async function listProjects({ user_email }, phoneNumber) {
 
   const isRequesterAdmin = await isAdmin(requesterId)
 
+  // Função auxiliar para buscar projetos e tarefas de um usuário
+  const getInventory = async (userId) => {
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, name, owner_id, tasks(id, title, status, priority, due_date)')
+      .or(`owner_id.eq.${userId},id.in.(${
+        (await supabase.from('project_members').select('project_id').eq('user_id', userId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
+      })`)
+    return projects || []
+  }
+
   // Se for admin e NÃO passar e-mail, listar de TODOS
   if (isRequesterAdmin && !user_email) {
     const { data: allProfiles } = await supabase.from('profiles').select('id, full_name, email')
     const results = []
 
     for (const profile of (allProfiles || [])) {
-      const { data: userProjects } = await supabase.rpc('get_user_projects', { p_user_id: profile.id })
+      const projectsWithTasks = await getInventory(profile.id)
       results.push({
         user_name: profile.full_name,
         user_email: profile.email,
-        projects: userProjects || []
+        projects: projectsWithTasks
       })
     }
 
@@ -601,20 +612,12 @@ export async function listProjects({ user_email }, phoneNumber) {
     }
   }
 
-  const { data: projects, error } = await supabase.rpc('get_user_projects', { p_user_id: targetUserId })
-  if (error) {
-    const [{ data: owned }, { data: member }] = await Promise.all([
-      supabase.from('projects').select('id, name, owner_id').eq('owner_id', targetUserId),
-      supabase.from('project_members').select('project:projects(id, name, owner_id)').eq('user_id', targetUserId),
-    ])
-    const results = [
-      ...(owned || []),
-      ...(member?.map(m => m.project).filter(Boolean) || [])
-    ]
-    return { count: results.length, projects: results, target_user: targetUserId }
+  const projectsWithTasks = await getInventory(targetUserId)
+  return { 
+    count: projectsWithTasks.length, 
+    projects: projectsWithTasks, 
+    target_user: targetUserId 
   }
-
-  return { count: projects.length, projects, target_user: targetUserId }
 }
 
 /**
