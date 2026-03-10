@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
 import { createTask, editTask, deleteTask, deleteProject, searchTasks, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
 const CHAT_MEMORY = new Map(); // Simple in-memory history: phoneNumber -> messages[]
@@ -60,10 +59,14 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     let history = CHAT_MEMORY.get(phoneNumber) || [];
     const cleanPhone = phoneNumber.replace(/\D/g, '')
 
-    const { data: profiles } = await supabase.from('profiles').select('id, phone, full_name').eq('is_active', true)
+    const { data: profiles } = await supabase.from('profiles').select('id, phone, full_name')
     const currentUser = (profiles || []).find(p => p.phone && brPhonesMatch(cleanPhone, p.phone)) || null;
 
-    const { data: settings } = await supabase.from('ai_agent_settings').select('system_prompt').eq('user_id', currentUser?.id).maybeSingle()
+    const { data: settings } = await supabase.from('ai_agent_settings').select('system_prompt, openai_api_key').eq('user_id', currentUser?.id).maybeSingle()
+    const openaiKey = settings?.openai_api_key || process.env.OPENAI_API_KEY
+    if (!openaiKey) throw new Error('OpenAI API Key não encontrada.')
+    
+    const ai = new OpenAI({ apiKey: openaiKey })
     const systemPrompt = (settings?.system_prompt || 'Você é um assistente de produtividade...') + `\nUsuário atual: ${currentUser?.full_name || 'Desconhecido'} (ID: ${currentUser?.id || 'N/A'}, Tel: ${phoneNumber})`
 
     // Prepara o conteúdo do usuário (Multi-modal se houver imagem)
@@ -85,7 +88,7 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     let finalResponse = '';
 
     while (maxIterations-- > 0) {
-      const completion = await openai.chat.completions.create({ model: MODEL, messages, functions: tools, function_call: 'auto' });
+      const completion = await ai.chat.completions.create({ model: MODEL, messages, functions: tools, function_call: 'auto' });
       const responseMessage = completion.choices[0].message;
 
       if (responseMessage.function_call) {
