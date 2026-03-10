@@ -468,6 +468,47 @@ export async function searchTasks({ query }, phoneNumber) {
 }
 
 /**
+ * Executa: search_projects
+ */
+export async function searchProjects({ name }, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+
+  const isRequesterAdmin = await isAdmin(userId)
+
+  // 1. Resolve projetos onde o usuário é dono ou membro
+  const { data: projects, error } = await supabase
+    .from('projects')
+    .select('id, name, owner_id')
+    .or(`owner_id.eq.${userId},id.in.(${
+      (await supabase.from('project_members').select('project_id').eq('user_id', userId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
+    })`)
+    .ilike('name', `%${name}%`)
+
+  if (error) return { error: error.message }
+
+  return { count: projects?.length || 0, projects: projects || [] }
+}
+
+/**
+ * Executa: search_labels
+ */
+export async function searchLabels({ name }, phoneNumber) {
+  const userId = await resolveUserId(phoneNumber)
+  if (!userId) return { error: 'Usuário não encontrado.' }
+
+  const { data: labels, error } = await supabase
+    .from('labels')
+    .select('id, name')
+    .eq('owner_id', userId)
+    .ilike('name', `%${name}%`)
+
+  if (error) return { error: error.message }
+
+  return { count: labels?.length || 0, labels: labels || [] }
+}
+
+/**
  * Executa: assign_task
  */
 export async function assignTask({ task_id, user_identifier }, phoneNumber) {

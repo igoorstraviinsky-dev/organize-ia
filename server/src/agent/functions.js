@@ -161,7 +161,7 @@ export const tools = [
     function: {
       name: "search_tasks",
       description:
-        "Busca tarefas por texto no título ou descrição. Use quando o usuário quiser encontrar uma tarefa específica pelo nome ou conteúdo, ou precisar do ID de uma tarefa para editar/deletar/criar subtarefa.",
+        "Busca tarefas por texto no título ou descrição. Use para verificar se uma tarefa já existe antes de criá-la ou para encontrar o ID de uma tarefa específica.",
       parameters: {
         type: "object",
         properties: {
@@ -171,6 +171,40 @@ export const tools = [
           },
         },
         required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_projects",
+      description: "Busca projetos pelo nome. USE SEMPRE antes de sugerir criar um novo projeto para evitar duplicatas.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Nome do projeto para buscar",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "search_labels",
+      description: "Busca etiquetas/labels pelo nome. USE SEMPRE antes de sugerir criar uma nova etiqueta para evitar duplicatas.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Nome da etiqueta para buscar",
+          },
+        },
+        required: ["name"],
       },
     },
   },

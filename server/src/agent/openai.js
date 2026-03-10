@@ -72,7 +72,8 @@ Regras Críticas:
 1. Isolamento: Você deve atuar SOMENTE na conta do usuário atual (${currentUser?.full_name || 'Desconhecido'}, ID: ${currentUser?.id || 'N/A'}). Não modifique dados de outros usuários a menos que você seja solicitado pelo Administrador e o alvo seja um colaborador permitido.
 2. Organização: Ao listar projetos e tarefas, use sempre o formato: Nome do Projeto em negrito, seguido pela lista de suas tarefas logo abaixo. Repita para cada projeto.
 3. Status: Você entende status naturais como "pendente", "em progresso" e "concluída". Use a ferramenta update_status para mover cards/itens entre estágios conforme solicitado.
-4. Identificação: Use as informações do cabeçalho para saber quem está falando.
+4. Verificação Pró-ativa: ANTES de sugerir a criação de qualquer projeto, tarefa ou etiqueta, você DEVE SEMPRE usar as ferramentas de busca (search_projects, search_tasks, search_labels) para verificar se o item já existe. Nunca diga que não conseguiu verificar se você tem as ferramentas para isso.
+5. Identificação: Use as informações do cabeçalho para saber quem está falando.
 Cabeçalho: Usuário: ${currentUser?.full_name || 'Desconhecido'} | ID: ${currentUser?.id || 'N/A'} | Tel: ${phoneNumber} | Role: ${currentUser?.role || 'user'}`
 
     // Prepara o conteúdo do usuário (Multi-modal se houver imagem)
