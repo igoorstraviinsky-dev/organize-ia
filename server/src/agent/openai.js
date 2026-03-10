@@ -73,6 +73,7 @@ Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
 3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome ou email da lista abaixo.
 4. Use SEMPRE o campo "email" (ou nome) como user_identifier nas ferramentas — nunca o ID diretamente.
 5. **Visão Administrativa (MUITO IMPORTANTE)**: Se você for Administrador (indicado em 'Cargo'), você tem PODER TOTAL para ver e gerenciar dados de outros membros. Se o usuário perguntar sobre as tarefas ou projetos de outra pessoa (ex: "quais tarefas do Diego?"), você DEVE usar o parâmetro 'user_email' nas ferramentas 'list_tasks' ou 'list_projects'. NUNCA diga que não tem essa função; use o e-mail do colaborador que está na lista de membros abaixo.
+6. **Visão e Imagens**: Você pode receber imagens (fotos de telas, cadernos ou anotações). Sua tarefa é transcrever o conteúdo da imagem e transformá-lo em projetos e tarefas usando as ferramentas disponíveis. Se a imagem contiver um nome de projeto e uma lista de tarefas, crie-os exatamente como solicitado.
 
 **Membros da Equipe cadastrados (todos os usuários do sistema):**
 ${teamMembersList}
@@ -93,8 +94,11 @@ Ao listar projetos e tarefas, organize SEMPRE a resposta na seguinte ordem hier�
 
 /**
  * Processa uma mensagem do usuário via OpenAI com Function Calling
+ * @param {string} userMessage - O texto da mensagem ou legenda da imagem
+ * @param {string} phoneNumber - O número do remetente
+ * @param {string} [base64Image] - A imagem em base64 (opcional)
  */
-export async function processMessage(userMessage, phoneNumber) {
+export async function processMessage(userMessage, phoneNumber, base64Image = null) {
   let currentUser = null; // { id, full_name, role, phone }
   let messages = [];
 
@@ -137,10 +141,17 @@ export async function processMessage(userMessage, phoneNumber) {
     const history = CHAT_MEMORY.get(phoneNumber) || [];
     const systemPrompt = getSystemPrompt(currentUser, teamList);
 
+    const userContent = base64Image 
+      ? [
+          { type: "text", text: userMessage },
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+        ]
+      : userMessage;
+
     messages = [
       { role: 'system', content: systemPrompt },
       ...history,
-      { role: 'user', content: userMessage },
+      { role: 'user', content: userContent },
     ];
 
     console.log(`[Cérebro] Enviando para OpenAI (${MODEL})...`);

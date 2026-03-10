@@ -63,8 +63,27 @@ router.post('/', async (req, res) => {
 
       console.log(`Transcribed audio from ${from}: ${userText}`)
 
+    } else if (message.type === 'image') {
+      const mediaId = message.image.id
+      const caption = message.image.caption || ''
+      console.log(`Image message from ${from}, media_id: ${mediaId}, caption: ${caption}`)
+
+      await markAsRead(messageId)
+      
+      const base64Image = await import('../lib/whatsapp.js').then(m => m.downloadMediaAsBase64(mediaId))
+      
+      if (base64Image) {
+        // Se houver imagem, processamos com Visão
+        const response = await processMessage(caption || 'Analise esta imagem e crie as tarefas nela.', from, base64Image)
+        await sendWhatsAppMessage(from, response)
+        return
+      } else {
+        await sendWhatsAppMessage(from, 'Não consegui processar a imagem. Tente novamente.')
+        return
+      }
+
     } else {
-      await sendWhatsAppMessage(from, 'Desculpe, só consigo processar mensagens de texto e áudio.')
+      await sendWhatsAppMessage(from, 'Desculpe, só consigo processar mensagens de texto, áudio e imagem.')
       return
     }
 

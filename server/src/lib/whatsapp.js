@@ -42,6 +42,20 @@ async function downloadMedia(url) {
 }
 
 /**
+ * Baixa o arquivo de imagem e retorna como uma String Base64 (Data URL)
+ */
+export async function downloadMediaAsBase64(mediaId) {
+  try {
+    const url = await getMediaUrl(mediaId)
+    const buffer = await downloadMedia(url)
+    return buffer.toString('base64')
+  } catch (error) {
+    console.error(`[WhatsApp] Erro ao baixar mídia ${mediaId}:`, error)
+    return null
+  }
+}
+
+/**
  * Transcreve um áudio do WhatsApp usando OpenAI Whisper.
  * Retorna o texto transcrito ou null em caso de erro.
  */
