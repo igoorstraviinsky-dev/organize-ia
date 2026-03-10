@@ -12,7 +12,12 @@ O agente atua como um **Super Admin** via WhatsApp, interagindo diretamente com 
 
 - **`openai.js` (O Cérebro)**:
   - Possui um **Sistema de Guarda** que verifica o `phone_number` no Supabase antes de qualquer interação.
-  - O `systemPrompt` define regras de formatação premium (**Negrito** para projetos e `-` para tarefas).
+  - O `systemPrompt` define regras de **Formatação Premium (Dashboard)**:
+    - **Cabeçalho**: "Seus projetos e tarefas"
+    - **Identidade**: 👤 **[Nome]**
+    - **Projetos (Macro)**: · 📂 **[Nome do Projeto]**
+    - **Tarefas (Micro)**: · 📋 [Título] para pendentes e · ✅ concluída para feitas.
+    - **Espaçamento**: Linha em branco obrigatória entre blocos de projetos.
   - Define a distinção entre ferramentas **Macro** (`list_projects`) e **Micro** (`list_tasks`).
 - **`executor.js` (A Mão)**:
   - Resolve a identidade do usuário cruzando o telefone do WhatsApp com a tabela `profiles`.
@@ -73,11 +78,11 @@ _Todas _ as tabelas do projeto (`todoit`) estão com o **RLS HABILITADO (`rls_en
 
 ## 🚀 3. Lógica de Listagem (Refatorada)
 
-### MACRO: `list_projects`
+### MACRO (DASHBOARD): `list_projects`
 
-- **Objetivo**: Visão rápida de "pastas".
-- **Retorno**: Apenas `id` e `name` dos projetos.
-- **Uso**: Quando o usuário quer saber "quais projetos eu tenho?" ou "quais projetos o colaborador X tem?".
+- **Objetivo**: Visão global de "pastas" com conteúdo hierárquico.
+- **Retorno**: O Agente deve, preferencialmente, usar uma função composta (ex: `getInventory` ou equivalente) que retorne o JSON de projetos já com as tarefas embutidas, evitando múltiplas chamadas de rede.
+- **Uso**: Quando o usuário pede um panorama geral ("quais projetos eu tenho?") permitindo montar um dashboard completo e veloz.
 
 ### MICRO: `list_tasks`
 
