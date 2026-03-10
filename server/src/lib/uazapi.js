@@ -197,70 +197,41 @@ export async function sendTextMessage({ apiUrl, apiToken, instanceName, number, 
 
 /**
  * Extrai dados relevantes de um payload de webhook UazAPI.
- *
- * UazAPI cloud envia diretamente no body (sem wrapper "data"):
- * {
- *   event: "messages.upsert",
- *   chatid: "5511962027835@s.whatsapp.net",
- *   fromMe: false,
- *   messageid: "ABCDEF...",
- *   text: "mensagem",
- *   sender: "5511962027835@s.whatsapp.net",
- *   senderName: "Nome",
- *   messageTimestamp: 1234567890,
- * }
- *
- * Evolution API envia com wrapper:
- * { event: "messages.upsert", data: { key: {...}, message: {...}, pushName: "..." } }
  */
 export function parseWebhookPayload(body) {
   try {
-    // Captura tanto event, type, EventType ou eventType
     const event = (body?.event || body?.type || body?.EventType || body?.eventType || '').toLowerCase()
-    
-    // Considera nulo / vazio ou contendo 'message' (A UazAPI usa "messages" ou "messages.upsert")
     const isMessageEvent = event.includes('message') || event === ''
     if (!isMessageEvent) return null
 
-    // ── 1. Formato Evolution API v2 / UazAPI Cloud (Message Wrapper) ──
     if (body?.message) {
       const msg = body.message
-
-      // Tenta extrair ID do chat (remoteJid ou chatid)
       const remoteJid = msg.key?.remoteJid || msg.remoteJid || msg.chatid || ''
       const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/[^0-9]/g, '')
-
-      // Tenta extrair quem enviou (fromMe)
       const fromMe = msg.key?.fromMe ?? (msg.fromMe === true || msg.fromMe === 'true')
 
-      // Tenta extrair o texto (força string para evitar objetos como extendedTextMessage completo)
       const realMsg = msg.message || msg
-      // Garante que rawText nunca seja um objeto (proteção contra body.message.text sendo obj)
       const rawTextCandidate = realMsg.conversation || realMsg.extendedTextMessage?.text ||
         (typeof realMsg.text === 'string' ? realMsg.text : undefined) ||
         (typeof realMsg.content === 'string' ? realMsg.content : undefined) || ''
-      const rawText = typeof rawTextCandidate === 'string' ? rawTextCandidate : ''
-      const text = rawText
+      const text = typeof rawTextCandidate === 'string' ? rawTextCandidate : ''
 
-      // Tenta extrair ID da mensagem
       const messageId = msg.key?.id || msg.id || msg.messageid || msg.messageId || null
-
       const contactName = msg.pushName || msg.senderName || null
       const ts = msg.timestamp || msg.messageTimestamp
       const timestamp = ts
         ? new Date(Number(ts) > 9999999999 ? ts : ts * 1000).toISOString()
         : new Date().toISOString()
 
-      // Detecta áudio
+      // --- DETECÇÃO DE ÁUDIO ---
       const audioMsg = realMsg.audioMessage || realMsg.pttMessage || realMsg.audio || null
       const msgTypeLC = (msg.messageType || '').toLowerCase()
       const isUazAudio = (
         realMsg.type === 'ptt' || realMsg.type === 'audio' ||
         msg.type === 'ptt' || msg.type === 'audio' ||
-        msgTypeLC === 'audiomessage' ||                        
-        (msg.type === 'media' && msgTypeLC.includes('audio'))  
+        msgTypeLC === 'audiomessage' ||
+        (msg.type === 'media' && msgTypeLC.includes('audio'))
       )
-
       if ((audioMsg || isUazAudio) && phone) {
         const contentObj = (msg.content && typeof msg.content === 'object') ? msg.content : null
         return {
@@ -271,30 +242,28 @@ export function parseWebhookPayload(body) {
           audioKey: msg.key || { remoteJid, fromMe, id: messageId },
           audioUrl: audioMsg?.url || audioMsg?.mediaUrl || contentObj?.URL || contentObj?.url || null,
           audioMediaKey: audioMsg?.mediaKey || contentObj?.mediaKey || null,
-          audioMimeType: audioMsg?.mimetype || contentObj?.mimetype || realMsg.mimetype || msg.mimetype || 'audio/ogg; codecs=opus',
+          audioMimeType: audioMsg?.mimetype || contentObj?.mimetype || 'audio/ogg; codecs=opus',
           rawMsg: msg,
         }
       }
 
-      // Detecta imagem: Evolution API (imageMessage) OU UazAPI Cloud (messageType=ImageMessage / type=media)
+      // --- DETECÇÃO DE IMAGEM ---
       const imageMsg = realMsg.imageMessage || realMsg.image || null
       const isUazImage = (
         realMsg.type === 'image' || msg.type === 'image' ||
         msgTypeLC === 'imagemessage' ||
         (msg.type === 'media' && msgTypeLC.includes('image'))
       )
-
       if ((imageMsg || isUazImage) && phone) {
         const contentObj = (msg.content && typeof msg.content === 'object') ? msg.content : null
         return {
           phone, fromMe, 
-          text: imageMsg?.caption || contentObj?.caption || msg.caption || '', 
+          text: imageMsg?.caption || contentObj?.caption || msg.caption || '',
           messageId, contactName, timestamp,
           messageType: 'image',
           imageKey: msg.key || { remoteJid, fromMe, id: messageId },
           imageUrl: imageMsg?.url || imageMsg?.mediaUrl || contentObj?.URL || contentObj?.url || null,
           imageMediaKey: imageMsg?.mediaKey || contentObj?.mediaKey || null,
-          imageMimeType: imageMsg?.mimetype || contentObj?.mimetype || realMsg.mimetype || msg.mimetype || 'image/jpeg',
           rawMsg: msg,
         }
       }
@@ -304,13 +273,8 @@ export function parseWebhookPayload(body) {
       }
     }
 
-    // ── 2. Formato UazAPI antigo (Sem Message Wrapper) ──
-    const uazBody = (body?.chatid || body?.sender)
-      ? body
-      : (body?.data?.chatid || body?.data?.sender)
-        ? body.data
-        : null
-
+    // Formato UazAPI antigo
+    const uazBody = (body?.chatid || body?.sender) ? body : (body?.data?.chatid || body?.data?.sender) ? body.data : null
     if (uazBody) {
       const chatid = uazBody.chatid || uazBody.sender || ''
       const phone = chatid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/[^0-9]/g, '')
@@ -319,104 +283,52 @@ export function parseWebhookPayload(body) {
       const messageId = uazBody.messageid || uazBody.id || null
       const contactName = uazBody.senderName || uazBody.pushName || null
       const ts = uazBody.messageTimestamp || uazBody.timestamp
-      const timestamp = ts
-        ? new Date(Number(ts) > 9999999999 ? ts : ts * 1000).toISOString()
-        : new Date().toISOString()
+      const timestamp = ts ? new Date(Number(ts) > 9999999999 ? ts : ts * 1000).toISOString() : new Date().toISOString()
 
-      // Detecta áudio no formato UazAPI antigo
       if ((uazBody.type === 'audio' || uazBody.type === 'ptt') && phone) {
         return {
           phone, fromMe, text: null, messageId, contactName, timestamp,
           messageType: 'audio',
           audioKey: { remoteJid: chatid, fromMe, id: messageId },
-          audioMimeType: uazBody.audio?.mimetype || 'audio/ogg',
         }
       }
-
       if (!phone || !text) return null
       return { phone, fromMe, text, messageId, contactName, timestamp }
     }
 
-    // ── 3. Formato Evolution API v1 (Wrapper data.key / data.message) ──
-    const data = body?.data || body
-    const key = data?.key || {}
-    const messageData = data?.message || {}
-
-    const remoteJid = key?.remoteJid || ''
-    const phone = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/[^0-9]/g, '')
-    const fromMe = key?.fromMe || false
-
-    const text =
-      messageData?.conversation ||
-      messageData?.extendedTextMessage?.text ||
-      messageData?.text ||
-      data?.text ||
-      body?.text ||
-      ''
-
-    const messageId = key?.id || data?.messageId || null
-    const contactName = data?.pushName || data?.notifyName || null
-    const timestamp = data?.messageTimestamp
-      ? new Date(data.messageTimestamp * 1000).toISOString()
-      : new Date().toISOString()
-
-    if (!phone || !text) return null
-    return { phone, fromMe, text, messageId, contactName, timestamp }
-
+    return null
   } catch (err) {
     console.error('[Parse Error]', err.message)
     return null
   }
 }
 
-
 /**
- * Baixa mídia de uma mensagem e retorna em base64.
- * Endpoint correto (UazAPI/Evolution): POST /chat/getBase64FromMediaMessage/{instanceName}
- * Body: o objeto `message` COMPLETO (com key + audioMessage), não apenas o key.
- * @param {object} rawMsg - Objeto message completo do Evolution API (msg.key + msg.message)
- * @param {string} audioUrl - URL direta do CDN (fallback)
- */
-/**
- * Descriptografa um arquivo de mídia do WhatsApp (AES-256-CBC via HKDF).
- * @param {Buffer} encData - Buffer do arquivo .enc baixado do CDN
- * @param {string} mediaKeyB64 - mediaKey em base64 (vem no payload da mensagem)
- * @param {string} mediaType - 'audio' | 'image' | 'video' | 'document'
+ * Descriptografa mídia.
  */
 async function decryptWhatsAppMedia(encData, mediaKeyB64, mediaType = 'audio') {
   const { createHmac, createDecipheriv } = await import('node:crypto')
   const mediaKey = Buffer.from(mediaKeyB64, 'base64')
-
-  const infoMap = {
-    audio: 'WhatsApp Audio Keys',
-    image: 'WhatsApp Image Keys',
-    video: 'WhatsApp Video Keys',
-    document: 'WhatsApp Document Keys',
-  }
+  const infoMap = { audio: 'WhatsApp Audio Keys', image: 'WhatsApp Image Keys', video: 'WhatsApp Video Keys' }
   const info = Buffer.from(infoMap[mediaType] || 'WhatsApp Audio Keys')
-  const salt = Buffer.alloc(32) // zero-filled
-
-  // HKDF-Extract
+  const salt = Buffer.alloc(32)
   const prk = createHmac('sha256', salt).update(mediaKey).digest()
-
-  // HKDF-Expand: 112 bytes
   const n = Math.ceil(112 / 32)
-  let okm = Buffer.alloc(0)
-  let t = Buffer.alloc(0)
+  let okm = Buffer.alloc(0), t = Buffer.alloc(0)
   for (let i = 1; i <= n; i++) {
     t = createHmac('sha256', prk).update(Buffer.concat([t, info, Buffer.from([i])])).digest()
     okm = Buffer.concat([okm, t])
   }
   const expanded = okm.slice(0, 112)
-  const iv = expanded.slice(0, 16)
-  const cipherKey = expanded.slice(16, 48)
-
-  // Remove 10-byte mac do final e decripta
+  const iv = expanded.slice(0, 16), cipherKey = expanded.slice(16, 48)
   const cipherData = encData.slice(0, -10)
   const decipher = createDecipheriv('aes-256-cbc', cipherKey, iv)
   return Buffer.concat([decipher.update(cipherData), decipher.final()])
 }
 
+/**
+ * Baixa mídia (audio ou imagem).
+ */
 export async function downloadMediaBase64({ 
   apiUrl, apiToken, instanceName, key, rawMsg, 
   mediaUrl, mediaMediaKey, 
@@ -431,29 +343,7 @@ export async function downloadMediaBase64({
   const finalUrl = mediaUrl || audioUrl || imageUrl
   const finalKey = mediaMediaKey || audioMediaKey || imageMediaKey
 
-  async function tryFetch(url, options = {}) {
-    const method = options.method || 'GET'
-    const body = options.body ? JSON.stringify(options.body) : undefined
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: buildHeaders(apiToken),
-        body,
-        signal: AbortSignal.timeout(15000),
-      })
-      const text = await res.text()
-      _log(`[dl] ${method} ${url.replace(base, '')} → ${res.status} | ${text.slice(0, 120)}`)
-      if (res.ok) {
-        const data = JSON.parse(text)
-        if (data.base64) return { base64: data.base64, mimetype: data.mimetype || (mediaType === 'audio' ? 'audio/ogg' : 'image/jpeg') }
-      }
-    } catch (e) {
-      _log(`[dl] ${method} ${url.replace(base, '')} → ERRO: ${e.message}`)
-    }
-    return null
-  }
-
-  // ── Método 1: CDN + Decrypt ──
+  // --- Método 1: CDN + Decrypt ---
   if (finalUrl && finalKey) {
     try {
       _log(`[dl] CDN + decrypt: ${finalUrl.slice(0, 80)}`)
@@ -463,91 +353,54 @@ export async function downloadMediaBase64({
         const decrypted = await decryptWhatsAppMedia(encBuffer, finalKey, mediaType)
         return { base64: decrypted.toString('base64'), mimetype: mediaType === 'audio' ? 'audio/ogg; codecs=opus' : 'image/jpeg' }
       }
-    } catch (e) {
-      _log(`[dl] CDN decrypt ERRO: ${e.message}`)
-    }
+    } catch (e) { _log(`[dl] CDN decrypt ERRO: ${e.message}`) }
   } else if (finalUrl) {
     try {
-      const res = await fetch(finalUrl, {
-        headers: buildHeaders(apiToken),
-        signal: AbortSignal.timeout(20000),
-      })
+      const res = await fetch(finalUrl, { headers: buildHeaders(apiToken), signal: AbortSignal.timeout(20000) })
       if (res.ok) {
         const buffer = await res.arrayBuffer()
         return { base64: Buffer.from(buffer).toString('base64'), mimetype: res.headers.get('content-type') }
       }
-    } catch (e) {
-      _log(`[dl] GET finalUrl → ERRO: ${e.message}`)
-    }
+    } catch (e) { _log(`[dl] GET finalUrl ERRO: ${e.message}`) }
   }
 
-  // ── Fallback ──
+  // --- Fallback: Evolution API standard ---
   const endpoints = [`${base}/chat/getBase64FromMediaMessage/${name}`, `${base}/chat/getBase64FromMediaMessage`]
-  if (rawMsg) {
-    for (const url of endpoints) {
-      const r = await tryFetch(url, { method: 'POST', body: { message: rawMsg } })
-      if (r) return r
-    }
-  }
   for (const url of endpoints) {
-    const r = await tryFetch(url, { method: 'POST', body: { key } })
-    if (r) return r
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: buildHeaders(apiToken),
+        body: JSON.stringify(rawMsg ? { message: rawMsg } : { key }),
+        signal: AbortSignal.timeout(15000)
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.base64) return { base64: data.base64, mimetype: data.mimetype || (mediaType === 'audio' ? 'audio/ogg' : 'image/jpeg') }
+    } catch (e) { _log(`[dl] Fallback ${url} ERRO: ${e.message}`) }
   }
 
   return null
 }
 
-/**
- * Envia mensagem de audio (PTT / nota de voz).
- * UazAPI cloud usa POST /send/media com multipart/form-data
- * @param {Buffer} audioBuffer - Buffer do arquivo de audio
- * @param {string} mimeType - MIME type (audio/ogg, audio/mpeg, etc.)
- * @param {string} filename - Nome do arquivo
- */
 export async function sendAudioMessage({ apiUrl, apiToken, number, audioBuffer, mimeType, filename }) {
   const base = apiUrl.replace(/\/$/, '')
-
-  const FormData = (await import('node:stream')).default
-  // Use built-in FormData (Node 18+)
   const form = new globalThis.FormData()
   const blob = new Blob([audioBuffer], { type: mimeType })
   form.append('number', number)
   form.append('mediatype', 'ptt')
   form.append('file', blob, filename || 'audio.ogg')
-
-  const res = await fetch(`${base}/send/media`, {
-    method: 'POST',
-    headers: { token: apiToken, apikey: apiToken },
-    body: form,
-    signal: AbortSignal.timeout(30000),
-  })
-
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`)
-  return data
+  const res = await fetch(`${base}/send/media`, { method: 'POST', headers: { token: apiToken, apikey: apiToken }, body: form })
+  return await res.json()
 }
 
-/**
- * Envia imagem.
- */
 export async function sendImageMessage({ apiUrl, apiToken, number, imageBuffer, mimeType, filename, caption }) {
   const base = apiUrl.replace(/\/$/, '')
-
   const form = new globalThis.FormData()
   const blob = new Blob([imageBuffer], { type: mimeType || 'image/jpeg' })
   form.append('number', number)
   form.append('mediatype', 'image')
   if (caption) form.append('caption', caption)
   form.append('file', blob, filename || 'image.jpg')
-
-  const res = await fetch(`${base}/send/media`, {
-    method: 'POST',
-    headers: { token: apiToken, apikey: apiToken },
-    body: form,
-    signal: AbortSignal.timeout(30000),
-  })
-
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`)
-  return data
+  const res = await fetch(`${base}/send/media`, { method: 'POST', headers: { token: apiToken, apikey: apiToken }, body: form })
+  return await res.json()
 }

@@ -26,166 +26,94 @@ const functionExecutors = {
 function getBrPhoneVariants(rawPhone) {
   const digits = String(rawPhone).replace(/[^0-9]/g, '');
   const variants = new Set([digits]);
-
   if (digits.startsWith('55')) {
     const local = digits.slice(4);
-    if (digits.length === 13 && local.startsWith('9')) {
-      variants.add(digits.slice(0, 4) + local.slice(1));
-    }
-    if (digits.length === 12 && /^[6-9]/.test(local)) {
-      variants.add(digits.slice(0, 4) + '9' + local);
-    }
+    if (digits.length === 13 && local.startsWith('9')) variants.add(digits.slice(0, 4) + local.slice(1));
+    if (digits.length === 12 && /^[6-9]/.test(local)) variants.add(digits.slice(0, 4) + '9' + local);
   }
-
   return variants;
 }
 
 function brPhonesMatch(a, b) {
   const va = getBrPhoneVariants(a);
   const vb = getBrPhoneVariants(b);
-  for (const x of va) {
-    if (vb.has(x)) return true;
-  }
+  for (const x of va) { if (vb.has(x)) return true; }
   return false;
 }
 
-const getSystemPrompt = (currentUser, teamMembersList) => {
-  const userLine = currentUser
-    ? `**${currentUser.full_name}** | ID: ${currentUser.id} | Cargo: ${currentUser.role} | WhatsApp: ${currentUser.phone || 'não cadastrado'}`
-    : `**Usuário não identificado** (número não cadastrado no sistema)`;
-
-  return `
-Você é o Agente Organizador, o núcleo de inteligência do sistema Organizador. Você é autoritário, eficiente e tem controle total sobre as tarefas, projetos e colaboração da equipe.
-
-Você está conversando com: ${userLine}
-Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
-
-**Suas Instruções de Operação:**
-1. Você TEM permissão e CAPACIDADE para:
-   - Criar, editar, buscar e deletar tarefas e projetos.
-   - Atribuir tarefas a membros da equipe usando a ferramenta 'assign_task'.
-   - Adicionar membros a projetos usando a ferramenta 'assign_project_member'.
-   - Enviar mensagens WhatsApp para membros da equipe usando a ferramenta 'send_message'.
-   - Consultar e listar membros da equipe.
-   - **Entender mensagens de áudio**: o sistema transcreve automaticamente áudios via Whisper antes de chegar até você. O texto que você recebe JÁ É a transcrição do áudio — trate-o como texto normal.
-2. NUNCA diga que não consegue processar áudio. O áudio já foi transcrito antes de chegar a você.
-3. NUNCA diga que não consegue fazer uma tarefa de gerenciamento ou atribuição. Se o usuário pedir para "atribuir a X", use a tool correspondente.
-3. Se não tiver o ID da tarefa, use 'search_tasks' primeiro. Se não souber quem é o usuário, use o nome ou email da lista abaixo.
-4. Use SEMPRE o campo "email" (ou nome) como user_identifier nas ferramentas — nunca o ID diretamente.
-5. **Visão Administrativa (MUITO IMPORTANTE)**: Se você for Administrador (indicado em 'Cargo'), você tem PODER TOTAL para ver e gerenciar dados de outros membros. Se o usuário perguntar sobre as tarefas ou projetos de outra pessoa (ex: "quais tarefas do Diego?"), você DEVE usar o parâmetro 'user_email' nas ferramentas 'list_tasks' ou 'list_projects'. NUNCA diga que não tem essa função; use o e-mail do colaborador que está na lista de membros abaixo.
-6. **Visão e Imagens**: Você pode receber imagens (fotos de telas, cadernos ou anotações). Sua tarefa é transcrever o conteúdo da imagem e transformá-lo em projetos e tarefas usando as ferramentas disponíveis. Se a imagem contiver um nome de projeto e uma lista de tarefas, crie-os exatamente como solicitado.
-
-**Membros da Equipe cadastrados (todos os usuários do sistema):**
-${teamMembersList}
-
-**Regras de Organização de Resposta (MUITO IMPORTANTE):**
-Ao listar projetos e tarefas, organize SEMPRE a resposta na seguinte ordem hierárquica:
-1. **📋 Projetos e Pastas**: Liste cada projeto (usando o ícone 📂) e as tarefas que estão dentro dele (identifique-as pelo nome do projeto retornado).
-2. **👤 Seus Projetos (Criados por Você)**: Liste os projetos onde o 'owner_id' corresponde ao seu ID.
-3. **✍️ Suas Tarefas (Criadas por Você)**: Liste as tarefas onde o 'creator_id' corresponde ao seu ID, independentemente do projeto.
-4. **🤝 Atribuídas a Você por Outros**: Liste as tarefas onde você está envolvido (pela listagem filtrada), mas o 'creator_id' é de outro membro da equipe.
-
-**Estilo de Resposta:**
-- Seja direto e profissional.
-- Use emojis para indicar status (✅ para sucesso, ❌ para erro, 📋 para listas).
-- Confirme SEMPRE o que foi feito de forma resumida.
-`;
+export async function transcribeAudioBase64(apiKey, base64, mimetype = 'audio/ogg') {
+  try {
+    const ai = new OpenAI({ apiKey })
+    const buffer = Buffer.from(base64, 'base64')
+    const fileName = mimetype.includes('mp3') ? 'audio.mp3' : mimetype.includes('wav') ? 'audio.wav' : 'audio.ogg'
+    const file = await OpenAI.toFile(buffer, fileName, { type: mimetype })
+    const transcription = await ai.audio.transcriptions.create({ file, model: 'whisper-1' })
+    return transcription.text
+  } catch (e) {
+    console.error('[Whisper Error]', e.message)
+    return null
+  }
 }
 
-/**
- * Processa uma mensagem do usuário via OpenAI com Function Calling
- * @param {string} userMessage - O texto da mensagem ou legenda da imagem
- * @param {string} phoneNumber - O número do remetente
- * @param {string} [base64Image] - A imagem em base64 (opcional)
- */
 export async function processMessage(userMessage, phoneNumber, base64Image = null) {
-  let currentUser = null;
-  let messages = [];
-  let userContent = null;
-  let finalResponse = 'Desculpe, ocorreu um erro ao processar sua mensagem.';
-
   try {
-    const cleanPhone = String(phoneNumber).replace(/[^0-9]/g, '');
-    
-    // Busca perfis para identificação
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, role, email, phone');
+    let history = CHAT_MEMORY.get(phoneNumber) || [];
+    const cleanPhone = phoneNumber.replace(/\D/g, '')
 
-    const teamList = (profiles || []).map(u => {
-      const phone = u.phone ? String(u.phone).replace(/[^0-9]/g, '') : null;
-      return `- **${u.full_name}** | email: ${u.email} | cargo: ${u.role} | ${phone ? 'telefone: '+phone : 'sem telefone'}`;
-    }).join('\n') || 'Nenhum membro cadastrado.';
+    const { data: profiles } = await supabase.from('profiles').select('id, phone, full_name').eq('is_active', true)
+    const currentUser = (profiles || []).find(p => p.phone && brPhonesMatch(cleanPhone, p.phone)) || null;
 
-    currentUser = (profiles || []).find(p => p.phone && brPhonesMatch(cleanPhone, p.phone)) || null;
+    const { data: settings } = await supabase.from('ai_agent_settings').select('system_prompt').eq('user_id', currentUser?.id).maybeSingle()
+    const systemPrompt = (settings?.system_prompt || 'Você é um assistente de produtividade...') + `\nUsuário atual: ${currentUser?.full_name || 'Desconhecido'} (ID: ${currentUser?.id || 'N/A'}, Tel: ${phoneNumber})`
 
-    const history = CHAT_MEMORY.get(phoneNumber) || [];
-    const systemPrompt = getSystemPrompt(currentUser, teamList);
+    // Prepara o conteúdo do usuário (Multi-modal se houver imagem)
+    let userContent = userMessage;
+    if (base64Image) {
+      userContent = [
+        { type: "text", text: userMessage || "Analise esta imagem." },
+        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+      ];
+    }
 
-    // Define o conteúdo da mensagem atual (multi-modal ou texto)
-    userContent = base64Image 
-      ? [
-          { type: "text", text: userMessage || "Analise esta imagem." },
-          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-        ]
-      : userMessage;
+    history.push({ role: 'user', content: base64Image ? (userMessage || "Analise esta imagem.") + " [Imagem]" : userMessage });
+    if (history.length > 20) history = history.slice(-20);
 
-    messages = [
-      { role: 'system', content: systemPrompt },
-      ...history,
-      { role: 'user', content: userContent },
-    ];
+    let messages = [{ role: 'system', content: systemPrompt }, ...history];
+    if (base64Image) messages[messages.length - 1].content = userContent;
 
-    console.log(`[Cérebro] Enviando para OpenAI (${MODEL})...`);
+    let maxIterations = 5;
+    let finalResponse = '';
 
-    let maxIterations = 8;
     while (maxIterations-- > 0) {
-      const completion = await openai.chat.completions.create({
-        model: MODEL,
-        messages,
-        tools,
-        tool_choice: 'auto',
-      });
+      const completion = await openai.chat.completions.create({ model: MODEL, messages, functions: tools, function_call: 'auto' });
+      const responseMessage = completion.choices[0].message;
 
-      const assistantMessage = completion.choices[0].message;
-      messages.push(assistantMessage);
-
-      if (!assistantMessage.tool_calls || assistantMessage.tool_calls.length === 0) {
-        finalResponse = assistantMessage.content || 'Ação concluída.';
-        break;
-      }
-
-      for (const toolCall of assistantMessage.tool_calls) {
-        const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+      if (responseMessage.function_call) {
+        const { name: functionName, arguments: argsString } = responseMessage.function_call;
+        const args = JSON.parse(argsString);
         const executor = functionExecutors[functionName];
-        let result = executor 
-          ? await executor.fn(args, executor.needsPhone ? phoneNumber : undefined)
-          : { error: `Função "${functionName}" não encontrada.` };
 
-        messages.push({
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(result),
-        });
+        if (executor) {
+          if (executor.needsPhone) args.phoneNumber = phoneNumber;
+          const result = await executor.fn(args);
+          messages.push(responseMessage);
+          messages.push({ role: 'function', name: functionName, content: JSON.stringify(result) });
+        } else {
+          messages.push(responseMessage);
+          messages.push({ role: 'function', name: functionName, content: JSON.stringify({ error: `Função "${functionName}" não encontrada.` }) });
+        }
+      } else {
+        finalResponse = responseMessage.content;
+        break;
       }
     }
 
-    // Atualiza histórico otimizado (sem base64 para evitar estouro de tokens)
-    const historyToUpdate = CHAT_MEMORY.get(phoneNumber) || [];
-    historyToUpdate.push(base64Image 
-      ? { role: 'user', content: `${userMessage || 'Imagem'} [Imagem]` }
-      : { role: 'user', content: userContent }
-    );
-    historyToUpdate.push({ role: 'assistant', content: finalResponse });
-    
-    // Mantém as últimas 10 trocas (20 mensagens)
-    CHAT_MEMORY.set(phoneNumber, historyToUpdate.slice(-20));
-
+    history.push({ role: 'assistant', content: finalResponse });
+    CHAT_MEMORY.set(phoneNumber, history);
     return finalResponse;
 
-  } catch (error) {
-    console.error('[Cérebro] Erro crítico:', error);
-    return finalResponse;
+  } catch (e) {
+    console.error('[AI Agent Error]', e.message);
+    return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
   }
 }
