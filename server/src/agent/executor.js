@@ -918,20 +918,36 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
     }
   })
 
-  const assigned_to_me_count = filteredTasks.filter(t => {
-    if (t.status === 'completed') return false;
-    const hasAssignments = t.assignments && t.assignments.length > 0;
-    const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === targetUserId);
-    const isCreator = t.creator_id === targetUserId;
-    return isAssignedToMe || (!hasAssignments && isCreator);
-  }).length;
+  // Refatorando Lógica de Volume Atribuído para contar as pendentes do inbox/owner 
+  let assigned_to_me_count = 0;
+  for (const t of filteredTasks) {
+    if (t.status !== 'completed') {
+      const hasAssignments = t.assignments && t.assignments.length > 0;
+      const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === targetUserId);
+      const isCreator = t.creator_id === targetUserId;
+      if (isAssignedToMe || (!hasAssignments && isCreator)) {
+        assigned_to_me_count++;
+      }
+    }
+  }
+
+  const average_completion_hours = completedCountWithDates > 0 
+    ? Math.round(totalCompletionMs / completedCountWithDates / (1000 * 60 * 60)) 
+    : null; // Null se não houver completadas em vez de 0 absoluto para formatação '-'
+  
+  let avgCompletionText = '-';
+  if (average_completion_hours !== null) {
+      if (average_completion_hours < 24) avgCompletionText = `${average_completion_hours}h`;
+      else avgCompletionText = `${Math.round(average_completion_hours / 24)}d`;
+  }
 
   return { 
     count: filteredTasks.length, 
-    average_completion_hours,
-    critical_tasks_count: criticalTasksCount,
-    volume_atribuido: assigned_to_me_count,
-    assigned_to_me_count,
+    analytics: {
+      velocidade_media: avgCompletionText,
+      atencao_critica: criticalTasksCount,
+      volume_atribuido: assigned_to_me_count
+    },
     tasks: filteredTasks,
     is_admin_view: isRequesterAdmin && !!user_email
   }

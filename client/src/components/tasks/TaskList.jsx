@@ -33,11 +33,17 @@ export default function TaskList({ projectId, title, filterToday }) {
   const unsectioned = pendingTasks.filter((t) => !t.section_id)
   const completedUnsectioned = completedTasks.filter((t) => !t.section_id)
 
-  // Cálculos de KPI para Inbox/Today
+  // Cálculos de KPI para Inbox/Today baseados nos dados recebidos
   const isInboxOrToday = title === 'Inbox' || filterToday
-  let avgCompletionText = '-'
-  let criticalCount = 0
-  let assignedCount = 0
+  
+  // Encapsulando no formato exigido pela arquitetura
+  const data = {
+    analytics: {
+      velocidade_media: '-',
+      atencao_critica: 0,
+      volume_atribuido: 0
+    }
+  }
 
   if (isInboxOrToday && tasks.length > 0) {
     const now = Date.now()
@@ -45,34 +51,36 @@ export default function TaskList({ projectId, title, filterToday }) {
     let completedCount = 0
 
     tasks.forEach(t => {
-      // Atenção Crítica
+      // 1. Atenção Crítica (> 48h pendente)
       if (t.status !== 'completed') {
         const updatedAt = new Date(t.updated_at || t.created_at).getTime()
         if ((now - updatedAt) / (1000 * 60 * 60) > 48) {
-          criticalCount++
+          data.analytics.atencao_critica++
         }
-      } else if (t.completed_at && t.created_at) {
-        // Velocidade
+      } 
+      
+      // 2. Velocidade Média (apenas completadas)
+      if (t.status === 'completed' && t.completed_at && t.created_at) {
         sumCompletionMs += (new Date(t.completed_at).getTime() - new Date(t.created_at).getTime())
         completedCount++
       }
 
-      // Atribuições a mim (Responsabilidade)
+      // 3. Volume Atribuído (pendentes onde sou criador OU atribuído)
       if (t.status !== 'completed' && user?.id) {
         const hasAssignments = t.assignments && t.assignments.length > 0
         const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === user.id)
         const isCreator = t.creator_id === user.id
         
         if (isAssignedToMe || (!hasAssignments && isCreator)) {
-          assignedCount++
+          data.analytics.volume_atribuido++
         }
       }
     })
 
     if (completedCount > 0) {
       const avgHours = Math.round(sumCompletionMs / completedCount / (1000 * 60 * 60))
-      if (avgHours < 24) avgCompletionText = `${avgHours}h`
-      else avgCompletionText = `${Math.round(avgHours / 24)}d`
+      if (avgHours < 24) data.analytics.velocidade_media = `${avgHours}h`
+      else data.analytics.velocidade_media = `${Math.round(avgHours / 24)}d`
     }
   }
 
@@ -107,17 +115,17 @@ export default function TaskList({ projectId, title, filterToday }) {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Velocidade Média</p>
-              <p className="text-xl font-black text-slate-800 leading-none mt-1">{avgCompletionText}</p>
+              <p className="text-xl font-black text-slate-800 leading-none mt-1">{data.analytics.velocidade_media}</p>
             </div>
           </div>
           <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
-            <div className={`rounded-lg p-3 ${criticalCount > 0 ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}>
+            <div className={`rounded-lg p-3 ${data.analytics.atencao_critica > 0 ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}>
               <ClockAlert size={20} strokeWidth={2.5} />
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atenção Crítica</p>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <p className="text-xl font-black text-slate-800 leading-none">{criticalCount}</p>
+                <p className="text-xl font-black text-slate-800 leading-none">{data.analytics.atencao_critica}</p>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">frias {'>'} 48h</p>
               </div>
             </div>
@@ -129,7 +137,7 @@ export default function TaskList({ projectId, title, filterToday }) {
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume Atribuído</p>
               <div className="mt-1 flex items-baseline gap-1.5">
-                <p className="text-xl font-black text-slate-800 leading-none">{assignedCount || 0}</p>
+                <p className="text-xl font-black text-slate-800 leading-none">{data.analytics.volume_atribuido}</p>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">para mim</p>
               </div>
             </div>
