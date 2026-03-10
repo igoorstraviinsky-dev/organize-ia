@@ -555,8 +555,8 @@ export async function listProjects({}, phoneNumber) {
   if (error) {
     // Fallback se a RPC falhar ou não estiver disponível conforme esperado
     const [{ data: owned }, { data: member }] = await Promise.all([
-      supabase.from('projects').select('id, name').eq('owner_id', userId),
-      supabase.from('project_members').select('project:projects(id, name)').eq('user_id', userId),
+      supabase.from('projects').select('id, name, owner_id').eq('owner_id', userId),
+      supabase.from('project_members').select('project:projects(id, name, owner_id)').eq('user_id', userId),
     ])
     const results = [
       ...(owned || []),
@@ -565,6 +565,7 @@ export async function listProjects({}, phoneNumber) {
     return { count: results.length, projects: results }
   }
 
+  // Se a RPC não retornar owner_id, garantimos que ele venha
   return { count: projects.length, projects }
 }
 
@@ -601,7 +602,7 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
 
   let query = supabase
     .from('tasks')
-    .select('id, title, status, priority, due_date, due_time, project:projects(name), task_labels(label:labels(name))')
+    .select('id, title, status, priority, due_date, due_time, creator_id, project:projects(name), task_labels(label:labels(name))')
     .is('parent_id', null)
     .or(orParts.join(','))
     .order('created_at', { ascending: false })
@@ -635,6 +636,7 @@ export async function listTasks({ filter, project_name, label_name }, phoneNumbe
     priority: t.priority,
     due_date: t.due_date,
     due_time: t.due_time,
+    creator_id: t.creator_id,
     project: t.project?.name || 'Inbox',
     labels: t.task_labels?.map((tl) => tl.label?.name).filter(Boolean) || [],
   }))

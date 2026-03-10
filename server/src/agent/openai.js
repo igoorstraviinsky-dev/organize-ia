@@ -76,6 +76,13 @@ Data/Hora atual: ${new Date().toLocaleString('pt-BR')}
 **Membros da Equipe cadastrados (todos os usuários do sistema):**
 ${teamMembersList}
 
+**Regras de Organização de Resposta (MUITO IMPORTANTE):**
+Ao listar projetos e tarefas, organize SEMPRE a resposta na seguinte ordem hierárquica:
+1. **📋 Projetos e Pastas**: Liste cada projeto (usando o ícone 📂) e as tarefas que estão dentro dele (identifique-as pelo nome do projeto retornado).
+2. **👤 Seus Projetos (Criados por Você)**: Liste os projetos onde o 'owner_id' corresponde ao seu ID.
+3. **✍️ Suas Tarefas (Criadas por Você)**: Liste as tarefas onde o 'creator_id' corresponde ao seu ID, independentemente do projeto.
+4. **🤝 Atribuídas a Você por Outros**: Liste as tarefas onde você está envolvido (pela listagem filtrada), mas o 'creator_id' é de outro membro da equipe.
+
 **Estilo de Resposta:**
 - Seja direto e profissional.
 - Use emojis para indicar status (✅ para sucesso, ❌ para erro, 📋 para listas).
