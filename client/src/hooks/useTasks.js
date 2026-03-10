@@ -133,6 +133,76 @@ export function useAllTasks() {
   })
 }
 
+// Hook dedicado para calcular os KPIs globais do Inbox Dashboard
+// Busca TODAS as tarefas pendentes do usuário em todos os projetos
+export function useGlobalKPIs() {
+  return useQuery({
+    queryKey: ['global-kpis'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id
+      if (!userId) return { volume_atribuido: 0, atencao_critica: 0, velocidade_media: '-' }
+
+      const [
+        { data: createdTasks },
+        { data: assignedEntries },
+        { data: completedTasks }
+      ] = await Promise.all([
+        supabase
+          .from('tasks')
+          .select('id, updated_at, created_at, assignments(user_id)')
+          .eq('creator_id', userId)
+          .neq('status', 'completed')
+          .is('parent_id', null),
+        supabase
+          .from('assignments')
+          .select('task_id')
+          .eq('user_id', userId),
+        supabase
+          .from('tasks')
+          .select('id, created_at, completed_at')
+          .eq('creator_id', userId)
+          .eq('status', 'completed')
+          .not('completed_at', 'is', null)
+          .limit(50)
+      ])
+
+      const assignedTaskIds = new Set((assignedEntries || []).map(a => a.task_id))
+      const myCreated = createdTasks || []
+
+      let volume_atribuido = 0
+      let atencao_critica = 0
+      const now = Date.now()
+
+      for (const t of myCreated) {
+        const hasAssignments = t.assignments && t.assignments.length > 0
+        const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === userId)
+        if (!hasAssignments || isAssignedToMe) {
+          volume_atribuido++
+          const updatedAt = new Date(t.updated_at || t.created_at).getTime()
+          if ((now - updatedAt) / (1000 * 60 * 60) > 48) atencao_critica++
+        }
+      }
+
+      for (const taskId of assignedTaskIds) {
+        if (!myCreated.some(t => t.id === taskId)) volume_atribuido++
+      }
+
+      let velocidade_media = '-'
+      const completed = completedTasks || []
+      if (completed.length > 0) {
+        const totalMs = completed.reduce((sum, t) =>
+          sum + (new Date(t.completed_at) - new Date(t.created_at)), 0)
+        const avgHours = Math.round(totalMs / completed.length / (1000 * 60 * 60))
+        velocidade_media = avgHours < 24 ? `${avgHours}h` : `${Math.round(avgHours / 24)}d`
+      }
+
+      return { volume_atribuido, atencao_critica, velocidade_media }
+    },
+    staleTime: 30 * 1000,
+  })
+}
+
 export function useTasksByLabel(labelId) {
   return useQuery({
     queryKey: ['tasks', 'label', labelId],

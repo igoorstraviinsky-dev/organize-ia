@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTasks, TASK_SELECT } from '../../hooks/useTasks'
+import { useTasks, useGlobalKPIs } from '../../hooks/useTasks'
 import { useSections, useCreateSection } from '../../hooks/useSections'
 import TaskItem from './TaskItem'
 import TaskForm from './TaskForm'
@@ -33,54 +33,16 @@ export default function TaskList({ projectId, title, filterToday }) {
   const unsectioned = pendingTasks.filter((t) => !t.section_id)
   const completedUnsectioned = completedTasks.filter((t) => !t.section_id)
 
-  // Cálculos de KPI para Inbox/Today baseados nos dados recebidos
+  // KPIs Globais (consulta independente em todos os projetos)
   const isInboxOrToday = title === 'Inbox' || filterToday
-  
-  // Encapsulando no formato exigido pela arquitetura
+  const { data: kpis = { volume_atribuido: 0, atencao_critica: 0, velocidade_media: '-' } } = useGlobalKPIs()
+
+  // Mantém o objeto data.analytics para compatibilidade com o JSX dos cards
   const data = {
     analytics: {
-      velocidade_media: '-',
-      atencao_critica: 0,
-      volume_atribuido: 0
-    }
-  }
-
-  if (isInboxOrToday && tasks.length > 0) {
-    const now = Date.now()
-    let sumCompletionMs = 0
-    let completedCount = 0
-
-    tasks.forEach(t => {
-      // 1. Atenção Crítica (> 48h pendente)
-      if (t.status !== 'completed') {
-        const updatedAt = new Date(t.updated_at || t.created_at).getTime()
-        if ((now - updatedAt) / (1000 * 60 * 60) > 48) {
-          data.analytics.atencao_critica++
-        }
-      } 
-      
-      // 2. Velocidade Média (apenas completadas)
-      if (t.status === 'completed' && t.completed_at && t.created_at) {
-        sumCompletionMs += (new Date(t.completed_at).getTime() - new Date(t.created_at).getTime())
-        completedCount++
-      }
-
-      // 3. Volume Atribuído (pendentes onde sou criador OU atribuído)
-      if (t.status !== 'completed' && user?.id) {
-        const hasAssignments = t.assignments && t.assignments.length > 0
-        const isAssignedToMe = hasAssignments && t.assignments.some(a => a.user_id === user.id)
-        const isCreator = t.creator_id === user.id
-        
-        if (isAssignedToMe || (!hasAssignments && isCreator)) {
-          data.analytics.volume_atribuido++
-        }
-      }
-    })
-
-    if (completedCount > 0) {
-      const avgHours = Math.round(sumCompletionMs / completedCount / (1000 * 60 * 60))
-      if (avgHours < 24) data.analytics.velocidade_media = `${avgHours}h`
-      else data.analytics.velocidade_media = `${Math.round(avgHours / 24)}d`
+      velocidade_media: kpis.velocidade_media,
+      atencao_critica: kpis.atencao_critica,
+      volume_atribuido: kpis.volume_atribuido
     }
   }
 
