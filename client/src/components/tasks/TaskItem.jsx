@@ -54,7 +54,7 @@ export default function TaskItem({ task }) {
   const hasSubtasks = subtasks.length > 0
 
   const isCold = !isCompleted && ((Date.now() - new Date(task.updated_at || task.created_at)) / (1000 * 60 * 60) > 48)
-  const themeColor = task?.creator?.theme_color || '#7c3aed'
+  const cardColor = task?.creator?.theme_color || '#7c3aed'
   const commentsCount = task.comments?.length || 0
   
   let originBadge = null;
@@ -88,8 +88,8 @@ export default function TaskItem({ task }) {
         className={`group relative flex cursor-pointer items-start gap-4 rounded-xl p-4 transition-all duration-300 border hover:shadow-md overflow-hidden
         ${isCompleted ? 'opacity-60 bg-slate-50 border-slate-100' : isCold ? 'border-yellow-400 ring-1 ring-yellow-400/50 hover:border-yellow-500' : 'border-slate-100'}`}
         style={!isCompleted ? {
-          borderLeft: `4px solid ${themeColor}`,
-          backgroundColor: `${themeColor}08`
+          borderLeft: `4px solid ${cardColor}`,
+          backgroundColor: `${cardColor}08`
         } : {}}
       >
         <button
