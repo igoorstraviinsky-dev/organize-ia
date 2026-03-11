@@ -33,8 +33,7 @@ export const TASK_SELECT = `
   section:sections(id, name),
   assignments(user_id, profiles:profiles(full_name, email, avatar_url)),
   task_labels(label_id, labels(id, name, color)),
-  creator:profiles!creator_id(theme_color),
-  comments(id)
+  creator:profiles!creator_id(theme_color)
 `
 
 export function useTasks(projectId) {
