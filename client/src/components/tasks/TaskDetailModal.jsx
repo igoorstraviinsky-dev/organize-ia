@@ -39,7 +39,6 @@ export default function TaskDetailModal({ task, onClose }) {
   const { profiles } = useTeam()
 
   const subtasks = task.subtasks || []
-  const labels = (task.task_labels || []).map((tl) => tl.label).filter(Boolean)
 
   // Carregar assignments
   useEffect(() => {
@@ -301,14 +300,14 @@ export default function TaskDetailModal({ task, onClose }) {
                   <div className="flex flex-wrap gap-2">
                     {task.task_labels.map((tl) => (
                       <span
-                        key={tl.label_id || tl.labels?.id}
+                        key={tl.id || tl}
                         className="rounded-xl px-3 py-1.5 text-xs font-black text-white shadow-sm ring-1 ring-black/5"
                         style={{ 
-                          backgroundColor: tl.labels?.color || '#6366f1', 
+                          backgroundColor: tl.color || '#6366f1', 
                           textShadow: '0 1px 2px rgba(0,0,0,0.2)' 
                         }}
                       >
-                        {(tl.labels?.name || tl.label || 'Sem Nome').toUpperCase()}
+                        {(tl.name || tl || 'Sem Nome').toUpperCase()}
                       </span>
                     ))}
                   </div>

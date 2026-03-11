@@ -34,10 +34,9 @@ function formatTime(timeStr) {
 export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isPlaceholder }) {
   const updateTask = useUpdateTask()
   const [showDetail, setShowDetail] = useState(false)
-
+ 
   const dateInfo = formatDate(task.due_date)
   const time = formatTime(task.due_time)
-  const labels = (task.task_labels || []).map((tl) => tl.label).filter(Boolean)
   const isCompleted = task.status === 'completed'
   const subtasks = task.subtasks || []
   const completedSubs = subtasks.filter((s) => s.status === 'completed').length
@@ -116,15 +115,15 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
             <div className="mt-2.5 ml-[30px] flex flex-wrap gap-1.5">
               {task.task_labels.map((tl) => (
                 <span
-                  key={tl.label_id || tl.labels?.id}
+                  key={tl.id || tl}
                   className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm ring-1 ring-black/5"
                   style={{
-                    backgroundColor: tl.labels?.color || '#6366f1',
-                    boxShadow: `0 2px 4px ${tl.labels?.color || '#6366f1'}40`,
+                    backgroundColor: tl.color || '#6366f1',
+                    boxShadow: `0 2px 4px ${(tl.color || '#6366f1')}40`,
                     textShadow: '0 1px 3px rgba(0,0,0,0.4)'
                   }}
                 >
-                  {tl.labels?.name || tl.label}
+                  {tl.name || tl}
                 </span>
               ))}
             </div>

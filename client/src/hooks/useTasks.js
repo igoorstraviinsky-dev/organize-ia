@@ -20,7 +20,7 @@ async function fetchSubtasksMap(taskIds) {
 export function normalizeTasks(tasks, subtasksMap = {}) {
   return tasks.map((task) => ({
     ...task,
-    task_labels: (task.task_labels || []).map((tl) => ({ label: tl.labels || tl.label })),
+    task_labels: (task.task_labels || []).map((tl) => tl.labels || tl.label || tl),
     subtasks: subtasksMap[task.id] || [],
   }))
 }

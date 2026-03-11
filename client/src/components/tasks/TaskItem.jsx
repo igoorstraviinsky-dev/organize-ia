@@ -48,7 +48,6 @@ export default function TaskItem({ task }) {
   const dateInfo = formatDate(task.due_date)
   const time = formatTime(task.due_time)
   const relativeUpdate = getRelativeTime(task.updated_at || task.created_at)
-  const labels = (task.task_labels || []).map((tl) => tl.label).filter(Boolean)
   const subtasks = task.subtasks || []
   const completedSubs = subtasks.filter((s) => s.status === 'completed').length
   const hasSubtasks = subtasks.length > 0
@@ -186,18 +185,18 @@ export default function TaskItem({ task }) {
               </div>
             )}
 
-            {labels.length > 0 && (
+            {task.task_labels?.length > 0 && (
               <div className="flex items-center gap-1">
-                {task.task_labels?.map((tl) => (
+                {task.task_labels.map((tl) => (
                   <span
-                    key={tl.label_id || tl.labels?.id}
+                    key={tl.id || tl}
                     className="rounded-lg px-2.5 py-1 text-[9px] font-black text-white uppercase tracking-widest ring-1 ring-black/5"
                     style={{ 
-                      backgroundColor: tl.labels?.color || '#6366f1',
+                      backgroundColor: tl.color || '#6366f1',
                       textShadow: '0 1px 3px rgba(0,0,0,0.4)'
                     }}
                   >
-                    {tl.labels?.name || tl.label}
+                    {tl.name || tl}
                   </span>
                 ))}
               </div>
