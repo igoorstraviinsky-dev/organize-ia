@@ -24,7 +24,7 @@ const COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'
 
 export default function Sidebar({ currentView, onViewChange, onProjectSelect, currentProjectId, onSignOut, role, userId }) {
   const { user } = useAuth()
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [], isLoading } = useProjects()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()

@@ -787,103 +787,113 @@ export async function assignProjectMember({ project_name, user_identifier, phone
 }
 
 export async function listProjects({ target_user, phoneNumber }) {
-  const profile = await resolveUserId(phoneNumber)
-  if (!profile) return { error: 'Usuário não encontrado.' }
+  try {
+    const profile = await resolveUserId(phoneNumber)
+    if (!profile) return [] // Retorna array vazio em vez de erro para não quebrar maps
 
-  const requesterId = profile.id
-  const isRequesterAdmin = profile.role === 'admin'
+    const requesterId = profile.id
+    const isRequesterAdmin = profile.role === 'admin'
 
-  /**
-   * Função auxiliar para buscar inventário (projetos e suas tarefas)
-   * Respeita o isolamento: usuário comum só vê o que é dele ou o que é compartilhado com ele.
-   */
-  const getInventory = async (ownerId, requesterId, isAdminFlag) => {
-    // 1. Busca IDs de projetos onde o usuário é membro
-    const { data: memberData } = await supabase
-      .from('project_members')
-      .select('project_id')
-      .eq('user_id', ownerId)
-    
-    const memberProjectIds = memberData?.map(m => m.project_id) || []
-
-    // 2. Busca projetos onde o usuário é dono OU membro
-    let query = supabase
-      .from('projects')
-      .select('id, name, owner_id')
-    
-    if (memberProjectIds.length > 0) {
-      query = query.or(`owner_id.eq.${ownerId},id.in.(${memberProjectIds.join(',')})`)
-    } else {
-      query = query.eq('owner_id', ownerId)
-    }
-
-    const { data: projects } = await query
-
-    if (!projects || projects.length === 0) return []
-
-    // 3. Filtra projetos que o REQUISITANTE tem acesso (se não for admin e não for o próprio dono)
-    let accessibleProjectIds = projects.map(p => p.id)
-    if (!isAdminFlag && ownerId !== requesterId) {
-      const { data: reqMemberData } = await supabase.from('project_members').select('project_id').eq('user_id', requesterId)
-      const { data: reqOwnedData } = await supabase.from('projects').select('id').eq('owner_id', requesterId)
+    /**
+     * Função auxiliar para buscar inventário (projetos e suas tarefas)
+     * Respeita o isolamento: usuário comum só vê o que é dele ou o que é compartilhado com ele.
+     */
+    const getInventory = async (ownerId, requesterId, isAdminFlag) => {
+      // 1. Busca IDs de projetos onde o usuário alvo (ownerId) é membro
+      const { data: memberData } = await supabase
+        .from('project_members')
+        .select('project_id')
+        .eq('user_id', ownerId)
       
-      const requesterAccessible = [
-        ...(reqMemberData?.map(m => m.project_id) || []),
-        ...(reqOwnedData?.map(p => p.id) || [])
-      ]
-      accessibleProjectIds = accessibleProjectIds.filter(id => requesterAccessible.includes(id))
+      const memberProjectIds = memberData?.map(m => m.project_id) || []
+
+      // 2. Busca projetos onde o usuário alvo é dono OU membro
+      let query = supabase
+        .from('projects')
+        .select('id, name, owner_id, color, icon')
+      
+      if (memberProjectIds.length > 0) {
+        query = query.or(`owner_id.eq.${ownerId},id.in.(${memberProjectIds.join(',')})`)
+      } else {
+        query = query.eq('owner_id', ownerId)
+      }
+
+      const { data: projects } = await query
+
+      if (!projects || projects.length === 0) return []
+
+      // 3. Filtra projetos que o REQUISITANTE tem acesso (se não for admin e não for o próprio dono)
+      let accessibleProjectIds = projects.map(p => p.id)
+      if (!isAdminFlag && ownerId !== requesterId) {
+        const [{ data: reqMemberData }, { data: reqOwnedData }] = await Promise.all([
+          supabase.from('project_members').select('project_id').eq('user_id', requesterId),
+          supabase.from('projects').select('id').eq('owner_id', requesterId)
+        ])
+        
+        const requesterAccessible = [
+          ...(reqMemberData?.map(m => m.project_id) || []),
+          ...(reqOwnedData?.map(p => p.id) || [])
+        ]
+        accessibleProjectIds = accessibleProjectIds.filter(id => requesterAccessible.includes(id))
+      }
+
+      // 4. Busca tarefas (Próprias e Atribuídas)
+      const { data: assignments } = await supabase.from('assignments').select('task_id').eq('user_id', ownerId)
+      const assignedTaskIds = assignments?.map(a => a.task_id) || []
+      
+      let queryTasks = supabase
+        .from('tasks')
+        .select('id, title, status, priority, due_date, project_id, parent_id, creator_id, creator:profiles!creator_id(theme_color)')
+        .order('position', { ascending: true })
+
+      if (assignedTaskIds.length > 0) {
+        queryTasks = queryTasks.or(`project_id.in.(${accessibleProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')})`)
+      } else {
+        queryTasks = queryTasks.in('project_id', accessibleProjectIds)
+      }
+
+      const { data: tasks } = await queryTasks
+
+      // 5. Estrutura consolidada
+      return projects
+        .filter(p => accessibleProjectIds.includes(p.id))
+        .map(p => ({
+          ...p,
+          tasks: tasks?.filter(t => t.project_id === p.id || assignedTaskIds.includes(t.id)) || []
+        }))
     }
 
-    const { data: assignments } = await supabase.from('assignments').select('task_id').eq('user_id', ownerId)
-    const assignedTaskIds = assignments?.map(a => a.task_id) || []
+    // Busca baseada na própria conta do remetente
+    let targetUserId = requesterId
+    let targetName = profile.full_name
+
+    if (isRequesterAdmin && target_user) {
+      const { data: targetProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .or(`full_name.ilike.%${target_user}%,email.ilike.%${target_user}%`)
+        .maybeSingle()
+        
+      if (!targetProfile) return [] // Usuário não encontrado -> lista vazia
+      
+      targetUserId = targetProfile.id
+      targetName = targetProfile.full_name
+    }
+
+    const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
     
-    let queryTasks = supabase
-      .from('tasks')
-      .select('id, title, status, priority, due_date, project_id, parent_id, creator_id, creator:profiles!creator_id(theme_color)')
-      .order('position', { ascending: true })
-
-    if (assignedTaskIds.length > 0) {
-      queryTasks = queryTasks.or(`project_id.in.(${accessibleProjectIds.join(',')}),id.in.(${assignedTaskIds.join(',')})`)
-    } else {
-      queryTasks = queryTasks.in('project_id', accessibleProjectIds)
-    }
-
-    const { data: tasks } = await queryTasks
-
-    // 5. Estrutura consolidada
-    return projects
-      .filter(p => accessibleProjectIds.includes(p.id))
-      .map(p => ({
-        ...p,
-        tasks: tasks?.filter(t => t.project_id === p.id || assignedTaskIds.includes(t.id)) || []
+    return (inventory || [])
+      .filter(p => p.name?.toLowerCase() !== 'inbox')
+      .map(p => ({ 
+        id: p.id,
+        name: p.name,
+        color: p.color,
+        tasks: (p.tasks || []).map(t => ({ title: t.title, status: t.status })) 
       }))
+  } catch (err) {
+    console.error('[listProjects Error]', err.message)
+    return []
   }
-
-  // Busca baseada na própria conta do remetente
-  let targetUserId = requesterId
-  let targetName = profile.full_name
-
-  if (isRequesterAdmin && target_user) {
-    const { data: targetProfile } = await supabase
-      .from('profiles')
-      .select('id, full_name, email')
-      .or(`full_name.ilike.%${target_user}%,email.ilike.%${target_user}%`)
-      .maybeSingle()
-      
-    if (!targetProfile) return { error: `Usuário '${target_user}' não encontrado no sistema.` }
-    
-    targetUserId = targetProfile.id
-    targetName = targetProfile.full_name
-  }
-
-  const inventory = await getInventory(targetUserId, requesterId, isRequesterAdmin)
-  
-  return inventory
-    .filter(p => p.name.toLowerCase() !== 'inbox')
-    .map(p => ({ 
-      name: p.name, 
-      tasks: p.tasks.map(t => ({ title: t.title, status: t.status })) 
-    }))
 }
 
 /**
