@@ -30,9 +30,21 @@ export default function TaskList({ projectId, title, filterToday }) {
   const isInboxOrToday = title === 'Inbox' || filterToday
   const hasSections = !isInboxOrToday && sections.length > 0
 
-  // Tarefas sem seção (No Dashboard/Inbox, exibimos todas flat)
-  const unsectioned = isInboxOrToday ? pendingTasks : pendingTasks.filter((t) => !t.section_id)
-  const completedUnsectioned = isInboxOrToday ? completedTasks : completedTasks.filter((t) => !t.section_id)
+  // Tarefas sem seção (No Dashboard/Inbox, exibimos todas flat - priorizando as que NÃO tem projeto)
+  let unsectioned = pendingTasks.filter((t) => !t.section_id)
+  let completedUnsectioned = completedTasks.filter((t) => !t.section_id)
+
+  if (isInboxOrToday) {
+    unsectioned = [...pendingTasks].sort((a, b) => {
+      // Se A não tem projeto e B tem, A vem primeiro (-1)
+      if (!a.project_id && b.project_id) return -1
+      if (a.project_id && !b.project_id) return 1
+      // Caso contrário, mantém a ordem original
+      return 0
+    })
+    
+    completedUnsectioned = [...completedTasks]
+  }
 
   // KPIs Globais (consulta independente em todos os projetos)
   const { data: kpis = { volume_atribuido: 0, atencao_critica: 0, velocidade_media: '-' } } = useGlobalKPIs()
