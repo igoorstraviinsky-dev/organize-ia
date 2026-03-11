@@ -839,7 +839,7 @@ export async function listProjects({ target_user, phoneNumber }) {
     
     let queryTasks = supabase
       .from('tasks')
-      .select('id, title, status, priority, due_date, project_id, parent_id, creator_id')
+      .select('id, title, status, priority, due_date, project_id, parent_id, creator_id, creator:profiles!creator_id(theme_color)')
       .order('position', { ascending: true })
 
     if (assignedTaskIds.length > 0) {
@@ -918,7 +918,7 @@ export async function listTasks({ filter, project_name, label_name, user_email, 
 
   let query = supabase
     .from('tasks')
-    .select('*, projects(name), assignments(user_id)')
+    .select('*, projects(name), assignments(user_id), creator:profiles!creator_id(theme_color)')
     .order('position', { ascending: true })
 
   if (assignedTaskIds.length > 0) {

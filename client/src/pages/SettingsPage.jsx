@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile')
   const [fullName, setFullName] = useState(user?.profile?.full_name || '')
   const [phone, setPhone] = useState(user?.profile?.phone || '')
+  const [themeColor, setThemeColor] = useState(user?.profile?.theme_color || '#7c3aed')
   const [hasChanges, setHasChanges] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: string }
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -23,7 +24,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user?.profile?.full_name) setFullName(user.profile.full_name)
     if (user?.profile?.phone !== undefined) setPhone(user.profile.phone || '')
-  }, [user?.profile?.full_name, user?.profile?.phone])
+    if (user?.profile?.theme_color) setThemeColor(user.profile.theme_color)
+  }, [user?.profile?.full_name, user?.profile?.phone, user?.profile?.theme_color])
 
   const showFeedback = (type, text) => {
     setMessage({ type, text })
@@ -34,7 +36,7 @@ export default function SettingsPage() {
     try {
       await updateProfile({
         userId: user.id,
-        updates: { full_name: fullName, phone: phone || null }
+        updates: { full_name: fullName, phone: phone || null, theme_color: themeColor }
       })
       setHasChanges(false)
       showFeedback('success', 'Perfil atualizado com sucesso!')
@@ -300,20 +302,47 @@ export default function SettingsPage() {
               </div>
             ))}
 
-            <div className="premium-card bg-slate-900 p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group cursor-pointer hover:scale-[1.02] transition-all">
-              <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] bg-[#8E44AD]/20 blur-[80px] rounded-full group-hover:bg-[#8E44AD]/30 transition-all" />
+            <div className="premium-card bg-slate-900 p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group">
+              <div 
+                className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] blur-[80px] rounded-full transition-all duration-500" 
+                style={{ backgroundColor: `${themeColor}40` }}
+              />
               <div className="relative z-10 h-full flex flex-col justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-6">
                   <div className="p-2.5 rounded-2xl bg-white/5 text-white">
                     <Palette size={20} strokeWidth={2.5} />
                   </div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Tema Visual</h3>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Aparência do Card</h3>
                 </div>
-                <div className="mt-12">
-                  <p className="text-2xl font-black text-white italic font-display uppercase tracking-tight">Premium Light</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="h-1 w-8 rounded-full bg-[#8E44AD]" />
-                    <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">Personalizar em breve</p>
+                <div className="mt-auto">
+                  <p className="text-sm font-bold text-slate-400 mb-4">Escolha a cor que vai diferenciar suas tarefas para toda a equipe.</p>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      '#7c3aed', // Roxo (Padrão Organizador)
+                      '#3b82f6', // Azul
+                      '#10b981', // Verde Escuro
+                      '#22c55e', // Verde Claro
+                      '#f59e0b', // Laranja
+                      '#ef4444', // Vermelho
+                      '#ec4899', // Rosa
+                      '#0f172a'  // Dark/Preto
+                    ].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          setThemeColor(color)
+                          setHasChanges(true)
+                        }}
+                        className={`w-10 h-10 rounded-full border-4 transition-all duration-300 ${
+                          themeColor === color ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:scale-110 drop-shadow-md pb-1'
+                        }`}
+                        style={{ 
+                          backgroundColor: color, 
+                          boxShadow: themeColor === color ? `0 0 15px ${color}80` : 'none' 
+                        }}
+                        title={color}
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
