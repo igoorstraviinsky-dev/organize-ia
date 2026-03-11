@@ -18,6 +18,7 @@ export function useRealtimeTasks() {
           console.log('[Realtime] Mudança detectada em tarefas:', payload.eventType)
           // Simplificação: qualquer mudança (INSERT, UPDATE, DELETE) limpa o cache e força o reload
           queryClient.invalidateQueries({ queryKey: ['tasks'] })
+          queryClient.invalidateQueries({ queryKey: ['global-kpis'] })
         }
       )
       .on(
