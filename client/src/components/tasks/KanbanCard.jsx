@@ -112,19 +112,19 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
           )}
 
           {/* Labels */}
-          {labels.length > 0 && (
+          {task.task_labels?.length > 0 && (
             <div className="mt-2.5 ml-[30px] flex flex-wrap gap-1.5">
-              {labels.map((label) => (
+              {task.task_labels.map((tl) => (
                 <span
-                  key={label.id}
+                  key={tl.label_id || tl.labels?.id}
                   className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-widest text-white shadow-sm ring-1 ring-black/5"
                   style={{
-                    backgroundColor: label.color,
-                    boxShadow: `0 2px 4px ${label.color}40`,
+                    backgroundColor: tl.labels?.color || '#6366f1',
+                    boxShadow: `0 2px 4px ${tl.labels?.color || '#6366f1'}40`,
                     textShadow: '0 1px 3px rgba(0,0,0,0.4)'
                   }}
                 >
-                  {label.name}
+                  {tl.labels?.name || tl.label}
                 </span>
               ))}
             </div>

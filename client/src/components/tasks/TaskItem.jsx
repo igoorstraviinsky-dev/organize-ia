@@ -188,16 +188,16 @@ export default function TaskItem({ task }) {
 
             {labels.length > 0 && (
               <div className="flex items-center gap-1">
-                {labels.map((label) => (
+                {task.task_labels?.map((tl) => (
                   <span
-                    key={label.id}
+                    key={tl.label_id || tl.labels?.id}
                     className="rounded-lg px-2.5 py-1 text-[9px] font-black text-white uppercase tracking-widest ring-1 ring-black/5"
                     style={{ 
-                      backgroundColor: label.color,
+                      backgroundColor: tl.labels?.color || '#6366f1',
                       textShadow: '0 1px 3px rgba(0,0,0,0.4)'
                     }}
                   >
-                    {label.name}
+                    {tl.labels?.name || tl.label}
                   </span>
                 ))}
               </div>
@@ -210,7 +210,7 @@ export default function TaskItem({ task }) {
                 className="rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest"
                 style={
                   originBadge === 'De: Mim' 
-                    ? { backgroundColor: `${themeColor}1A`, color: themeColor }
+                    ? { backgroundColor: `${cardColor}1A`, color: cardColor }
                     : { backgroundColor: '#ecfdf5', color: '#059669' }
                 }
               >

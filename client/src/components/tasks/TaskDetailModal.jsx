@@ -297,15 +297,18 @@ export default function TaskDetailModal({ task, onClose }) {
               {/* Labels */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Etiquetas</label>
-                {labels.length > 0 ? (
+                {task.task_labels?.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {labels.map((label) => (
+                    {task.task_labels.map((tl) => (
                       <span
-                        key={label.id}
+                        key={tl.label_id || tl.labels?.id}
                         className="rounded-xl px-3 py-1.5 text-xs font-black text-white shadow-sm ring-1 ring-black/5"
-                        style={{ backgroundColor: label.color, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+                        style={{ 
+                          backgroundColor: tl.labels?.color || '#6366f1', 
+                          textShadow: '0 1px 2px rgba(0,0,0,0.2)' 
+                        }}
                       >
-                        {label.name.toUpperCase()}
+                        {(tl.labels?.name || tl.label || 'Sem Nome').toUpperCase()}
                       </span>
                     ))}
                   </div>
