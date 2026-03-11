@@ -27,12 +27,10 @@ export default function Dashboard({ onSignOut }) {
 
   // Auto-selecionar Inbox ao carregar se estiver na raiz do app
   useEffect(() => {
-    if (projects.length > 0 && (view === undefined || view === 'app')) {
-      const inbox = projects.find((p) => p.name === "Inbox");
-      if (inbox) navigate(`/app/inbox/${inbox.id}`, { replace: true });
-      else navigate(`/app/today`, { replace: true });
+    if (view === undefined || view === 'app') {
+      navigate(`/app/inbox`, { replace: true });
     }
-  }, [projects, view, navigate]);
+  }, [view, navigate]);
 
   if (loading) {
     return (
