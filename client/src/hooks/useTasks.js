@@ -46,66 +46,44 @@ export function useTasks(projectId) {
       const userId = session?.user?.id
       if (!userId) return []
 
-      let data, error;
+      if (!projectId) {
+        // Dashboard / Inbox global
+        const { data: assignedTasks } = await supabase.from('assignments').select('task_id').eq('user_id', userId)
+        const assignedIds = (assignedTasks || []).map(a => a.task_id)
 
-      // Se for Inbox, buscar tarefas do projeto Inbox OU tarefas atribuídas ao usuário
-      if (projectId) {
-        const { data: project } = await supabase
-          .from('projects')
-          .select('name')
-          .eq('id', projectId)
-          .single()
+        let query = supabase
+          .from('tasks')
+          .select(TASK_SELECT)
+          .is('parent_id', null)
+          .order('position', { ascending: true })
+          .order('created_at', { ascending: false })
 
-        if (project?.name === 'Inbox') {
-          // Busca em paralelo: atribuições e tarefas do inbox
-          const [{ data: assignedTasks }, { data: inboxTasks, error: inboxError }] = await Promise.all([
-            supabase.from('assignments').select('task_id').eq('user_id', userId),
-            supabase.from('tasks').select(TASK_SELECT).eq('project_id', projectId).is('parent_id', null)
-          ])
-
-          if (inboxError) throw inboxError
-
-          const assignedIds = (assignedTasks || []).map(a => a.task_id).filter(id => !inboxTasks.some(t => t.id === id))
-          
-          let finalTasks = inboxTasks || []
-          
-          if (assignedIds.length > 0) {
-            const { data: extraTasks } = await supabase
-              .from('tasks')
-              .select(TASK_SELECT)
-              .in('id', assignedIds)
-              .is('parent_id', null)
-            
-            if (extraTasks) finalTasks = [...finalTasks, ...extraTasks]
-          }
-
-          const subtasksMap = await fetchSubtasksMap(finalTasks.map((t) => t.id))
-          return normalizeTasks(finalTasks, subtasksMap)
+        if (assignedIds.length > 0) {
+          query = query.or(`creator_id.eq.${userId},id.in.(${assignedIds.join(',')})`)
+        } else {
+          query = query.eq('creator_id', userId)
         }
+
+        const { data, error } = await query
+        if (error) throw error
+
+        const subtasksMap = await fetchSubtasksMap(data.map((t) => t.id))
+        return normalizeTasks(data, subtasksMap)
+      } else {
+        // Projeto específico
+        const { data, error } = await supabase
+          .from('tasks')
+          .select(TASK_SELECT)
+          .is('parent_id', null)
+          .eq('project_id', projectId)
+          .order('position', { ascending: true })
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+
+        const subtasksMap = await fetchSubtasksMap(data.map((t) => t.id))
+        return normalizeTasks(data, subtasksMap)
       }
-
-      let query = supabase
-        .from('tasks')
-        .select(TASK_SELECT)
-        .is('parent_id', null)
-        .order('position', { ascending: true })
-        .order('created_at', { ascending: false })
-
-      if (projectId) {
-        query = query.eq('project_id', projectId)
-      }
-
-      const result = await query
-      data = result.data
-      error = result.error
-
-      if (error) {
-        console.error('useTasks query error:', error)
-        throw error
-      }
-
-      const subtasksMap = await fetchSubtasksMap(data.map((t) => t.id))
-      return normalizeTasks(data, subtasksMap)
     },
   })
 }

@@ -27,14 +27,14 @@ export default function TaskList({ projectId, title, filterToday }) {
   const pendingTasks = filteredTasks.filter((t) => t.status !== 'completed')
   const completedTasks = filteredTasks.filter((t) => t.status === 'completed')
 
-  const hasSections = sections.length > 0
+  const isInboxOrToday = title === 'Inbox' || filterToday
+  const hasSections = !isInboxOrToday && sections.length > 0
 
-  // Tarefas sem seção
-  const unsectioned = pendingTasks.filter((t) => !t.section_id)
-  const completedUnsectioned = completedTasks.filter((t) => !t.section_id)
+  // Tarefas sem seção (No Dashboard/Inbox, exibimos todas flat)
+  const unsectioned = isInboxOrToday ? pendingTasks : pendingTasks.filter((t) => !t.section_id)
+  const completedUnsectioned = isInboxOrToday ? completedTasks : completedTasks.filter((t) => !t.section_id)
 
   // KPIs Globais (consulta independente em todos os projetos)
-  const isInboxOrToday = title === 'Inbox' || filterToday
   const { data: kpis = { volume_atribuido: 0, atencao_critica: 0, velocidade_media: '-' } } = useGlobalKPIs()
 
   // Mantém o objeto data.analytics para compatibilidade com o JSX dos cards
