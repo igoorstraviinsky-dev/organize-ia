@@ -120,10 +120,10 @@ export default function Dashboard({ onSignOut }) {
             {currentView === "settings" && <SettingsPage />}
             {(currentView === "today" || currentView === "inbox" || currentView === "project") && (
               isBoardMode ? (
-                <KanbanBoard projectId={currentView === "today" ? null : currentProjectId} />
+                <KanbanBoard projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId} />
               ) : (
                 <TaskList
-                  projectId={currentView === "today" ? null : currentProjectId}
+                  projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId}
                   title={getTitle()}
                   filterToday={currentView === "today"}
                 />
