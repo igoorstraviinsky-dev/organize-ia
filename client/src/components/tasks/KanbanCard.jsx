@@ -42,6 +42,7 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
   const subtasks = task.subtasks || []
   const completedSubs = subtasks.filter((s) => s.status === 'completed').length
   const priorityConfig = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG[4]
+  const themeColor = task?.creator?.theme_color 
 
   const toggleComplete = (e) => {
     e.stopPropagation()
@@ -67,13 +68,17 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
         {...dragListeners}
         className={`
           group relative cursor-grab rounded-2xl border-l-[4px]
-          transition-all duration-300 active:cursor-grabbing
-          ${priorityConfig.border}
+          transition-all duration-300 active:cursor-grabbing overflow-hidden
+          ${!themeColor ? priorityConfig.border : ''}
           ${isDraggingOverlay
-            ? `bg-white shadow-2xl ${priorityConfig.shadow} ring-2 ring-brand-purple/20 scale-105 rotate-2`
-            : `bg-white border-slate-100 shadow-sm ${priorityConfig.shadow} hover:shadow-md hover:scale-[1.01] hover:border-slate-200`
+            ? `shadow-2xl ${priorityConfig.shadow} ring-2 ring-brand-purple/20 scale-105 rotate-2`
+            : `border-slate-100 shadow-sm ${priorityConfig.shadow} hover:shadow-md hover:scale-[1.01] hover:border-slate-200`
           }
         `}
+        style={themeColor ? {
+          borderLeftColor: themeColor,
+          backgroundColor: `${themeColor}14`
+        } : { backgroundColor: '#ffffff' }}
       >
 
         <div className="p-4">

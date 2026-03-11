@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, Flag, Trash2, Hash, Clock, CheckCircle2, Circle } from 'lucide-react'
+import { CalendarDays, Flag, Trash2, Hash, Clock, CheckCircle2, Circle, MessageSquare } from 'lucide-react'
 import { useUpdateTask, useDeleteTask } from '../../hooks/useTasks'
 import TaskDetailModal from './TaskDetailModal'
 import { useAuth } from '../../hooks/useAuth'
@@ -55,6 +55,7 @@ export default function TaskItem({ task }) {
 
   const isCold = !isCompleted && ((Date.now() - new Date(task.updated_at || task.created_at)) / (1000 * 60 * 60) > 48)
   const themeColor = task?.creator?.theme_color || '#7c3aed'
+  const commentsCount = task.comments?.length || 0
   
   let originBadge = null;
   if (user?.id) {
@@ -103,13 +104,24 @@ export default function TaskItem({ task }) {
         </button>
 
         <div className="min-w-0 flex-1 space-y-1.5">
-          <p className={`text-base font-semibold tracking-tight ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-            {task.title}
-          </p>
+          <div className="space-y-1">
+            <p className={`text-base font-semibold tracking-tight ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+              {task.title}
+            </p>
 
-          {task.description && (
-            <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{task.description}</p>
-          )}
+            {task.description && (
+              <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{task.description}</p>
+            )}
+
+            {hasSubtasks && (
+              <div className="flex items-center gap-1.5 text-slate-400 mt-1">
+                <CheckCircle2 size={12} className={completedSubs === subtasks.length ? 'text-brand-green' : 'text-slate-400'} />
+                <span className="text-[11px] font-semibold">
+                  {completedSubs}/{subtasks.length} subtarefas
+                </span>
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-wrap items-center gap-2.5 pt-1">
             {dateInfo && (
@@ -136,6 +148,13 @@ export default function TaskItem({ task }) {
               <span className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                 <Hash size={13} style={{ color: task.project.color }} />
                 {task.project.name}
+              </span>
+            )}
+
+            {commentsCount > 0 && (
+              <span className="flex items-center gap-1 rounded-lg bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-400 border border-slate-100">
+                <MessageSquare size={12} />
+                {commentsCount}
               </span>
             )}
 
@@ -198,53 +217,7 @@ export default function TaskItem({ task }) {
             )}
           </div>
 
-          {/* Lista de subtarefas inline */}
-          {hasSubtasks && (
-            <div className="mt-3 rounded-xl bg-slate-50 border border-slate-100 p-3 space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="h-1.5 flex-1 rounded-full bg-slate-200">
-                  <div
-                    className="h-1.5 rounded-full bg-brand-purple transition-all duration-500"
-                    style={{ width: `${(completedSubs / subtasks.length) * 100}%` }}
-                  />
-                </div>
-                <span className={`text-[10px] font-bold tracking-widest uppercase ${
-                  completedSubs === subtasks.length ? 'text-brand-green' : 'text-slate-500'
-                }`}>
-                  {completedSubs}/{subtasks.length}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-0.5">
-                {subtasks.map((sub) => {
-                  const done = sub.status === 'completed'
-                  return (
-                    <div
-                      key={sub.id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateTask.mutate({
-                          id: sub.id,
-                          status: done ? 'pending' : 'completed',
-                        })
-                      }}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-all hover:bg-slate-200/50"
-                    >
-                      {done ? (
-                        <CheckCircle2 size={14} className="flex-shrink-0 text-brand-green" />
-                      ) : (
-                        <Circle size={14} className="flex-shrink-0 text-slate-300 group-hover:text-slate-400" />
-                      )}
-                      <span className={`text-xs font-semibold ${
-                        done ? 'text-slate-400 line-through' : 'text-slate-600'
-                      }`}>
-                        {sub.title}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+
         </div>
 
         <button
