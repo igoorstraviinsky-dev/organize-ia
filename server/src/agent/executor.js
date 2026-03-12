@@ -1309,17 +1309,7 @@ export async function endFocusSession({ status = 'completed', phoneNumber }) {
     const currentTotal = task?.total_focus_seconds || 0
     await supabase.from('tasks').update({ total_focus_seconds: currentTotal + durationSeconds }).eq('id', activeSession.task_id)
   }
-
-  const minutes = Math.floor(durationSeconds / 60)
-  const seconds = durationSeconds % 60
-
-  return { 
-    success: true, 
-    message: `✅ Sessão de foco encerrada. Você focou por ${minutes}m ${seconds}s.`,
-  };
-}
-
-/**
+/**
  * Executa: update_ai_settings
  */
 export async function updateAiSettings({ morning_summary_enabled, morning_summary_time, phoneNumber }) {
@@ -1329,13 +1319,36 @@ export async function updateAiSettings({ morning_summary_enabled, morning_summar
 
   const updates = {};
   if (morning_summary_enabled !== undefined) updates.morning_summary_enabled = morning_summary_enabled;
-  if (morning_summary_time !== undefined) updates.morning_summary_time = morning_summary_time;
   
+  // Se receber um novo horário, adicionamos à lista (evitando duplicatas e limite de 3)
+  if (morning_summary_time !== undefined) {
+    const { data: currentSettings } = await supabase
+      .from('ai_agent_settings')
+      .select('morning_summary_times')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    let times = currentSettings?.morning_summary_times || ["08:00"];
+    if (!Array.isArray(times)) times = [times];
+    
+    if (!times.includes(morning_summary_time)) {
+      if (times.length >= 3) {
+        return { error: 'Limite de 3 horários de resumo atingido. Remova um para adicionar outro.' };
+      }
+      times.push(morning_summary_time);
+      times.sort();
+      updates.morning_summary_times = times;
+    }
+  }
+
   if (Object.keys(updates).length === 0) return { error: 'Nenhuma alteração informada.' };
 
   const { data, error } = await supabase
     .from('ai_agent_settings')
-    .upsert({ user_id: userId, ...updates })
+    .upsert(
+      { user_id: userId, ...updates },
+      { onConflict: 'user_id' }
+    )
     .select()
     .single();
 
@@ -1343,7 +1356,13 @@ export async function updateAiSettings({ morning_summary_enabled, morning_summar
 
   let feedback = '✅ Configurações atualizadas:';
   if (morning_summary_enabled !== undefined) feedback += `\n• Resumo matinal: ${morning_summary_enabled ? 'Ativado' : 'Desativado'}`;
-  if (morning_summary_time !== undefined) feedback += `\n• Horário: ${morning_summary_time}`;
+  if (updates.morning_summary_times) feedback += `\n• Horários ativos: ${updates.morning_summary_times.join(', ')}`;
+
+  return { success: true, message: feedback, settings: data };
+}
+ undefined) feedback += `\n• Resumo matinal: ${morning_summary_enabled ? 'Ativado' : 'Desativado'}`;
+  if (updates.morning_summary_times) feedback += `\n• Horários ativos: ${updates.morning_summary_times.join(', ')}`;
+
 
   return { success: true, message: feedback, settings: data };
 }

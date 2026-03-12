@@ -31,15 +31,22 @@ async function checkAndSendSummaries() {
     hour12: false
   }).format(now);
 
-  // 1. Busca usuários com resumo habilitado para este horário
-  const { data: usersToNotif, error } = await supabase
+  // 1. Busca usuários com resumo habilitado
+  const { data: usersSettings, error } = await supabase
     .from('ai_agent_settings')
-    .select('user_id, morning_summary_time, profiles(full_name, phone)')
-    .eq('morning_summary_enabled', true)
-    .eq('morning_summary_time', brTime);
+    .select('user_id, morning_summary_times, profiles(full_name, phone)')
+    .eq('morning_summary_enabled', true);
 
   if (error) throw error;
-  if (!usersToNotif || usersToNotif.length === 0) return;
+  if (!usersSettings || usersSettings.length === 0) return;
+
+  // 2. Filtra quem agendou para o horário de Brasília atual
+  const usersToNotif = usersSettings.filter(settings => {
+    const times = settings.morning_summary_times || [];
+    return Array.isArray(times) && times.includes(brTime);
+  });
+
+  if (usersToNotif.length === 0) return;
 
   console.log(`[MorningSummary] Processando ${usersToNotif.length} resumos para ${brTime}...`);
 

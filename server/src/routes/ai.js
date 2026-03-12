@@ -52,7 +52,7 @@ router.post('/settings', authenticate, async (req, res) => {
     system_prompt, 
     is_active,
     morning_summary_enabled,
-    morning_summary_time,
+    morning_summary_times,
     timezone
   } = req.body
 

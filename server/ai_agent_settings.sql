@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.ai_agent_settings (
   system_prompt TEXT DEFAULT 'Você é um assistente virtual prestativo.',
   is_active BOOLEAN DEFAULT false,
   morning_summary_enabled BOOLEAN DEFAULT false,
-  morning_summary_time TEXT DEFAULT '08:00',
+  morning_summary_times JSONB DEFAULT '["08:00"]'::jsonb,
   timezone TEXT DEFAULT 'America/Sao_Paulo',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
-import { User, Mail, Shield, Settings, Bell, Palette, Camera, Check, Loader2, Save, X, Users, Zap, LogOut, Phone } from 'lucide-react'
+import {  Search, Bell, Shield, Paintbrush, Sun, Clock, History, Cpu, Globe, Team, CheckCircle, 
+  ChevronRight, Lock, Mail, User, Palette, Smartphone, Sparkles, Plus, Trash2 
+} from 'lucide-react';
 import TeamPage from './TeamPage'
 import IntegrationsPage from '../components/integrations/IntegrationsPage'
 import { useAgentSettings } from '../hooks/useAgentSettings'
-import { Sun, Clock } from 'lucide-react'
+
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -387,22 +389,68 @@ export default function SettingsPage() {
                   <Clock size={12} />
                   Horário do Resumo
                 </p>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="time"
-                    value={agentSettings?.morning_summary_time || '08:00'}
-                    onChange={async (e) => {
-                      try {
-                        await updateSettings({ morning_summary_time: e.target.value })
-                        showFeedback('success', `Horário definido para ${e.target.value}`)
-                      } catch (err) {
-                        showFeedback('error', 'Erro ao definir horário.')
-                      }
-                    }}
-                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-lg font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  />
-                  <p className="text-xs font-bold text-slate-500 leading-tight">
-                    Enviaremos um resumo motivador com suas tarefas <br/> do dia e o balanço de ontem.
+                <div className="space-y-4">
+                  {(agentSettings?.morning_summary_times || ['08:00']).map((time, index) => (
+                    <div key={index} className="flex items-center gap-4 group">
+                      <div className="relative">
+                        <input
+                          type="time"
+                          value={time}
+                          onChange={async (e) => {
+                            try {
+                              const newTimes = [...(agentSettings?.morning_summary_times || ['08:00'])]
+                              newTimes[index] = e.target.value
+                              await updateSettings({ morning_summary_times: newTimes })
+                              showFeedback('success', 'Horário atualizado!')
+                            } catch (err) {
+                              showFeedback('error', 'Erro ao atualizar horário.')
+                            }
+                          }}
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-lg font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                        />
+                      </div>
+                      
+                      {(agentSettings?.morning_summary_times?.length > 1) && (
+                        <button 
+                          onClick={async () => {
+                            try {
+                              const newTimes = agentSettings.morning_summary_times.filter((_, i) => i !== index)
+                              await updateSettings({ morning_summary_times: newTimes })
+                              showFeedback('success', 'Horário removido.')
+                            } catch (err) {
+                              showFeedback('error', 'Erro ao remover horário.')
+                            }
+                          }}
+                          className="p-2 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {(agentSettings?.morning_summary_times?.length < 3) && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const currentTimes = agentSettings?.morning_summary_times || ['08:00']
+                          const nextHour = (parseInt(currentTimes[currentTimes.length - 1].split(':')[0]) + 1) % 24
+                          const newTime = `${nextHour.toString().padStart(2, '0')}:00`
+                          await updateSettings({ morning_summary_times: [...currentTimes, newTime] })
+                          showFeedback('success', 'Novo horário adicionado!')
+                        } catch (err) {
+                          showFeedback('error', 'Erro ao adicionar horário.')
+                        }
+                      }}
+                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors py-2"
+                    >
+                      <Plus size={14} />
+                      Adicionar Horário
+                    </button>
+                  )}
+                  
+                  <p className="text-xs font-bold text-slate-500 leading-tight pt-2 border-t border-slate-50">
+                    Enviaremos resumos motivadores com suas tarefas nestes horários. <br/> Você pode configurar até 3 resumos diários.
                   </p>
                 </div>
               </div>
