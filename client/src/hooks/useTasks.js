@@ -302,7 +302,10 @@ export function useUpdateTask() {
 
       return data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['user_xp'] })
+    },
   })
 }
 
@@ -317,6 +320,9 @@ export function useDeleteTask() {
         throw new Error(error.message || 'Erro ao excluir tarefa')
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['user_xp'] })
+    },
   })
 }

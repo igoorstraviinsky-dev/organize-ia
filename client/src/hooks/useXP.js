@@ -1,7 +1,41 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 export function useXP() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    let channel;
+    
+    const setupSubscription = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) return;
+
+      channel = supabase
+        .channel('user_xp_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_xp',
+            filter: `user_id=eq.${userId}`
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ['user_xp'] });
+          }
+        )
+        .subscribe();
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   return useQuery({
     queryKey: ['user_xp'],
     queryFn: async () => {
