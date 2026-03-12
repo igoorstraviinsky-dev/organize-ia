@@ -280,23 +280,39 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }) => {
+      // Busca o estado atual antes de atualizar para saber se era concluída
+      const { data: oldTask } = await supabase
+        .from('tasks')
+        .select('status, title')
+        .eq('id', id)
+        .single()
+
       const { data, error } = await supabase
         .from('tasks')
         .update(updates)
         .eq('id', id)
         .select()
         .single()
+
       if (error) {
         console.error('Update task error:', error)
         throw new Error(error.message || 'Erro ao atualizar tarefa')
       }
 
-      if (updates.status === 'completed') {
+      // Lógica de Toasts
+      if (updates.status === 'completed' && oldTask?.status !== 'completed') {
         triggerAchievementToast({
           title: 'Tarefa Concluída!',
           message: `Você finalizou "${data.title}"`,
           xp: 50,
           type: 'xp'
+        })
+      } else if (oldTask?.status === 'completed' && updates.status && updates.status !== 'completed') {
+        triggerAchievementToast({
+          title: 'Tarefa Reaberta!',
+          message: `Você desmarcou "${data.title}"`,
+          xp: 50,
+          type: 'penalty'
         })
       }
 
