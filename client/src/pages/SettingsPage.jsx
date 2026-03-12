@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { Search, Bell, Shield, Paintbrush, Sun, Clock, History, Cpu, Globe, Users, CheckCircle, 
-  ChevronRight, Lock, Mail, User, Palette, Smartphone, Sparkles, Plus, Trash2 
+  ChevronRight, Lock, Mail, User, Palette, Smartphone, Sparkles, Plus, Trash2, Phone 
 } from 'lucide-react';
 import TeamPage from './TeamPage'
 import IntegrationsPage from '../components/integrations/IntegrationsPage'
