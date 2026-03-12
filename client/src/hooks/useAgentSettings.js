@@ -38,7 +38,10 @@ export function useAgentSettings() {
 
       const { data, error } = await supabase
         .from('ai_agent_settings')
-        .upsert({ user_id: user.id, ...updates })
+        .upsert(
+          { user_id: user.id, ...updates },
+          { onConflict: 'user_id' }
+        )
         .select()
         .single();
 
