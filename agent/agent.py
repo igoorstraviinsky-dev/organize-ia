@@ -115,15 +115,38 @@ TOOLS = [
 
 def get_system_prompt(name: str, role: str, team_members: str):
     role_display = "Administrador" if role == "admin" else "Colaborador"
-    today = datetime.now().strftime("%Y-%m-%d %H:%M")
+    
+    # Obter data e hora no fuso de São Paulo (UTC-3)
+    from datetime import timezone, timedelta
+    utc_now = datetime.now(timezone.utc)
+    sp_now = utc_now - timedelta(hours=3)
+    
+    dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+    meses = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    
+    dia_semana_str = dias_semana[sp_now.weekday()]
+    mes_str = meses[sp_now.month]
+    today_str = f"{dia_semana_str}, {sp_now.day} de {mes_str} de {sp_now.year} às {sp_now.strftime('%H:%M')}"
+    
+    hour_sp = sp_now.hour
+    if 5 <= hour_sp < 12:
+        greeting_context = 'Atualmente é de manhã. Ao iniciar a conversa, seja caloroso, fluido e criativo usando o nome da pessoa (ex: "Bom dia, [nome]! Tudo bem?", "Faaaala [nome], bom dia!", "Olá [nome], um ótimo dia para você!").'
+    elif 12 <= hour_sp < 18:
+        greeting_context = 'Atualmente é de tarde. Ao iniciar a conversa, seja caloroso, fluido e criativo usando o nome da pessoa (ex: "Boa tarde, [nome]! Como estão as coisas?", "Fala [nome], uma excelente tarde!", "Olá [nome], boa tarde!").'
+    else:
+        greeting_context = 'Atualmente é de noite. Ao iniciar a conversa, seja caloroso, fluido e criativo usando o nome da pessoa (ex: "Boa noite, [nome]! Tudo tranquilo?", "Fala [nome], uma ótima noite!", "Olá [nome], boa noite!").'
     
     return f"""
 Você é o Agente Organizador Python, executor de elite do sistema Organizador.
 Sua missão é orquestrar projetos, tarefas e etiquetas com precisão.
 
+CONTEXTO DE TEMPO ATUAL (SÃO PAULO/BRASÍLIA):
+Hoje é {today_str}.
+{greeting_context}
+
 Diretrizes de Identidade:
 1. Super Admin: Você atua com autoridade total. 
-2. Visibilidade Total: Você acessa tarefas criadas pelo usuários, atribuídas a eles e projetos compartilhados.
+2. Visibilidade Total: Você acessa tarefas criadas pelo usuário, atribuídas a ele e projetos compartilhados.
 3. Padrão de Ferramentas:
    - Use 'list_projects' para visão MACRO (apenas nomes).
    - Use 'list_tasks' para visão MICRO (detalhes, filtros e prazos).
@@ -143,7 +166,6 @@ Regras Críticas:
 3. Atribuição Direta: Sempre que o usuário pedir para criar algo para outra pessoa (ex: "para o Diego"), use o parâmetro assigned_user_identifier diretamente na função de criação. Não use comandos separados.
 
 Você está conversando com: **{name}** (Perfil: {role_display}).
-Data/Hora atual: {today}
 Membros da Equipe:
 {team_members}
 """
@@ -199,8 +221,12 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
 
     elif name in ("assign_task", "designar_tarefa"):
         ident = args.get("user_identifier") or args.get("nome_usuario")
-        user = await db.find_user_by_name(ident)
-        if not user: return f"❌ Usuário '{ident}' não encontrado."
+        users = await db.find_users_by_name(ident)
+        if not users: return f"❌ Usuário '{ident}' não encontrado."
+        if len(users) > 1:
+            opts = ", ".join([f"{u['full_name']} ({u.get('email', 'sem email')})" for u in users])
+            return f"❌ Múltiplos usuários encontrados: [{opts}]. Especifique usando o e-mail exato ou nome completo."
+        user = users[0]
         await db.assign_user_to_task(args["task_id"], user["id"])
         return f"✅ Tarefa atribuída a *{user['full_name']}*!"
 

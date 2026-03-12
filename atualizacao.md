@@ -58,4 +58,57 @@ Para que o projeto funcione em harmonia, a estrutura segue este modelo:
 
 ---
 
-_Atualizado em: 10 de Março de 2026_
+# 🛠️ PLANO DE REFATORAÇÃO CRÍTICA V2 (SPECKIT PLAN)
+
+Este plano descreve rigorosamente as mudanças técnicas necessárias para mitigar os pontos blind-spots de escalabilidade relatados no arquivo `analise_agente.md`.
+
+## 1. Technical Context
+Detectamos falhas sistêmicas em Três Pilares críticos entre a integração Agente ↔ Database:
+- **Resolução de Identidade Insegura:** Busca ambígua de nomes (`ilike`).
+- **Fusos Horários (Timezone Drift):** Inserção de `due_date` sem marcação UTC explícita.
+- **Estouro de Memória GPT (Paging):** Retornos de array infinitos do Supabase na tool `list_tasks`.
+
+## 2. Proposed Changes
+
+### Fase 1: Blindagem de Resolução de Usuário
+
+#### [MODIFY] `server/src/agent/executor.js`
+- **Componente**: Função `resolveUser(identifier)`
+- **Lógica**: Se a busca parcial via nome retornar múltiplas linhas (ex: 2 pessoas com nome "João"):
+  - Retornar um erro de Tooling ao Agente: `{"error": "Múltiplos usuários encontrados: [João Silva (email@...), João Pedro (email2@...)]. Solicite ao usuário especificar o e-mail ou nome completo."}`.
+  - O Agente será forçado pelo GPT a abortar a criação/atribuição e responder ao WhatsApp perguntando "Qual João exatamente?".
+
+### Fase 2: Normalização Universal do Tempo (Timezones)
+
+#### [MODIFY] `server/src/agent/functions.js`
+- **Componente**: Definições das ferramentas `create_task` e `edit_task`.
+- **Lógica**: Adicionar anotações ao Schema de que a IA deve mesclar `due_date` e `due_time` preferencialmente em um formato ISO Offset unificado (`YYYY-MM-DDTHH:mm:ss-03:00`) se possível, ou garantir através de lógica no código que se o Agente mandar hora 18:00 (Fuso SP), o Node a grave no banco com o equivalente UTC caso a coluna seja Timezone-Aware, ou explicitamente `-03:00`.
+
+#### [MODIFY] `server/src/agent/executor.js` e `agent/db.py`
+- Adicionar no momento da persistência (insert statement) a garantia de Timezone estrito, normalizando conversões de data para evitar que tarefas mudem de dia (Day Drift).
+
+### Fase 3: Paging & Boundary Enforcement (Limites Críticos)
+
+#### [MODIFY] `server/src/agent/executor.js`
+- **Componentes**: `export async function listTasks(...)` e equivalente `list_projects`.
+- **Lógica**:
+  - Injetar forçosamente o encadeamento `.limit(20)` à query de Select do Supabase.
+  - Injetar contagem (`{ count: 'exact' }`). Se o result.count for maior que 20, anexar na string de saída pro GPT: `(Aviso: Existem N tarefas ocultas devido ao limite. Peça para o usuário ser mais específico na pesquisa)`.
+
+#### [MODIFY] `agent/db.py`
+- Replicar as mesmas proteções (`.limit(20)` e alertas de paginação) nas funções do Python, blindando-o contra crashes de `ContextLengthExceeded`.
+
+### Fase 4: Oportunidades do Guia de Domínio
+
+#### [MODIFY] `conversaia.md`
+- Criar a seção: **"Dicionário de Negócios Agente"** definindo Inbox e Tarefas Gerais perfeitamente para IAs.
+- Inserir **Tabela Escalonável de Troubleshooting** documentando cada crash já vivenciado.
+
+## 3. Verification Plan
+- **Execução**: O comando vai ser enviado "Para João", se o sistema apontar o Erro para Múltiplos, passou.
+- **Teste de Dados Limites**: Fazer o mock de 50 tarefas para um user_id e testar o `list_tasks`. O array retornado para o console do Agente não pode ter length maior que 20.
+- **Date Check**: Criar tarefa "para me lembrar hoje às 23:50". Ver no banco se o date é UTC de amanhã 02:50, e ver se no Front React ele rende como "Hoje 23:50".
+
+---
+
+_Atualizado em: 11 de Março de 2026_

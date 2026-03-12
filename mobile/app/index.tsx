@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, Dimensions, useColorScheme, Alert } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useSSE } from '../src/hooks/useSSE';
-import { CheckCircle, Circle, MessageSquare, Layout, Bell, User, Zap, ChevronRight } from 'lucide-react-native';
+import { CheckCircle, Circle, MessageSquare, Layout, Bell, User, Zap, ChevronRight, Settings } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../src/constants/Colors';
+import { TaskItem } from '../src/components/TaskItem';
 
 const { width } = Dimensions.get('window');
 
@@ -61,8 +62,12 @@ export default function App() {
       // Buscar todas as tarefas que este usuário tem acesso (RLS cuida do filtro)
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
-        .select('*')
-        .order('due_date', { ascending: true });
+        .select(`
+          *,
+          creator:profiles!tasks_creator_id_fkey(full_name),
+          project:projects(name, color)
+        `)
+        .order('created_at', { ascending: false });
 
       if (tasksError) throw tasksError;
       setTasks(tasksData || []);
@@ -81,27 +86,24 @@ export default function App() {
   }, []);
 
   const renderTask = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={[styles.taskCard, { backgroundColor: theme.card, borderColor: theme.border }]} 
-      activeOpacity={0.7}
-    >
-      <View style={styles.taskIconContainer}>
-        {item.status === 'completed' ? (
-          <CheckCircle size={22} color="#10b981" />
-        ) : (
-          <Circle size={22} color={theme.subtext} />
-        )}
-      </View>
-      <View style={styles.taskInfo}>
-        <Text style={[styles.taskText, { color: theme.text }, item.status === 'completed' && { textDecorationLine: 'line-through', color: theme.subtext }]}>
-          {item.title}
-        </Text>
-        <Text style={[styles.taskTime, { color: theme.subtext }]}>
-          {new Date(item.created_at).toLocaleDateString('pt-BR')}
-        </Text>
-      </View>
-      <ChevronRight size={18} color={theme.subtext} />
-    </TouchableOpacity>
+    <TaskItem 
+      task={item} 
+      onPress={(task) => {
+        // Logica para abrir detalhe da tarefa se necessário
+        console.log('Task pressed:', task.title);
+      }}
+      onToggle={async (task) => {
+        const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+        const { error } = await supabase
+          .from('tasks')
+          .update({ status: newStatus })
+          .eq('id', task.id);
+        
+        if (!error) {
+          fetchTasksAndProjects();
+        }
+      }}
+    />
   );
 
   return (
@@ -246,11 +248,11 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   userName: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '900',
     color: '#f8fafc',
-    letterSpacing: -0.5,
-    marginTop: 2,
+    letterSpacing: -1,
+    marginTop: 4,
   },
   headerActions: {
     flexDirection: 'row',
@@ -294,15 +296,16 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flexDirection: 'row',
-    borderRadius: 28,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 32,
+    padding: 28,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    elevation: 8,
   },
   statItem: {
     flex: 1,
@@ -363,38 +366,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 24,
     paddingBottom: 120,
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    padding: 20,
-    borderRadius: 24,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  taskIconContainer: {
-    marginRight: 16,
-  },
-  taskInfo: {
-    flex: 1,
-  },
-  taskText: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-    color: '#475569',
-  },
-  taskTime: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 4,
-    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',

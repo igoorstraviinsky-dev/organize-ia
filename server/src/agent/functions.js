@@ -23,12 +23,12 @@ export const tools = [
           due_date: {
             type: "string",
             description:
-              'Data de vencimento no formato YYYY-MM-DD. Interprete datas relativas como "amanhã", "próxima segunda", etc.',
+              'Data de vencimento no formato YYYY-MM-DD. Assuma sempre o Fuso Horário de Brasília (UTC-3) para interpretar e preencher as datas.',
           },
           due_time: {
             type: "string",
             description:
-              'Hora de vencimento no formato HH:MM (24h). Ex: "18:00", "09:30". Interprete "às 6 da tarde" como "18:00".',
+              'Hora de vencimento no formato HH:MM (24h). Ex: "18:00", "09:30". Assuma sempre UTC-3 (Horário de Brasília).',
           },
           priority: {
             type: "integer",

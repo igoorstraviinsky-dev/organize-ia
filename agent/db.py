@@ -71,7 +71,8 @@ async def list_tasks(user_id: str, project_id: str = None, status_filter: str = 
         from datetime import date
         query = query.eq("due_date", date.today().isoformat())
     
-    res = query.order("priority", ascending=True).execute()
+    # Adicionando limite para prevenir estouro de tokens
+    res = query.order("priority", ascending=True).limit(20).execute()
     return res.data
 
 async def create_task(user_id: str, title: str, description: str = None, priority: int = 4, due_date: str = None, project_id: str = None) -> Dict[str, Any]:
@@ -108,7 +109,7 @@ async def list_projects(user_id: str) -> List[Dict[str, Any]]:
         else:
             query = query.eq("owner_id", user_id)
             
-        res = query.execute()
+        res = query.limit(20).execute()
         print(f"✅ DEBUG: Projetos encontrados: {len(res.data)}")
         return res.data
     except Exception as e:
@@ -125,9 +126,9 @@ async def list_team_members() -> List[Dict[str, Any]]:
     res = _supabase.table("profiles").select("id, full_name, email").execute()
     return res.data
 
-async def find_user_by_name(name: str) -> Optional[Dict[str, Any]]:
-    res = _supabase.table("profiles").select("id, full_name").ilike("full_name", f"%{name}%").execute()
-    return res.data[0] if res.data else None
+async def find_users_by_name(name: str) -> List[Dict[str, Any]]:
+    res = _supabase.table("profiles").select("id, full_name, email").ilike("full_name", f"%{name}%").execute()
+    return res.data
 
 async def assign_user_to_task(task_id: str, user_id: str):
     _supabase.table("assignments").upsert({"task_id": task_id, "user_id": user_id}).execute()

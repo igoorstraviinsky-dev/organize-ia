@@ -25,7 +25,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.igoorstraviinsky.mobile"
+      "package": "com.android.organizzestrav"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,8 +38,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "920048cc-c728-4695-8c6a-c22b34b445fb"
+        "projectId": "c008faba-bc7f-4474-a2ae-2bb30c0d06e0"
       }
-    }
+    },
+    "owner": "straviinskys"
   }
 }

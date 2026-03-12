@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Modal, TouchableOpacity, useColorScheme, SafeAreaView, Platform } from 'react-native';
-import { X, Calendar, Hash, Trash2, Archive, CheckCircle, Circle } from 'lucide-react-native';
+import { X, Calendar, Hash, Trash2, Archive, CheckCircle, Circle, User } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
 
 interface TaskDetailModalProps {
@@ -49,23 +49,33 @@ export const TaskDetailModal = ({ visible, task, onClose, onToggle, onDelete }: 
               </Text>
             </View>
 
-            <View style={styles.infoSection}>
-              <View style={styles.infoItem}>
-                <Hash size={20} color={theme.tint} />
-                <Text style={[styles.infoLabel, { color: theme.subtext }]}>Projeto</Text>
-                <Text style={[styles.infoValue, { color: task.project?.color || theme.text }]}>
-                  {task.project?.name || 'Inbox'}
-                </Text>
-              </View>
+              <View style={styles.infoSection}>
+                {task.creator && (
+                  <View style={styles.infoItem}>
+                    <User size={20} color={theme.tint} />
+                    <Text style={[styles.infoLabel, { color: theme.subtext }]}>Atribuído por</Text>
+                    <Text style={[styles.infoValue, { color: theme.text }]}>
+                      {task.creator.full_name}
+                    </Text>
+                  </View>
+                )}
 
-              <View style={styles.infoItem}>
-                <Calendar size={20} color={theme.tint} />
-                <Text style={[styles.infoLabel, { color: theme.subtext }]}>Data de Entrega</Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
-                  {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Sem data'}
-                </Text>
+                <View style={styles.infoItem}>
+                  <Hash size={20} color={theme.tint} />
+                  <Text style={[styles.infoLabel, { color: theme.subtext }]}>Projeto</Text>
+                  <Text style={[styles.infoValue, { color: task.project?.color || theme.text }]}>
+                    {task.project?.name || 'Inbox'}
+                  </Text>
+                </View>
+
+                <View style={styles.infoItem}>
+                  <Calendar size={20} color={theme.tint} />
+                  <Text style={[styles.infoLabel, { color: theme.subtext }]}>Data de Entrega</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'Sem data'}
+                  </Text>
+                </View>
               </View>
-            </View>
 
             {task.description && (
               <View style={styles.descriptionSection}>

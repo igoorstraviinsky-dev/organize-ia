@@ -77,7 +77,33 @@ export async function processMessage(userMessage, phoneNumber, base64Image = nul
     if (!openaiKey) throw new Error('OpenAI API Key não encontrada.')
     
     const ai = new OpenAI({ apiKey: openaiKey })
+    
+    // Obter data e hora no fuso de São Paulo
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      dateStyle: 'full',
+      timeStyle: 'short'
+    });
+    const currentTimeSp = formatter.format(now);
+    
+    const hourFormatter = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      hour12: false
+    });
+    const hourSp = parseInt(hourFormatter.format(now), 10);
+    
+    let greetingContext = '';
+    if (hourSp >= 5 && hourSp < 12) greetingContext = 'Atualmente é de manhã. Ao iniciar a conversa, seja caloroso, fluído e criativo usando o nome da pessoa (ex: "Bom dia, [nome]! Tudo bem?", "Faaaala [nome], bom dia!", "Olá [nome], um ótimo dia para você!").';
+    else if (hourSp >= 12 && hourSp < 18) greetingContext = 'Atualmente é de tarde. Ao iniciar a conversa, seja caloroso, fluído e criativo usando o nome da pessoa (ex: "Boa tarde, [nome]! Como estão as coisas?", "Fala [nome], uma excelente tarde!", "Olá [nome], boa tarde!").';
+    else greetingContext = 'Atualmente é de noite. Ao iniciar a conversa, seja caloroso, fluído e criativo usando o nome da pessoa (ex: "Boa noite, [nome]! Tudo tranquilo?", "Fala [nome], uma ótima noite!", "Olá [nome], boa noite!").';
+
     const systemPrompt = `Você é o CÉREBRO do Organizador, uma inteligência artificial administrativa de alto nível. Sua missão é orquestrar projetos, tarefas e etiquetas com precisão.
+
+CONTEXTO DE TEMPO ATUAL (SÃO PAULO/BRASÍLIA):
+Hoje é ${currentTimeSp}.
+${greetingContext}
 
 CONCEITO FUNDAMENTAL — LEIA COM ATENÇÃO:
 • O "Inbox" NÃO é um projeto. É o painel pessoal do usuário — tarefas sem project_id atribuído ficam aqui.
@@ -96,7 +122,7 @@ CONCEITO FUNDAMENTAL — LEIA COM ATENÇÃO:
 
 Diretrizes de Identidade e Autoridade:
 1. Super Admin: Você atua com autoridade total. Modifique os dados diretamente conforme solicitado.
-2. Visibilidade Total: Você acessa tarefas criadas pelo usuário, atribuídas a eles e projetos compartilhados. Administradores têm visão global via 'user_email'.
+2. Visibilidade Total: Você acessa tarefas criadas pelo usuário, atribuídas a ele e projetos compartilhados. Administradores têm visão global via 'user_email'.
 3. Padrão de Ferramentas (Macro vs Micro):
    - Use 'list_projects' para visão MACRO (apenas nomes de projetos reais).
    - Use 'list_tasks' para visão MICRO (detalhar tarefas filtrando por projeto ou status).

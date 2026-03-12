@@ -72,7 +72,7 @@ async function resolveUser(identifier) {
   // Tenta por email primeiro
   const { data: byEmail } = await supabase
     .from('profiles')
-    .select('id, full_name')
+    .select('id, full_name, email')
     .eq('email', identifier)
     .maybeSingle();
 
@@ -81,12 +81,17 @@ async function resolveUser(identifier) {
   // Tenta por nome (busca parcial)
   const { data: byName } = await supabase
     .from('profiles')
-    .select('id, full_name')
-    .ilike('full_name', `%${identifier}%`)
-    .limit(1)
-    .maybeSingle();
+    .select('id, full_name, email')
+    .ilike('full_name', `%${identifier}%`);
 
-  return byName || null;
+  if (!byName || byName.length === 0) return null;
+
+  if (byName.length > 1) {
+    const options = byName.map(u => `${u.full_name} (${u.email})`).join(', ');
+    throw new Error(`Múltiplos usuários encontrados: [${options}]. Especifique usando o e-mail ou nome completo do usuário para ser mais preciso.`);
+  }
+
+  return byName[0];
 }
 
 /**
@@ -600,13 +605,13 @@ export async function searchTasks({ query, phoneNumber }) {
   if (projectIds.length > 0) scopeParts.push(`project_id.in.(${projectIds.join(',')})`)
   if (assignedTaskIds.length > 0) scopeParts.push(`id.in.(${assignedTaskIds.join(',')})`)
 
-  const { data, error } = await supabase
+  const { data, count, error } = await supabase
     .from('tasks')
-    .select('id, title, status, priority, due_date, parent_id, project:projects(name)')
+    .select('id, title, status, priority, due_date, parent_id, project:projects(name)', { count: 'exact' })
     .or(scopeParts.join(','))
     .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
     .order('created_at', { ascending: false })
-    .limit(10)
+    .limit(20)
 
   if (error) return { error: error.message }
 
@@ -624,6 +629,10 @@ export async function searchTasks({ query, phoneNumber }) {
     return 'Nenhuma tarefa encontrada correspondente a essa pesquisa.';
   }
 
+  if (count > 20) {
+    return { count_total_found: count, info: `Exibindo 20 de ${count} tarefas encontradas. Aviso: Há muitas tarefas ocultas, informe o usuário para ser mais específico na pesquisa.`, tasks: results }
+  }
+
   return { count: results.length, tasks: results }
 }
 
@@ -638,18 +647,23 @@ export async function searchProjects({ name, phoneNumber }) {
   const isRequesterAdmin = profile.role === 'admin'
 
   // 1. Resolve projetos onde o usuário é dono ou membro
-  const { data: projects, error } = await supabase
+  const { data: projects, count, error } = await supabase
     .from('projects')
-    .select('id, name, owner_id')
+    .select('id, name, owner_id', { count: 'exact' })
     .or(`owner_id.eq.${userId},id.in.(${
       (await supabase.from('project_members').select('project_id').eq('user_id', userId)).data?.map(m => m.project_id).join(',') || '00000000-0000-0000-0000-000000000000'
     })`)
     .ilike('name', `%${name}%`)
+    .limit(20)
 
   if (error) return { error: error.message }
 
   if (!projects || projects.length === 0) {
     return `Nenhum projeto encontrado contendo "${name}" para ${profile.full_name}.`;
+  }
+
+  if (count > 20) {
+    return { count_total_found: count, info: `Exibindo 20 de ${count} projetos encontrados. Há mais resultados ocultos, peça para detalhar a busca.`, projects: projects }
   }
 
   return { count: projects.length, projects: projects }
