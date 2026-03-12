@@ -1,9 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, useColorScheme } from 'react-native';
-import { CheckCircle, Circle, Clock, User, Hash } from 'lucide-react-native';
+import { CheckCircle, Circle, Clock, User, Hash, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../constants/Colors';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { MotiView, AnimatePresence } from 'moti';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface TaskItemProps {
   task: {
@@ -36,188 +38,199 @@ export const TaskItem = ({ task, onToggle, onPress }: TaskItemProps) => {
 
   const getPriorityColor = (priority?: number) => {
     switch (priority) {
-      case 1: return theme.danger;
-      case 2: return theme.warning;
-      case 3: return theme.tint;
-      default: return theme.subtext;
+      case 1: return '#ef4444';
+      case 2: return '#f59e0b';
+      case 3: return '#6366f1';
+      default: return 'rgba(255,255,255,0.3)';
     }
   };
 
   return (
-    <TouchableOpacity 
+    <MotiView
+      from={{ opacity: 0, scale: 0.95, translateY: 10 }}
+      animate={{ opacity: 1, scale: 1, translateY: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
       style={[
-        styles.container, 
+        styles.container,
         { 
-          backgroundColor: theme.card, 
-          borderColor: isCompleted ? theme.border : theme.neonBlue + '40',
+          backgroundColor: isCompleted ? 'rgba(15, 23, 42, 0.3)' : 'rgba(30, 41, 59, 0.4)',
+          borderColor: isCompleted ? 'rgba(255, 255, 255, 0.05)' : 'rgba(99, 102, 241, 0.2)'
         }
-      ]} 
-      onPress={() => onPress(task)}
-      activeOpacity={0.8}
+      ]}
     >
-      {/* Top Row: Title and Checkbox */}
-      <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text 
-            style={[
-              styles.title, 
-              { color: theme.text },
-              isCompleted && styles.completedText
-            ]}
-            numberOfLines={2}
+      <TouchableOpacity 
+        onPress={() => onPress(task)}
+        activeOpacity={0.7}
+        style={styles.touchArea}
+      >
+        <View style={styles.contentRow}>
+          {/* Checkbox Section */}
+          <TouchableOpacity 
+            style={styles.checkboxContainer}
+            onPress={() => onToggle?.(task)}
+            activeOpacity={0.6}
           >
-            {task.title}
-          </Text>
-        </View>
-        
-        <TouchableOpacity 
-          style={styles.checkbox} 
-          onPress={() => onToggle?.(task)}
-          activeOpacity={0.6}
-        >
-          {isCompleted ? (
-            <CheckCircle size={24} color={theme.success} />
-          ) : (
-            <Circle size={24} color={theme.neonBlue} />
-          )}
-        </TouchableOpacity>
-      </View>
+            <AnimatePresence exitBeforeEnter>
+              {isCompleted ? (
+                <MotiView
+                  key="checked"
+                  from={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                >
+                  <LinearGradient
+                    colors={['#10b981', '#059669']}
+                    style={styles.checkedCircle}
+                  >
+                    <CheckCircle size={16} color="#fff" strokeWidth={3} />
+                  </LinearGradient>
+                </MotiView>
+              ) : (
+                <MotiView
+                  key="unchecked"
+                  from={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  style={[styles.uncheckedCircle, { borderColor: 'rgba(255,255,255,0.2)' }]}
+                />
+              )}
+            </AnimatePresence>
+          </TouchableOpacity>
 
-      {/* Middle Row: Meta info */}
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <User size={14} color={theme.subtext} />
-          <Text style={[styles.metaText, { color: theme.subtext }]}>
-            {task.creator?.full_name?.split(' ')[0] || 'Sistema'}
-          </Text>
-        </View>
-
-        <View style={styles.metaItem}>
-          <Clock size={14} color={theme.subtext} />
-          <Text style={[styles.metaText, { color: theme.subtext }]}>
-            {timeAgo}
-          </Text>
-        </View>
-      </View>
-
-      {/* Footer: Project and Priority */}
-      <View style={styles.footer}>
-        {task.project && (
-          <View style={[styles.projectBadge, { backgroundColor: (task.project.color || theme.tint) + '20' }]}>
-            <Hash size={12} color={task.project.color || theme.tint} />
-            <Text style={[styles.projectText, { color: task.project.color || theme.tint }]}>
-              {task.project.name}
+          {/* Info Section */}
+          <View style={styles.infoContainer}>
+            <Text 
+              style={[
+                styles.title, 
+                { color: isCompleted ? 'rgba(255,255,255,0.3)' : '#fff' },
+                isCompleted && styles.completedText
+              ]}
+              numberOfLines={1}
+            >
+              {task.title}
             </Text>
-          </View>
-        )}
-        
-        <View style={styles.priorityIndicator}>
-          <View 
-            style={[
-              styles.priorityDot, 
-              { backgroundColor: getPriorityColor(task.priority) }
-            ]} 
-          />
-          <Text style={[styles.priorityText, { color: theme.subtext }]}>
-            P{task.priority || 4}
-          </Text>
-        </View>
-      </View>
 
-      {/* Gloss Effect Overlay */}
-      <View style={styles.glossOverlay} pointerEvents="none" />
-    </TouchableOpacity>
+            <View style={styles.metaRow}>
+              {task.project && (
+                <View style={[styles.projectBadge, { backgroundColor: (task.project.color || '#6366f1') + '15' }]}>
+                  <View style={[styles.projectDot, { backgroundColor: task.project.color || '#6366f1' }]} />
+                  <Text style={[styles.projectText, { color: task.project.color || '#6366f1' }]}>
+                    {task.project.name}
+                  </Text>
+                </View>
+              )}
+              
+              <View style={styles.timeBadge}>
+                <Clock size={10} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.timeText}>{timeAgo}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Right Action */}
+          <View style={styles.rightAction}>
+            <View style={[styles.priorityLine, { backgroundColor: getPriorityColor(task.priority) }]} />
+            <ChevronRight size={16} color="rgba(255,255,255,0.15)" />
+          </View>
+        </View>
+      </TouchableOpacity>
+    </MotiView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    borderRadius: 20,
     marginBottom: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  titleSection: {
+  touchArea: {
+    padding: 16,
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkboxContainer: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkedCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uncheckedCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  infoContainer: {
     flex: 1,
-    paddingRight: 12,
+    gap: 6,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 24,
-    letterSpacing: -0.5,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   completedText: {
     textDecorationLine: 'line-through',
-    opacity: 0.4,
-  },
-  checkbox: {
-    marginTop: 2,
   },
   metaRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
-  },
-  metaItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  metaText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: 12,
+    gap: 10,
   },
   projectBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
-  },
-  projectText: {
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  priorityIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  priorityDot: {
+  projectDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
   },
-  priorityText: {
-    fontSize: 12,
-    fontWeight: '700',
+  projectText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  timeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeText: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.3)',
+    fontWeight: '600',
+  },
+  rightAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  priorityLine: {
+    width: 3,
+    height: 20,
+    borderRadius: 2,
   },
   glossOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
 });
+

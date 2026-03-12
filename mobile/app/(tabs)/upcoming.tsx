@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl, Dimensions, Platform } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
-import { CalendarRange } from 'lucide-react-native';
+import { CalendarRange, Zap } from 'lucide-react-native';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
 import { TaskItem } from '../../src/components/TaskItem';
 import { TaskDetailModal } from '../../src/components/TaskDetailModal';
 import { Colors } from '../../src/constants/Colors';
 import { useColorScheme } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MotiView, MotiText } from 'moti';
+
+const { width } = Dimensions.get('window');
 
 export default function UpcomingScreen() {
   const colorScheme = useColorScheme() ?? 'dark';
@@ -64,11 +68,6 @@ export default function UpcomingScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
-  };
-
   const renderTask = ({ item }: { item: any }) => (
     <TaskItem 
       task={item} 
@@ -81,127 +80,157 @@ export default function UpcomingScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <CalendarRange size={28} color={theme.tint} />
-          <Text style={[styles.title, { color: theme.text }]}>Em Breve</Text>
-        </View>
-        <Text style={[styles.dateText, { color: theme.subtext }]}>Próximas tarefas agendadas</Text>
-      </View>
+      
+      {/* Background Premium */}
+      <LinearGradient
+        colors={['#020617', '#0f172a', '#020617']}
+        style={StyleSheet.absoluteFill}
+      />
+      
+      {/* Glow Spheres */}
+      <View style={[styles.glowSphere, { top: -50, right: -50, backgroundColor: 'rgba(99, 102, 241, 0.15)' }]} />
+      <View style={[styles.glowSphere, { bottom: 100, left: -100, backgroundColor: 'rgba(168, 85, 247, 0.1)' }]} />
 
-      <FlatList
-        data={tasks}
-        renderItem={renderTask}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.tint} />
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: theme.subtext }]}>Nenhuma tarefa para o futuro.</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <MotiView 
+          from={{ opacity: 0, translateY: -20 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          style={styles.header}
+        >
+          <View style={styles.titleRow}>
+            <LinearGradient
+              colors={['#6366f1', '#a855f7']}
+              style={styles.headerIconWrapper}
+            >
+              <CalendarRange size={20} color="#fff" />
+            </LinearGradient>
+            <View>
+              <Text style={styles.title}>Em Breve</Text>
+              <Text style={styles.dateText}>Próximas tarefas agendadas</Text>
             </View>
-          ) : null
-        }
-      />
+          </View>
+        </MotiView>
 
-      <TaskDetailModal
-        visible={detailVisible}
-        task={selectedTask}
-        onClose={() => setDetailVisible(false)}
-        onToggle={toggleTask}
-      />
-    </SafeAreaView>
+        <FlatList
+          data={tasks}
+          renderItem={renderTask}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+          }
+          ListEmptyComponent={
+            !loading ? (
+              <View style={styles.emptyContainer}>
+                <MotiView 
+                  from={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  style={styles.emptyIcon}
+                >
+                  <Zap size={48} color="rgba(255,255,255,0.1)" />
+                </MotiView>
+                <Text style={styles.emptyText}>Nenhuma tarefa para o futuro.</Text>
+                <Text style={styles.emptySubtext}>Que tal agendar um novo objetivo agora?</Text>
+              </View>
+            ) : null
+          }
+        />
+
+        <TaskDetailModal
+          visible={detailVisible}
+          task={selectedTask}
+          onClose={() => setDetailVisible(false)}
+          onToggle={toggleTask}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#020617',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  glowSphere: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
   },
   header: {
-    padding: 20,
-    marginTop: 10,
+    padding: 24,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
+  },
+  headerIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#f8fafc',
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: -0.5,
   },
   dateText: {
-    color: '#94a3b8',
     fontSize: 14,
-    marginTop: 5,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
+    marginTop: 2,
   },
   list: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    paddingTop: 24,
     paddingBottom: 40,
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  leftSection: {
-    marginRight: 15,
-  },
-  taskInfo: {
-    flex: 1,
-  },
-  taskText: {
-    color: '#f8fafc',
-    fontSize: 16,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-    color: '#64748b',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  dateLabel: {
-    fontSize: 11,
-    color: '#6366f1',
-    fontWeight: '600',
-  },
-  separator: {
-    color: '#334155',
-    marginHorizontal: 8,
-    fontSize: 12,
-  },
-  projectDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  projectLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
   },
   emptyContainer: {
     alignItems: 'center',
-    marginTop: 60,
+    justifyContent: 'center',
+    paddingTop: 80,
+    gap: 16,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   emptyText: {
-    color: '#94a3b8',
-    fontSize: 16,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    opacity: 0.9,
     textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: '500',
+    textAlign: 'center',
+    maxWidth: 280,
+    lineHeight: 20,
   },
 });
