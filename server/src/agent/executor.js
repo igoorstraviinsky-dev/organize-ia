@@ -1219,84 +1219,8 @@ export async function updateStatus({ task_id, status, phoneNumber }) {
     .single()
 
   if (error) return { error: error.message }
-
-  // --- LÓGICA DE GAMIFICAÇÃO (XP SYSTEM) ---
-  let gamificationInfo = null
-  if (normalizedStatus === 'completed' && currentTask.status !== 'completed' && phoneNumber) {
-    try {
-      const profile = await resolveUserId(phoneNumber)
-      if (profile) {
-        const userId = profile.id
-        const today = new Date().toISOString().split('T')[0]
-        
-        // 1. Busca ou Cria registro de XP
-        let { data: xpData } = await supabase.from('user_xp').select('*').eq('user_id', userId).maybeSingle()
-        if (!xpData) {
-          const { data: newXP } = await supabase.from('user_xp').insert({ user_id: userId, total_xp: 0 }).select().single()
-          xpData = newXP
-        }
-
-        // 2. Calcula Streak e Recompensas
-        let xpGained = 50
-        let newStreak = xpData.streak_days || 0
-        const lastCompletion = xpData.last_completion
-
-        if (!lastCompletion) {
-          newStreak = 1
-        } else {
-          const lastDate = new Date(lastCompletion)
-          const currDate = new Date(today)
-          const diffDays = Math.floor((currDate - lastDate) / (1000 * 60 * 60 * 24))
-
-          if (diffDays === 1) {
-            newStreak += 1
-            xpGained += Math.min(newStreak * 5, 50) // Bonus de streak
-          } else if (diffDays > 1) {
-            newStreak = 1
-          }
-        }
-
-        // 3. Verifica Conquistas (Achievements)
-        const achievementsUnlocked = []
-        if (xpData.tasks_completed === 0) achievementsUnlocked.push('first_task')
-        if (newStreak === 3) achievementsUnlocked.push('streak_3')
-        if (newStreak === 7) achievementsUnlocked.push('streak_7')
-
-        // 4. Atualiza Banco
-        await supabase.from('user_xp').update({
-          total_xp: xpData.total_xp + xpGained,
-          tasks_completed: xpData.tasks_completed + 1,
-          streak_days: newStreak,
-          last_completion: today
-        }).eq('user_id', userId)
-
-        if (achievementsUnlocked.length > 0) {
-          const achInserts = achievementsUnlocked.map(key => ({ user_id: userId, achievement_key: key }))
-          await supabase.from('user_achievements').upsert(achInserts)
-        }
-
-        gamificationInfo = {
-          xp_gained: xpGained,
-          streak: newStreak,
-          total_xp: xpData.total_xp + xpGained,
-          new_achievements: achievementsUnlocked
-        }
-      }
-    } catch (gErr) {
-      console.error('[Gamification Error]', gErr.message)
-    }
-  }
-
-  let successMsg = `✅ Status de "${data.title}" atualizado para "${normalizedStatus}".`
-  if (gamificationInfo) {
-    successMsg += `\n\n🎯 *+${gamificationInfo.xp_gained} XP!* totalizando ${gamificationInfo.total_xp} XP.`
-    if (gamificationInfo.streak > 1) successMsg += `\n🔥 Combo de ${gamificationInfo.streak} dias!`
-    if (gamificationInfo.new_achievements.length > 0) {
-      successMsg += `\n🏆 Conquista Desbloqueada: ${gamificationInfo.new_achievements.join(', ')}!`
-    }
-  }
   
-  return { success: true, task: data, message: successMsg, gamification: gamificationInfo }
+  return { success: true, task: data, message: `✅ Status de "${data.title}" atualizado para "${normalizedStatus}".` }
 }
 
 /**
