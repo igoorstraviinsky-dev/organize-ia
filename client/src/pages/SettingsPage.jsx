@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { Search, Bell, Shield, Paintbrush, Sun, Clock, History, Cpu, Globe, Users, CheckCircle, 
-  ChevronRight, Lock, Mail, User, Palette, Smartphone, Sparkles, Plus, Trash2, Phone 
+  ChevronRight, Lock, Mail, User, Palette, Smartphone, Sparkles, Plus, Trash2, Phone, Zap, LogOut, Check, X, Loader2, Save, Camera, Settings as SettingsIcon 
 } from 'lucide-react';
 import TeamPage from './TeamPage'
 import IntegrationsPage from '../components/integrations/IntegrationsPage'
@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [hasChanges, setHasChanges] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: string }
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [isTriggering, setIsTriggering] = useState(false)
 
   const { settings: agentSettings, updateSettings } = useAgentSettings()
   const isAdmin = user?.profile?.role === 'admin'
@@ -68,6 +69,31 @@ export default function SettingsPage() {
     }
   }
 
+  const handleTriggerSummary = async () => {
+    if (isTriggering) return
+    setIsTriggering(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/ai/morning-summary/trigger`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Erro ao disparar resumo.')
+      
+      showFeedback('success', 'Resumo matinal enviado para seu WhatsApp!')
+    } catch (err) {
+      console.error('Error triggering summary:', err)
+      showFeedback('error', err.message)
+    } finally {
+      setIsTriggering(false)
+    }
+  }
+
   const sections = [
     {
       title: 'Perfil',
@@ -111,7 +137,7 @@ export default function SettingsPage() {
     },
     {
       title: 'Preferências',
-      icon: Settings,
+      icon: SettingsIcon,
       items: [
         { label: 'Idioma', value: 'Português (Brasil)', readOnly: true },
         { label: 'Fuso Horário', value: 'Brasília (GMT-3)', readOnly: true },
@@ -379,7 +405,7 @@ export default function SettingsPage() {
                     }
                   }}
                 />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
             </div>
 
@@ -449,9 +475,29 @@ export default function SettingsPage() {
                     </button>
                   )}
                   
-                  <p className="text-xs font-bold text-slate-500 leading-tight pt-2 border-t border-slate-50">
-                    Enviaremos resumos motivadores com suas tarefas nestes horários. <br/> Você pode configurar até 3 resumos diários.
-                  </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-50">
+                    <p className="text-xs font-bold text-slate-500 leading-tight">
+                      Enviaremos resumos motivadores com suas tarefas nestes horários. <br/> Você pode configurar até 3 resumos diários.
+                    </p>
+                    
+                    <button
+                      onClick={handleTriggerSummary}
+                      disabled={isTriggering}
+                      className="flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all"
+                    >
+                      {isTriggering ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={14} />
+                          Receber Agora
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

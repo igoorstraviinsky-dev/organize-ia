@@ -1309,7 +1309,15 @@ export async function endFocusSession({ status = 'completed', phoneNumber }) {
     const currentTotal = task?.total_focus_seconds || 0
     await supabase.from('tasks').update({ total_focus_seconds: currentTotal + durationSeconds }).eq('id', activeSession.task_id)
   }
-/**
+
+  return { 
+    success: true, 
+    message: `✅ Sessão de foco encerrada (${Math.round(durationSeconds/60)}m).`,
+    duration_seconds: durationSeconds
+  }
+}
+
+/**
  * Executa: update_ai_settings
  */
 export async function updateAiSettings({ morning_summary_enabled, morning_summary_time, phoneNumber }) {

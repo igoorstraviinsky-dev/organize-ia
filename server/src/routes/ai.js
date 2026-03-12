@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import { authenticate } from '../middleware/auth.js'
+import { processUserSummary } from '../services/morning-summary.js'
+import { supabase } from '../lib/supabase.js'
 
 const router = Router()
 
@@ -108,6 +110,40 @@ router.post('/settings', authenticate, async (req, res) => {
     res.json(result)
   } catch (err) {
     console.error('[AI Settings POST]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+/**
+ * POST /api/ai/morning-summary/trigger
+ * Dispara o resumo matinal manualmente para o usuário autenticado.
+ */
+router.post('/morning-summary/trigger', authenticate, async (req, res) => {
+  const userId = req.user.id
+
+  try {
+    // Busca as configurações necessárias para o resumo
+    const { data: settings, error } = await supabase
+      .from('ai_agent_settings')
+      .select('user_id, profiles(full_name, phone)')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!settings) {
+      return res.status(404).json({ error: 'Configurações de agente não encontradas para este usuário.' })
+    }
+
+    if (!settings.profiles?.phone) {
+      return res.status(400).json({ error: 'Usuário não possui telefone cadastrado no perfil.' })
+    }
+
+    // Chama a função de processamento (enviará via WhatsApp)
+    await processUserSummary(settings)
+
+    res.json({ success: true, message: 'Resumo matinal disparado com sucesso!' })
+  } catch (err) {
+    console.error('[Morning Summary Trigger]', err.message)
     res.status(500).json({ error: err.message })
   }
 })

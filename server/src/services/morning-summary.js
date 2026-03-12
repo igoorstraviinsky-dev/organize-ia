@@ -55,7 +55,7 @@ async function checkAndSendSummaries() {
   }
 }
 
-async function processUserSummary(settings) {
+export async function processUserSummary(settings) {
   const userId = settings.user_id;
   const profile = settings.profiles;
   const today = new Date().toISOString().split('T')[0];
