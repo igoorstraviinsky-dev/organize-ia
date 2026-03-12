@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteAllUserTasks, deleteProject, createProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
+import { createTask, editTask, deleteTask, deleteAllUserTasks, deleteProject, createProject, editProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects } from './executor.js'
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
@@ -14,6 +14,7 @@ const functionExecutors = {
   delete_all_user_tasks:   { fn: deleteAllUserTasks,    needsPhone: true },
   delete_project:          { fn: deleteProject,         needsPhone: true },
   create_project: { fn: createProject, needsPhone: true },
+  edit_project:   { fn: editProject,   needsPhone: true },
   search_tasks:   { fn: searchTasks,   needsPhone: true },
   search_projects: { fn: searchProjects, needsPhone: true },
   search_labels:  { fn: searchLabels,  needsPhone: true },
@@ -22,9 +23,11 @@ const functionExecutors = {
   assign_project_member: { fn: assignProjectMember, needsPhone: true },
   remove_project_member: { fn: removeProjectMember, needsPhone: true },
   list_tasks:     { fn: listTasks,     needsPhone: true },
-  update_status:  { fn: updateStatus,  needsPhone: false },
+  update_status:  { fn: updateStatus,  needsPhone: true },
   send_message:   { fn: sendMessage,   needsPhone: true },
   list_projects:  { fn: listProjects,  needsPhone: true },
+  start_focus_session: { fn: startFocusSession, needsPhone: true },
+  end_focus_session:   { fn: endFocusSession,   needsPhone: true },
 }
 
 function getBrPhoneVariants(rawPhone) {

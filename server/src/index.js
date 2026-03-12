@@ -7,6 +7,7 @@ import aiRouter from './routes/ai.js'
 import configRouter from './routes/config.js'
 import teamRouter from './routes/team.js'
 import { initAllSSEListeners } from './lib/sseClient.js'
+import { initMorningSummary } from './services/morning-summary.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -49,4 +50,7 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
   // Inicia listeners SSE para todas as integrações UazAPI ativas
   initAllSSEListeners().catch(err => console.error('[SSE Init Error]', err.message))
+  
+  // Inicia o agendador de resumo matinal
+  initMorningSummary();
 })

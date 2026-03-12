@@ -437,4 +437,71 @@ export const tools = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "edit_project",
+      description: "Edita nome, descrição ou tema visual (gradiente de cor) de um projeto existente. Use quando o usuário quiser personalizar, renomear ou mudar a cor/tema de um projeto.",
+      parameters: {
+        type: "object",
+        properties: {
+          project_name: {
+            type: "string",
+            description: "Nome atual do projeto a ser editado.",
+          },
+          new_name: {
+            type: "string",
+            description: "Novo nome do projeto (opcional).",
+          },
+          description: {
+            type: "string",
+            description: "Nova descrição do projeto (opcional).",
+          },
+          theme_gradient: {
+            type: "string",
+            description: "Gradiente CSS para o tema visual do projeto. Ex: 'linear-gradient(135deg, #6366f1, #8b5cf6)'. Cores suportadas: roxo (#6366f1, #8b5cf6), azul (#3b82f6, #06b6d4), verde (#10b981, #059669), rosa (#ec4899, #f43f5e), laranja (#f59e0b, #ef4444).",
+          },
+        },
+        required: ["project_name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "start_focus_session",
+      description: "Inicia uma sessão de foco (Pomodoro) vinculada a uma tarefa. Use quando o usuário disser 'quero focar', 'iniciar cronômetro' ou similar.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "string",
+            description: "ID da tarefa para a qual focar (opcional). Se não informado, inicia uma sessão geral."
+          },
+          task_title: {
+            type: "string",
+            description: "Título da tarefa (opcional). Caso o ID não esteja disponível."
+          }
+        }
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "end_focus_session",
+      description: "Encerra a sessão de foco atual. Calcula o tempo decorrido e salva na tarefa/perfil do usuário.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["completed", "interrupted"],
+            description: "Status do encerramento (padrão: completed)."
+          }
+        }
+      }
+    }
+  }
 ];
+

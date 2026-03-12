@@ -20,11 +20,17 @@ export function useCreateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ name, color, icon }) => {
+    mutationFn: async ({ name, color, icon, theme_gradient }) => {
       const { data: { user } } = await supabase.auth.getUser()
       const { data, error } = await supabase
         .from('projects')
-        .insert({ name, color: color || '#6366f1', icon: icon || 'folder', owner_id: user.id })
+        .insert({ 
+          name, 
+          color: color || '#6366f1', 
+          icon: icon || 'folder', 
+          owner_id: user.id,
+          theme_gradient: theme_gradient || null
+        })
         .select()
         .single()
       if (error) throw error
@@ -38,10 +44,15 @@ export function useUpdateProject() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, name, color }) => {
+    mutationFn: async ({ id, ...updates }) => {
+      // Remove campos indefinidos para evitar sobrescrever com null se não desejado
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([_, v]) => v !== undefined)
+      )
+
       const { data, error } = await supabase
         .from('projects')
-        .update({ name, color })
+        .update(cleanUpdates)
         .eq('id', id)
         .select()
         .single()

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../../hooks/useProjects'
 import { useAuth } from '../../hooks/useAuth'
+import XPBar from '../gamification/XPBar'
 
 const COLORS = ['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
 
@@ -124,6 +125,8 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
         </div>
         <span className="text-xl font-black tracking-tight text-white font-display uppercase italic">Organizador</span>
       </div>
+
+      <XPBar />
 
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 custom-scrollbar">
         {navItems.map((item) => {

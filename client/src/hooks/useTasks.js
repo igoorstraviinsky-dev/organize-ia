@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { triggerAchievementToast } from '../components/gamification/AchievementToast'
 
 async function fetchSubtasksMap(taskIds) {
   if (taskIds.length === 0) return {}
@@ -289,6 +290,16 @@ export function useUpdateTask() {
         console.error('Update task error:', error)
         throw new Error(error.message || 'Erro ao atualizar tarefa')
       }
+
+      if (updates.status === 'completed') {
+        triggerAchievementToast({
+          title: 'Tarefa Concluída!',
+          message: `Você finalizou "${data.title}"`,
+          xp: 50,
+          type: 'xp'
+        })
+      }
+
       return data
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),

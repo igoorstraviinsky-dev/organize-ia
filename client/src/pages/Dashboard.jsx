@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { List, LayoutGrid, Folder, Plus, ChevronRight, Hash, X } from "lucide-react";
+import { List, LayoutGrid, Folder, Plus, ChevronRight, Hash, X, Palette } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import { useProjects, useCreateProject } from "../hooks/useProjects";
+import { useProjects, useCreateProject, useUpdateProject } from "../hooks/useProjects";
+import GradientPicker from "../components/projects/GradientPicker";
 import { useTasks } from "../hooks/useTasks";
 import { useRealtimeTasks } from "../hooks/useRealtimeTasks";
 import Sidebar from "../components/layout/Sidebar";
@@ -13,6 +14,8 @@ import LabelsPage from "./Labels";
 import WhatsAppChat from '../components/chat/WhatsAppChat';
 import SettingsPage from './SettingsPage';
 import { motion, AnimatePresence } from 'framer-motion';
+import PomodoroTimer from "../components/focus/PomodoroTimer";
+import AchievementToast from "../components/gamification/AchievementToast";
 
 export default function Dashboard({ onSignOut }) {
   const { view, id } = useParams();
@@ -21,12 +24,14 @@ export default function Dashboard({ onSignOut }) {
   const { data: projects = [] } = useProjects();
   const { data: allTasks = [] } = useTasks(null);
   const createProject = useCreateProject();
+  const updateProject = useUpdateProject();
   
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'board'
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectColor, setNewProjectColor] = useState("#7c3aed");
+  const [editingThemeProjectId, setEditingThemeProjectId] = useState(null);
 
   const COLORS = ['#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6366f1'];
 
@@ -139,34 +144,57 @@ export default function Dashboard({ onSignOut }) {
           const isActive = currentProjectId === project.id;
 
           return (
-            <button
-              key={project.id}
-              onClick={() => {
-                navigate(`/app/project/${project.id}`);
-                setIsProjectsOpen(false);
-              }}
-              className={`w-full group flex items-center justify-between p-3.5 rounded-2xl transition-all ${
-                isActive ? 'bg-brand-purple/5 border border-brand-purple/10' : 'hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="p-2 rounded-lg"
-                  style={{ backgroundColor: `${project.color || '#7c3aed'}15`, color: project.color || '#7c3aed' }}
-                >
-                  <Hash size={14} strokeWidth={3} />
+            <div key={project.id} className="space-y-1">
+              <button
+                onClick={() => {
+                  navigate(`/app/project/${project.id}`);
+                  setIsProjectsOpen(false);
+                }}
+                className={`w-full group flex items-center justify-between p-3.5 rounded-2xl transition-all ${
+                  isActive ? 'bg-brand-purple/5 border border-brand-purple/10' : 'hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="p-2 rounded-lg"
+                    style={{
+                      background: project.theme_gradient || `${project.color || '#7c3aed'}20`,
+                      color: project.color || '#7c3aed'
+                    }}
+                  >
+                    <Hash size={14} strokeWidth={3} />
+                  </div>
+                  <span className={`text-sm font-bold ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{project.name}</span>
                 </div>
-                <span className={`text-sm font-bold ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{project.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {projectTasksCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-400">
-                    {projectTasksCount}
-                  </span>
-                )}
-                <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-400" />
-              </div>
-            </button>
+                <div className="flex items-center gap-2">
+                  {projectTasksCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black text-slate-400">
+                      {projectTasksCount}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    title="Personalizar tema"
+                    onClick={(e) => { e.stopPropagation(); setEditingThemeProjectId(editingThemeProjectId === project.id ? null : project.id); }}
+                    className="p-1 rounded-lg hover:bg-slate-200 text-slate-300 hover:text-brand-purple transition-all"
+                  >
+                    <Palette size={13} />
+                  </button>
+                  <ChevronRight size={14} className="text-slate-300 group-hover:text-slate-400" />
+                </div>
+              </button>
+              {editingThemeProjectId === project.id && (
+                <div className="px-2 pb-2">
+                  <GradientPicker
+                    value={project.theme_gradient || ''}
+                    onChange={async (grad) => {
+                      await updateProject.mutateAsync({ id: project.id, theme_gradient: grad });
+                      setEditingThemeProjectId(null);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
           );
         })}
 
@@ -244,7 +272,30 @@ export default function Dashboard({ onSignOut }) {
       />
       <main className="flex-1 overflow-hidden p-8 flex flex-col relative">
         <div className="flex-1 premium-card flex flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100 bg-white px-10 py-8">
+          {/* Banner de tema do projeto ativo - Premium Vibe */}
+          {currentView === 'project' && (() => {
+            const proj = projects.find(p => p.id === currentProjectId);
+            return proj?.theme_gradient ? (
+              <div className="relative h-1.5 w-full overflow-hidden rounded-t-2xl">
+                <div
+                  style={{ background: proj.theme_gradient }}
+                  className="absolute inset-0 w-full h-full opacity-90"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-transparent" />
+              </div>
+            ) : null;
+          })()}
+          <div className="flex items-center justify-between border-b border-slate-100 bg-white px-10 py-8 relative">
+            {/* Sutil brilho do tema no header */}
+            {currentView === 'project' && (() => {
+              const proj = projects.find(p => p.id === currentProjectId);
+              return proj?.theme_gradient ? (
+                <div 
+                  style={{ background: proj.theme_gradient }}
+                  className="absolute bottom-0 left-0 w-full h-[1px] opacity-30 shadow-[0_0_15px_rgba(0,0,0,0.1)]"
+                />
+              ) : null;
+            })()}
             <div className="flex items-center gap-6">
               <h1 className="text-3xl font-extrabold tracking-tight font-display uppercase" style={{ color: '#17112E' }}>
                 {getTitle()}
@@ -304,6 +355,9 @@ export default function Dashboard({ onSignOut }) {
             </>
           )}
         </AnimatePresence>
+
+        <PomodoroTimer />
+        <AchievementToast />
       </main>
     </div>
   );

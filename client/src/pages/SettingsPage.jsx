@@ -4,6 +4,8 @@ import { useProfile } from '../hooks/useProfile'
 import { User, Mail, Shield, Settings, Bell, Palette, Camera, Check, Loader2, Save, X, Users, Zap, LogOut, Phone } from 'lucide-react'
 import TeamPage from './TeamPage'
 import IntegrationsPage from '../components/integrations/IntegrationsPage'
+import { useAgentSettings } from '../hooks/useAgentSettings'
+import { Sun, Clock } from 'lucide-react'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -18,6 +20,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState(null) // { type: 'error' | 'success', text: string }
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
+  const { settings: agentSettings, updateSettings } = useAgentSettings()
   const isAdmin = user?.profile?.role === 'admin'
 
   // Atualizar estado local quando o usuário carregar
@@ -344,6 +347,49 @@ export default function SettingsPage() {
                       />
                     ))}
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="premium-card bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600">
+                  <Sun size={20} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#17112E] uppercase tracking-widest">Resumo Matinal IA</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receba seu dia no WhatsApp</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={agentSettings?.morning_summary_enabled || false}
+                  onChange={(e) => updateSettings({ morning_summary_enabled: e.target.checked })}
+                />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+            </div>
+
+            <div className={`space-y-6 transition-all duration-500 ${agentSettings?.morning_summary_enabled ? 'opacity-100 max-h-40' : 'opacity-30 pointer-events-none max-h-20'}`}>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                  <Clock size={12} />
+                  Horário do Resumo
+                </p>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="time"
+                    value={agentSettings?.morning_summary_time || '08:00'}
+                    onChange={(e) => updateSettings({ morning_summary_time: e.target.value })}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-lg font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  />
+                  <p className="text-xs font-bold text-slate-500 leading-tight">
+                    Enviaremos um resumo motivador com suas tarefas <br/> do dia e o balanço de ontem.
+                  </p>
                 </div>
               </div>
             </div>

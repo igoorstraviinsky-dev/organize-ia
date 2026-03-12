@@ -581,6 +581,36 @@ export async function createProject({ name, description, assigned_user_identifie
 }
 
 /**
+ * Executa: edit_project
+ */
+export async function editProject({ project_name, new_name, description, theme_gradient, phoneNumber }) {
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
+
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id, name')
+    .eq('owner_id', userId)
+    .ilike('name', project_name)
+    .single()
+
+  if (!project) return { error: `Projeto "${project_name}" não encontrado.` }
+
+  const updates = {}
+  if (new_name) updates.name = new_name
+  if (description !== undefined) updates.description = description
+  if (theme_gradient) updates.theme_gradient = theme_gradient
+
+  if (Object.keys(updates).length === 0) return { error: 'Nenhuma alteração informada.' }
+
+  const { error } = await supabase.from('projects').update(updates).eq('id', project.id)
+  if (error) return { error: error.message }
+
+  return { success: true, message: `Projeto "${project.name}" atualizado com sucesso.` }
+}
+
+/**
  * Executa: search_tasks
  */
 export async function searchTasks({ query, phoneNumber }) {
@@ -1155,7 +1185,7 @@ export async function sendMessage({ user_identifier, message, phoneNumber }) {
 /**
  * Executa: update_status
  */
-export async function updateStatus({ task_id, status }) {
+export async function updateStatus({ task_id, status, phoneNumber }) {
   // Lida com status amigáveis (em progresso, concluída, etc)
   const statusMap = {
     'pendente': 'pending',
@@ -1169,16 +1199,199 @@ export async function updateStatus({ task_id, status }) {
   
   const normalizedStatus = statusMap[status.toLowerCase()] || status
 
+  // Primeiro busca a tarefa para saber quem é o dono/atribuído e o título
+  const { data: currentTask, error: fetchError } = await supabase
+    .from('tasks')
+    .select('id, title, status, creator_id')
+    .eq('id', task_id)
+    .single()
+  
+  if (fetchError || !currentTask) return { error: `Tarefa ${task_id} não encontrada.` }
+
   const { data, error } = await supabase
     .from('tasks')
-    .update({ status: normalizedStatus })
+    .update({ 
+      status: normalizedStatus,
+      completed_at: normalizedStatus === 'completed' ? new Date().toISOString() : null
+    })
     .eq('id', task_id)
     .select('id, title, status')
     .single()
 
   if (error) return { error: error.message }
 
-  // Se for uma subtarefa e estiver sendo concluída, poderíamos verificar lógica de pai aqui no futuro.
+  // --- LÓGICA DE GAMIFICAÇÃO (XP SYSTEM) ---
+  let gamificationInfo = null
+  if (normalizedStatus === 'completed' && currentTask.status !== 'completed' && phoneNumber) {
+    try {
+      const profile = await resolveUserId(phoneNumber)
+      if (profile) {
+        const userId = profile.id
+        const today = new Date().toISOString().split('T')[0]
+        
+        // 1. Busca ou Cria registro de XP
+        let { data: xpData } = await supabase.from('user_xp').select('*').eq('user_id', userId).maybeSingle()
+        if (!xpData) {
+          const { data: newXP } = await supabase.from('user_xp').insert({ user_id: userId, total_xp: 0 }).select().single()
+          xpData = newXP
+        }
+
+        // 2. Calcula Streak e Recompensas
+        let xpGained = 50
+        let newStreak = xpData.streak_days || 0
+        const lastCompletion = xpData.last_completion
+
+        if (!lastCompletion) {
+          newStreak = 1
+        } else {
+          const lastDate = new Date(lastCompletion)
+          const currDate = new Date(today)
+          const diffDays = Math.floor((currDate - lastDate) / (1000 * 60 * 60 * 24))
+
+          if (diffDays === 1) {
+            newStreak += 1
+            xpGained += Math.min(newStreak * 5, 50) // Bonus de streak
+          } else if (diffDays > 1) {
+            newStreak = 1
+          }
+        }
+
+        // 3. Verifica Conquistas (Achievements)
+        const achievementsUnlocked = []
+        if (xpData.tasks_completed === 0) achievementsUnlocked.push('first_task')
+        if (newStreak === 3) achievementsUnlocked.push('streak_3')
+        if (newStreak === 7) achievementsUnlocked.push('streak_7')
+
+        // 4. Atualiza Banco
+        await supabase.from('user_xp').update({
+          total_xp: xpData.total_xp + xpGained,
+          tasks_completed: xpData.tasks_completed + 1,
+          streak_days: newStreak,
+          last_completion: today
+        }).eq('user_id', userId)
+
+        if (achievementsUnlocked.length > 0) {
+          const achInserts = achievementsUnlocked.map(key => ({ user_id: userId, achievement_key: key }))
+          await supabase.from('user_achievements').upsert(achInserts)
+        }
+
+        gamificationInfo = {
+          xp_gained: xpGained,
+          streak: newStreak,
+          total_xp: xpData.total_xp + xpGained,
+          new_achievements: achievementsUnlocked
+        }
+      }
+    } catch (gErr) {
+      console.error('[Gamification Error]', gErr.message)
+    }
+  }
+
+  let successMsg = `✅ Status de "${data.title}" atualizado para "${normalizedStatus}".`
+  if (gamificationInfo) {
+    successMsg += `\n\n🎯 *+${gamificationInfo.xp_gained} XP!* totalizando ${gamificationInfo.total_xp} XP.`
+    if (gamificationInfo.streak > 1) successMsg += `\n🔥 Combo de ${gamificationInfo.streak} dias!`
+    if (gamificationInfo.new_achievements.length > 0) {
+      successMsg += `\n🏆 Conquista Desbloqueada: ${gamificationInfo.new_achievements.join(', ')}!`
+    }
+  }
   
-  return { success: true, task: data, message: `✅ Status de "${data.title}" atualizado para "${normalizedStatus}".` }
+  return { success: true, task: data, message: successMsg, gamification: gamificationInfo }
+}
+
+/**
+ * Executa: start_focus_session
+ */
+export async function startFocusSession({ task_id, task_title, phoneNumber }) {
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
+
+  // Se passou título mas não ID, tenta achar o ID
+  let resolvedTaskId = task_id
+  if (!resolvedTaskId && task_title) {
+    const { data: t } = await supabase
+      .from('tasks')
+      .select('id')
+      .eq('owner_id', userId)
+      .ilike('title', task_title)
+      .maybeSingle()
+    if (t) resolvedTaskId = t.id
+  }
+
+  // Finaliza qualquer sessão aberta antes
+  await supabase
+    .from('focus_sessions')
+    .update({ status: 'interrupted', end_time: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('status', 'active')
+
+  const { data, error } = await supabase
+    .from('focus_sessions')
+    .insert({
+      user_id: userId,
+      task_id: resolvedTaskId || null,
+      status: 'active'
+    })
+    .select()
+    .single()
+
+  if (error) return { error: error.message }
+
+  return { 
+    success: true, 
+    message: resolvedTaskId 
+      ? `🚀 Modo Foco iniciado para a tarefa selecionada. Bom trabalho!` 
+      : `🚀 Modo Foco iniciado. Concentração total agora!`,
+    session: data 
+  }
+}
+
+/**
+ * Executa: end_focus_session
+ */
+export async function endFocusSession({ status = 'completed', phoneNumber }) {
+  const profile = await resolveUserId(phoneNumber)
+  if (!profile) return { error: 'Usuário não encontrado.' }
+  const userId = profile.id
+
+  const { data: activeSession, error: fetchError } = await supabase
+    .from('focus_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle()
+
+  if (fetchError || !activeSession) return { error: 'Nenhuma sessão de foco ativa encontrada.' }
+
+  const endTime = new Date()
+  const startTime = new Date(activeSession.start_time)
+  const durationSeconds = Math.floor((endTime - startTime) / 1000)
+
+  const { error: updateError } = await supabase
+    .from('focus_sessions')
+    .update({
+      status,
+      end_time: endTime.toISOString(),
+      duration_seconds: durationSeconds
+    })
+    .eq('id', activeSession.id)
+
+  if (updateError) return { error: updateError.message }
+
+  // Se havia uma tarefa vinculada, atualiza o tempo total nela
+  if (activeSession.task_id && status === 'completed') {
+    const { data: task } = await supabase.from('tasks').select('total_focus_seconds').eq('id', activeSession.task_id).single()
+    const currentTotal = task?.total_focus_seconds || 0
+    await supabase.from('tasks').update({ total_focus_seconds: currentTotal + durationSeconds }).eq('id', activeSession.task_id)
+  }
+
+  const minutes = Math.floor(durationSeconds / 60)
+  const seconds = durationSeconds % 60
+
+  return { 
+    success: true, 
+    message: `✅ Sessão de foco encerrada. Você focou por ${minutes}m ${seconds}s.`,
+    duration_seconds: durationSeconds 
+  }
 }
