@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS public.ai_agent_settings (
   openai_api_key TEXT,
   system_prompt TEXT DEFAULT 'Você é um assistente virtual prestativo.',
   is_active BOOLEAN DEFAULT false,
+  morning_summary_enabled BOOLEAN DEFAULT false,
+  morning_summary_time TEXT DEFAULT '08:00',
+  timezone TEXT DEFAULT 'America/Sao_Paulo',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id)
