@@ -26,7 +26,10 @@ router.get('/settings', authenticate, async (req, res) => {
       data = {
         openai_api_key: '',
         system_prompt: '',
-        is_active: false
+        is_active: false,
+        morning_summary_enabled: false,
+        morning_summary_time: '08:00',
+        timezone: 'America/Sao_Paulo'
       }
     }
 
@@ -44,7 +47,14 @@ router.get('/settings', authenticate, async (req, res) => {
  */
 router.post('/settings', authenticate, async (req, res) => {
   const userId = req.user.id
-  const { openai_api_key, system_prompt, is_active } = req.body
+  const { 
+    openai_api_key, 
+    system_prompt, 
+    is_active,
+    morning_summary_enabled,
+    morning_summary_time,
+    timezone
+  } = req.body
 
   try {
     const client = req.sb
@@ -61,7 +71,14 @@ router.post('/settings', authenticate, async (req, res) => {
       // Atualiza
       const { data, error } = await client
         .from('ai_agent_settings')
-        .update({ openai_api_key, system_prompt, is_active })
+        .update({ 
+          openai_api_key, 
+          system_prompt, 
+          is_active,
+          morning_summary_enabled,
+          morning_summary_time,
+          timezone
+        })
         .eq('user_id', userId)
         .select()
         .single()
@@ -72,7 +89,15 @@ router.post('/settings', authenticate, async (req, res) => {
       // Insere
       const { data, error } = await client
         .from('ai_agent_settings')
-        .insert({ user_id: userId, openai_api_key, system_prompt, is_active })
+        .insert({ 
+          user_id: userId, 
+          openai_api_key, 
+          system_prompt, 
+          is_active,
+          morning_summary_enabled,
+          morning_summary_time,
+          timezone
+        })
         .select()
         .single()
       

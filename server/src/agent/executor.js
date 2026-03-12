@@ -1316,6 +1316,34 @@ export async function endFocusSession({ status = 'completed', phoneNumber }) {
   return { 
     success: true, 
     message: `✅ Sessão de foco encerrada. Você focou por ${minutes}m ${seconds}s.`,
-    duration_seconds: durationSeconds 
-  }
+  };
+}
+
+/**
+ * Executa: update_ai_settings
+ */
+export async function updateAiSettings({ morning_summary_enabled, morning_summary_time, phoneNumber }) {
+  const profile = await resolveUserId(phoneNumber);
+  if (!profile) return { error: 'Usuário não encontrado.' };
+  const userId = profile.id;
+
+  const updates = {};
+  if (morning_summary_enabled !== undefined) updates.morning_summary_enabled = morning_summary_enabled;
+  if (morning_summary_time !== undefined) updates.morning_summary_time = morning_summary_time;
+  
+  if (Object.keys(updates).length === 0) return { error: 'Nenhuma alteração informada.' };
+
+  const { data, error } = await supabase
+    .from('ai_agent_settings')
+    .upsert({ user_id: userId, ...updates })
+    .select()
+    .single();
+
+  if (error) return { error: error.message };
+
+  let feedback = '✅ Configurações atualizadas:';
+  if (morning_summary_enabled !== undefined) feedback += `\n• Resumo matinal: ${morning_summary_enabled ? 'Ativado' : 'Desativado'}`;
+  if (morning_summary_time !== undefined) feedback += `\n• Horário: ${morning_summary_time}`;
+
+  return { success: true, message: feedback, settings: data };
 }

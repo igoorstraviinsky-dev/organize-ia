@@ -368,7 +368,14 @@ export default function SettingsPage() {
                   type="checkbox" 
                   className="sr-only peer"
                   checked={agentSettings?.morning_summary_enabled || false}
-                  onChange={(e) => updateSettings({ morning_summary_enabled: e.target.checked })}
+                  onChange={async (e) => {
+                    try {
+                      await updateSettings({ morning_summary_enabled: e.target.checked })
+                      showFeedback('success', 'Configuração de resumo atualizada!')
+                    } catch (err) {
+                      showFeedback('error', 'Erro ao atualizar configuração.')
+                    }
+                  }}
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
               </label>
@@ -384,7 +391,14 @@ export default function SettingsPage() {
                   <input
                     type="time"
                     value={agentSettings?.morning_summary_time || '08:00'}
-                    onChange={(e) => updateSettings({ morning_summary_time: e.target.value })}
+                    onChange={async (e) => {
+                      try {
+                        await updateSettings({ morning_summary_time: e.target.value })
+                        showFeedback('success', `Horário definido para ${e.target.value}`)
+                      } catch (err) {
+                        showFeedback('error', 'Erro ao definir horário.')
+                      }
+                    }}
                     className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-lg font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                   />
                   <p className="text-xs font-bold text-slate-500 leading-tight">

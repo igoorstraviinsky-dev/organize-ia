@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { supabase } from '../lib/supabase.js'
 import { tools } from './functions.js'
-import { createTask, editTask, deleteTask, deleteAllUserTasks, deleteProject, createProject, editProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects, startFocusSession, endFocusSession } from './executor.js'
+import { createTask, editTask, deleteTask, deleteAllUserTasks, deleteProject, createProject, editProject, searchTasks, searchProjects, searchLabels, listLabels, assignTask, assignProjectMember, removeProjectMember, listTasks, updateStatus, sendMessage, listProjects, startFocusSession, endFocusSession, updateAiSettings } from './executor.js'
 
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 
@@ -28,6 +28,7 @@ const functionExecutors = {
   list_projects:  { fn: listProjects,  needsPhone: true },
   start_focus_session: { fn: startFocusSession, needsPhone: true },
   end_focus_session:   { fn: endFocusSession,   needsPhone: true },
+  update_ai_settings:  { fn: updateAiSettings,  needsPhone: true },
 }
 
 function getBrPhoneVariants(rawPhone) {

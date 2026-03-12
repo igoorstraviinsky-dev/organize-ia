@@ -502,6 +502,26 @@ export const tools = [
         }
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_ai_settings",
+      description: "Atualiza as configurações do Agente de IA, incluindo o resumo matinal (ativar/desativar e horário).",
+      parameters: {
+        type: "object",
+        properties: {
+          morning_summary_enabled: {
+            type: "boolean",
+            description: "Ativar ou desativar o resumo matinal no WhatsApp."
+          },
+          morning_summary_time: {
+            type: "string",
+            description: "Horário para envio do resumo no formato HH:MM (24h). Ex: '08:30'."
+          }
+        }
+      }
+    }
   }
 ];
 
