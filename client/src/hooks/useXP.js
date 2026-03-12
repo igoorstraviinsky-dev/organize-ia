@@ -5,8 +5,9 @@ export function useXP() {
   return useQuery({
     queryKey: ['user_xp'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return null
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id
+      if (!userId) return null
 
       const { data, error } = await supabase
         .from('user_xp')
@@ -18,18 +19,25 @@ export function useXP() {
             achievements (*)
           )
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching XP:', error)
+        // Retorna fallback em caso de erro para não travar a UI
+        return { total_xp: 0, level: 1, streak_days: 0, progress: 0, xpInCurrentLevel: 0, nextLevelXp: 500 }
+      }
 
-      // Cálculo de Nível (XP por nível = 500)
-      const level = Math.floor((data?.total_xp || 0) / 500) + 1
-      const xpInCurrentLevel = (data?.total_xp || 0) % 500
+      // Se não existir dados, retorna valores iniciais
+      const xpValue = data?.total_xp || 0
+      const level = Math.floor(xpValue / 500) + 1
+      const xpInCurrentLevel = xpValue % 500
       const progress = (xpInCurrentLevel / 500) * 100
 
       return {
         ...data,
+        total_xp: xpValue,
+        streak_days: data?.streak_days || 0,
         level,
         xpInCurrentLevel,
         progress,
