@@ -1360,9 +1360,3 @@ export async function updateAiSettings({ morning_summary_enabled, morning_summar
 
   return { success: true, message: feedback, settings: data };
 }
- undefined) feedback += `\n• Resumo matinal: ${morning_summary_enabled ? 'Ativado' : 'Desativado'}`;
-  if (updates.morning_summary_times) feedback += `\n• Horários ativos: ${updates.morning_summary_times.join(', ')}`;
-
-
-  return { success: true, message: feedback, settings: data };
-}
