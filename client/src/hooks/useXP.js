@@ -85,6 +85,6 @@ export function useXP() {
         user_achievements: achievementsData
       }
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 0, // Garante que a invalidação force refetch imediato
   })
 }

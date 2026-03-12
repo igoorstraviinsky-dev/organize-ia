@@ -37,18 +37,24 @@ export default function XPBar() {
       <div className="relative">
         <div className="h-2 w-full overflow-hidden rounded-full bg-white/5 shadow-inner">
           <motion.div
-            initial={{ width: 0 }}
+            layout
+            initial={false}
             animate={{ width: `${stats.progress}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
+            transition={{ 
+              type: "spring",
+              stiffness: 50,
+              damping: 15,
+              duration: 1.5 
+            }}
             className="h-full bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500"
             style={{
-              boxShadow: '0 0 10px rgba(245, 158, 11, 0.4)',
+              boxShadow: '0 0 15px rgba(245, 158, 11, 0.5)',
               backgroundSize: '200% 100%'
             }}
           />
         </div>
         <div className="mt-2 flex justify-between px-0.5">
-          <span className="text-[9px] font-bold text-white/40">{stats.xpInCurrentLevel} XP</span>
+          <span className="text-[9px] font-bold text-white/40">{Math.round(stats.xpInCurrentLevel)} XP</span>
           <span className="text-[9px] font-bold text-white/40">{stats.nextLevelXp} XP</span>
         </div>
       </div>
