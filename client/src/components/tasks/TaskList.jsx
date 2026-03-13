@@ -116,47 +116,50 @@ export default function TaskList({ projectId, title, filterToday }) {
   return (
     <div className="space-y-12 animate-in fade-in duration-700">
       {/* KPIs Dashboard - Dark Neomorphic Recessed Style */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
-          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-1 rounded-[22px] border border-white/[0.03] bg-black/10">
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group hover:border-white/10 transition-all duration-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/0 via-transparent to-transparent opacity-0 group-hover:opacity-10 transition-opacity" />
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.1] transition-all rotate-12 group-hover:rotate-0 group-hover:scale-110">
             <Activity size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-10">
              <div className="rounded-2xl royal-purple-gradient p-3.5 text-white shadow-[0_10px_30px_rgba(106,27,154,0.3)]">
               <Activity size={22} strokeWidth={2.5} />
             </div>
             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Velocidade Média</p>
           </div>
-          <p className="text-4xl font-black text-white tracking-tighter" style={{ textShadow: '0 0 20px rgba(255,255,255,0.1)' }}>{data.analytics.velocidade_media}</p>
+          <p className="text-4xl font-black text-white tracking-tighter relative z-10" style={{ textShadow: '0 0 20px rgba(255,255,255,0.1)' }}>{data.analytics.velocidade_media}</p>
         </div>
 
-        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
-          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group hover:border-white/10 transition-all duration-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-600/0 via-transparent to-transparent opacity-0 group-hover:opacity-10 transition-opacity" />
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.1] transition-all rotate-12 group-hover:rotate-0 group-hover:scale-110">
             <ClockAlert size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-10">
             <div className={`rounded-2xl p-3.5 shadow-lg ${data.analytics.atencao_critica > 0 ? 'bg-orange-600 text-white shadow-orange-600/20' : 'bg-[#151515] text-slate-600'}`}>
               <ClockAlert size={22} strokeWidth={2.5} />
             </div>
             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Atenção Crítica</p>
           </div>
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 relative z-10">
             <p className="text-4xl font-black text-white tracking-tighter">{data.analytics.atencao_critica}</p>
             <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">frias {'>'} 48h</p>
           </div>
         </div>
 
-        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
-          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group hover:border-white/10 transition-all duration-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/0 via-transparent to-transparent opacity-0 group-hover:opacity-10 transition-opacity" />
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.1] transition-all rotate-12 group-hover:rotate-0 group-hover:scale-110">
             <Users size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-10">
             <div className="rounded-2xl royal-purple-gradient p-3.5 text-white shadow-[0_10px_30px_rgba(106,27,154,0.3)]">
               <Users size={22} strokeWidth={2.5} />
             </div>
             <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Volume Atribuído</p>
           </div>
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-3 relative z-10">
             <p className="text-4xl font-black text-white tracking-tighter">{data.analytics.volume_atribuido}</p>
             <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">para mim</p>
           </div>

@@ -82,7 +82,7 @@
     background: #050505;
     box-shadow: inset 6px 6px 12px #000000, inset -6px -6px 12px #101010;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .royal-purple-gradient {
