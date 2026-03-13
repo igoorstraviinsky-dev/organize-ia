@@ -109,7 +109,7 @@ export default function SettingsPage() {
                 setFullName(e.target.value)
                 setHasChanges(true)
               }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8E44AD]/20 focus:border-[#8E44AD] transition-all"
+              className="w-full dark-neo-recessed px-4 py-3 text-sm font-medium text-white outline-none focus:ring-1 focus:ring-purple-500/30 transition-all border border-transparent focus:border-purple-600/40"
             />
           )
         },
@@ -127,7 +127,7 @@ export default function SettingsPage() {
                   setHasChanges(true)
                 }}
                 placeholder="Ex: 5511999999999"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#8E44AD]/20 focus:border-[#8E44AD] transition-all"
+                className="w-full pl-9 pr-3 py-3 dark-neo-recessed text-sm font-medium text-white outline-none focus:ring-1 focus:ring-purple-500/30 transition-all border border-transparent focus:border-purple-600/40"
               />
             </div>
           )
@@ -164,7 +164,7 @@ export default function SettingsPage() {
   if (!user) return null
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 px-4 md:px-0">
       {/* Modal de Logout Personalizado */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -172,13 +172,13 @@ export default function SettingsPage() {
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" 
             onClick={() => setShowLogoutConfirm(false)}
           />
-          <div className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl border border-white/20 animate-in zoom-in-95 duration-300">
+          <div className="relative w-full max-w-md bg-[#0a0a0a] rounded-[32px] p-8 shadow-2xl border border-white/10 animate-in zoom-in-95 duration-300">
             <div className="flex flex-col items-center text-center">
               <div className="h-20 w-20 rounded-3xl bg-red-50 flex items-center justify-center text-red-500 mb-6 shadow-xl shadow-red-500/10">
                 <LogOut size={32} strokeWidth={2.5} />
               </div>
-              <h3 className="text-2xl font-black text-[#17112E] uppercase italic tracking-tight mb-2">Encerrar Sessão?</h3>
-              <p className="text-slate-500 font-bold text-sm mb-8 leading-relaxed">
+              <h3 className="text-2xl font-black text-white uppercase italic tracking-tight mb-2">Encerrar Sessão?</h3>
+              <p className="text-slate-400 font-bold text-sm mb-8 leading-relaxed">
                 Tem certeza que deseja sair da sua conta? <br/> Você precisará fazer login novamente para acessar seus dados.
               </p>
               
@@ -203,10 +203,10 @@ export default function SettingsPage() {
 
       {/* Mensagens de Feedback */}
       {message && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border animate-in slide-in-from-top-4 duration-300 ${
+          <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 rounded-2xl shadow-2xl border animate-in slide-in-from-top-4 duration-300 ${
           message.type === 'success' 
-            ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
-            : 'bg-red-50 border-red-100 text-red-800'
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 backdrop-blur-md' 
+            : 'bg-red-500/10 border-red-500/20 text-red-400 backdrop-blur-md'
         }`}>
           {message.type === 'success' ? <Check size={18} /> : <X size={18} />}
           <p className="text-sm font-black uppercase tracking-widest">{message.text}</p>
@@ -215,15 +215,15 @@ export default function SettingsPage() {
 
       {/* Admin Tabs */}
       {isAdmin && (
-        <div className="flex p-1 bg-slate-100 rounded-2xl w-fit mb-12 shadow-inner">
+        <div className="flex p-1 bg-white/5 rounded-2xl w-fit mb-12 border border-white/5 shadow-inner">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 activeTab === tab.id 
-                  ? 'bg-white text-[#8E44AD] shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20 scale-105' 
+                  : 'text-slate-500 hover:text-white hover:bg-white/5'
               }`}
             >
               <tab.icon size={14} strokeWidth={3} />
@@ -240,7 +240,7 @@ export default function SettingsPage() {
               <div className="relative group">
                 <div 
                   onClick={handleAvatarClick}
-                  className="h-24 w-24 md:h-28 md:w-28 rounded-[38px] bg-gradient-to-br from-[#17112E] to-[#8E44AD] flex items-center justify-center shadow-2xl shadow-[#8E44AD]/30 border-4 border-white overflow-hidden cursor-pointer active:scale-95 transition-all"
+                  className="h-24 w-24 md:h-28 md:w-28 rounded-[38px] bg-[#0a0a0a] flex items-center justify-center shadow-2xl shadow-black border-4 border-white/5 overflow-hidden cursor-pointer active:scale-95 transition-all group-hover:border-purple-500/50"
                 >
                   {isUploading ? (
                     <Loader2 className="h-8 w-8 text-white animate-spin" />
@@ -272,7 +272,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <h2 className="text-3xl md:text-4xl font-black text-[#17112E] font-display uppercase italic tracking-tight">
+                <h2 className="text-3xl md:text-4xl font-black text-white font-display uppercase italic tracking-tight">
                   {user?.profile?.full_name || 'Usuário'}
                 </h2>
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2 flex items-center gap-2">
@@ -296,7 +296,7 @@ export default function SettingsPage() {
               
               <button
                 onClick={() => setShowLogoutConfirm(true)}
-                className="flex items-center gap-2 bg-white hover:bg-red-50 text-red-500 border border-red-100 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-sm shadow-red-500/5 group"
+                className="flex items-center gap-2 bg-white/5 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-white/5 px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-sm group"
               >
                 <LogOut size={16} strokeWidth={3} className="group-hover:translate-x-0.5 transition-transform" />
                 Sair
@@ -306,12 +306,12 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sections.map((section) => (
-              <div key={section.title} className="premium-card bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
+              <div key={section.title} className="jetted-glass bg-[#0a0a0a]/60 p-8 rounded-[32px] border border-white/5 shadow-2xl">
                 <div className="flex items-center gap-3 mb-8">
-                  <div className="p-2.5 rounded-2xl bg-slate-50 text-[#8E44AD]">
+                  <div className="p-2.5 rounded-2xl bg-white/5 text-purple-400">
                     <section.icon size={20} strokeWidth={2.5} />
                   </div>
-                  <h3 className="text-sm font-black text-[#17112E] uppercase tracking-widest">{section.title}</h3>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">{section.title}</h3>
                 </div>
                 
                 <div className="space-y-8">
@@ -321,7 +321,7 @@ export default function SettingsPage() {
                         {item.label}
                       </p>
                       {typeof item.value === 'string' ? (
-                        <p className="text-sm font-bold text-slate-800 bg-slate-50/50 border border-transparent rounded-lg px-3 py-2">
+                        <p className="text-sm font-bold text-white/80 bg-white/5 border border-white/5 rounded-lg px-3 py-2">
                           {item.value}
                         </p>
                       ) : (
@@ -333,10 +333,10 @@ export default function SettingsPage() {
               </div>
             ))}
 
-            <div className="premium-card bg-slate-900 p-8 rounded-[32px] border border-white/5 shadow-xl relative overflow-hidden group">
+            <div className="jetted-glass bg-[#0a0a0a]/60 p-8 rounded-[32px] border border-white/5 shadow-2xl relative overflow-hidden group">
               <div 
-                className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] blur-[80px] rounded-full transition-all duration-500" 
-                style={{ backgroundColor: `${themeColor}40` }}
+                className="absolute top-[-20%] right-[-10%] w-[50%] h-[50%] blur-[80px] rounded-full transition-all duration-500 opacity-20" 
+                style={{ backgroundColor: themeColor }}
               />
               <div className="relative z-10 h-full flex flex-col justify-between">
                 <div className="flex items-center gap-3 mb-6">
@@ -346,7 +346,7 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-black text-white uppercase tracking-widest">Aparência do Card</h3>
                 </div>
                 <div className="mt-auto">
-                  <p className="text-sm font-bold text-slate-400 mb-4">Escolha a cor que vai diferenciar suas tarefas para toda a equipe.</p>
+                  <p className="text-sm font-bold text-slate-400 mb-4 tracking-tight">Escolha a cor que diferencia suas tarefas para toda a equipe.</p>
                   <div className="flex flex-wrap gap-3">
                     {[
                       '#7c3aed', // Roxo (Padrão Organizador)
@@ -380,14 +380,14 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="premium-card bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
+          <div className="jetted-glass bg-[#0a0a0a]/60 p-8 rounded-[32px] border border-white/5 shadow-2xl">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600">
+                <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400">
                   <Sun size={20} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-[#17112E] uppercase tracking-widest">Resumo Matinal IA</h3>
+                  <h3 className="text-sm font-black text-white uppercase tracking-widest">Resumo Matinal IA</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receba seu dia no WhatsApp</p>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function SettingsPage() {
                               showFeedback('error', 'Erro ao atualizar horário.')
                             }
                           }}
-                          className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-lg font-black text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                          className="dark-neo-recessed bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-lg font-black text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/40 transition-all"
                         />
                       </div>
                       
@@ -475,15 +475,15 @@ export default function SettingsPage() {
                     </button>
                   )}
                   
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-50">
-                    <p className="text-xs font-bold text-slate-500 leading-tight">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-white/5">
+                    <p className="text-xs font-bold text-slate-500 leading-tight tracking-tight">
                       Enviaremos resumos motivadores com suas tarefas nestes horários. <br/> Você pode configurar até 3 resumos diários.
                     </p>
                     
                     <button
                       onClick={handleTriggerSummary}
                       disabled={isTriggering}
-                      className="flex items-center justify-center gap-2 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all"
+                      className="flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 disabled:opacity-50 text-indigo-400 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl transition-all border border-indigo-500/20"
                     >
                       {isTriggering ? (
                         <>
@@ -503,17 +503,17 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="premium-card bg-[#8E44AD]/5 p-6 rounded-[24px] border border-[#8E44AD]/15 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="jetted-glass bg-purple-600/5 p-6 rounded-[24px] border border-purple-600/20 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 rounded-xl bg-[#8E44AD] text-white shadow-lg shadow-[#8E44AD]/20">
+              <div className="p-2.5 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-600/20">
                 <Bell size={20} />
               </div>
               <div>
-                <p className="text-sm font-black text-[#17112E] uppercase tracking-wide">Notificações</p>
-                <p className="text-xs font-bold text-slate-500">O sistema enviará alertas para novas tarefas e prazos.</p>
+                <p className="text-sm font-black text-white uppercase tracking-wide">Notificações</p>
+                <p className="text-xs font-bold text-slate-500 tracking-tight">O sistema enviará alertas para novas tarefas e prazos.</p>
               </div>
             </div>
-            <button className="bg-white border border-slate-200 text-[10px] font-black uppercase tracking-widest text-[#8E44AD] hover:bg-slate-50 px-6 py-2.5 rounded-xl transition-all shadow-sm">
+            <button className="bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-purple-400 hover:bg-white/10 px-6 py-2.5 rounded-xl transition-all shadow-sm">
               Gerenciar
             </button>
           </div>

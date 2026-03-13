@@ -136,8 +136,6 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
 
       <XPBar />
 
-      <XPBar />
-
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 custom-scrollbar">
         {navItems.map((item) => {
           const isActive = currentView === item.key;
