@@ -322,8 +322,8 @@ export default function Dashboard({ onSignOut }) {
                 />
               ) : null;
             })()}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex flex-col gap-4">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-12">
                 <div className="flex items-center gap-4">
                   {/* Mobile Menu Button */}
                   <button 
@@ -338,7 +338,9 @@ export default function Dashboard({ onSignOut }) {
                   </h1>
                 </div>
                 
-                <XPBar layout="compact" />
+                <div className="flex items-center">
+                  <XPBar layout="compact" />
+                </div>
               </div>
 
               <div className="flex items-center gap-4 ml-auto">

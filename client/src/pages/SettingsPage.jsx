@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { Search, Bell, Shield, Paintbrush, Sun, Clock, History, Cpu, Globe, Users, CheckCircle, 

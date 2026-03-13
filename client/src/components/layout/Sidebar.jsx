@@ -158,23 +158,23 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
         })}
       </nav>
 
-      <div className="mt-auto border-t border-white/5 p-4 flex items-center justify-between gap-2">
+      <div className="mt-auto border-t border-white/5 p-4 flex flex-col lg:flex-row items-center justify-between gap-2 overflow-hidden">
         <button
           onClick={() => onViewChange('settings')}
-          className="flex flex-1 items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:bg-white/5 group border border-transparent hover:border-white/5 overflow-hidden"
+          className="flex flex-1 items-center gap-3 px-3 py-3 rounded-2xl transition-all hover:bg-white/5 group border border-transparent hover:border-white/5 w-full lg:w-auto"
           title="Configurações"
         >
           <div className="h-10 w-10 rounded-xl bg-purple-600/10 flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-600 group-hover:border-purple-500 transition-all flex-shrink-0 shadow-lg shadow-purple-900/20">
              <Settings size={20} className="text-purple-400 group-hover:text-white transition-colors" />
           </div>
           <div className="flex-1 min-w-0 text-left md:hidden lg:block">
-            <p className="text-xs font-black text-white truncate group-hover:text-purple-400 transition-colors uppercase tracking-widest">{user?.profile?.full_name || 'Usuário'}</p>
+            <p className="text-[10px] font-black text-white truncate group-hover:text-purple-400 transition-colors uppercase tracking-widest">{user?.profile?.full_name || 'Usuário'}</p>
           </div>
         </button>
 
         <button
           onClick={onSignOut}
-          className="h-12 w-12 flex items-center justify-center rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90 border border-transparent hover:border-red-500/20"
+          className="h-12 w-full lg:w-12 flex items-center justify-center rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90 border border-transparent hover:border-red-500/20"
           title="Sair"
         >
           <Power size={20} />
