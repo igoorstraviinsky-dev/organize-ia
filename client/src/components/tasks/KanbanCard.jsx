@@ -4,10 +4,10 @@ import { useUpdateTask } from '../../hooks/useTasks'
 import TaskDetailModal from './TaskDetailModal'
 
 const PRIORITY_CONFIG = {
-  1: { border: 'border-l-red-500', bg: 'bg-red-50', shadow: 'shadow-red-500/10', badge: 'bg-red-100 text-red-600', label: 'Urgente' },
-  2: { border: 'border-l-orange-400', bg: 'bg-orange-50', shadow: 'shadow-orange-500/10', badge: 'bg-orange-100 text-orange-600', label: 'Alta' },
-  3: { border: 'border-l-blue-400', bg: 'bg-blue-50', shadow: 'shadow-blue-500/10', badge: 'bg-blue-100 text-blue-600', label: 'Média' },
-  4: { border: 'border-l-slate-200', bg: 'bg-white', shadow: 'shadow-slate-200/50', badge: 'bg-slate-100 text-slate-500', label: 'Normal' },
+  1: { border: 'border-l-red-500', bg: 'bg-red-500/5', shadow: 'shadow-red-500/10', badge: 'bg-red-500/10 text-red-500 border border-red-500/20', label: 'Urgente' },
+  2: { border: 'border-l-orange-400', bg: 'bg-orange-500/5', shadow: 'shadow-orange-500/10', badge: 'bg-orange-500/10 text-orange-400 border border-orange-500/20', label: 'Alta' },
+  3: { border: 'border-l-blue-400', bg: 'bg-blue-500/5', shadow: 'shadow-blue-500/10', badge: 'bg-blue-500/10 text-blue-400 border border-blue-500/20', label: 'Média' },
+  4: { border: 'border-l-white/10', bg: 'bg-white/5', shadow: 'shadow-black/50', badge: 'bg-white/5 text-slate-500 border border-white/5', label: 'Normal' },
 }
 
 function formatDate(dateStr) {
@@ -16,12 +16,12 @@ function formatDate(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diff = Math.floor((date - today) / 86400000)
-  if (diff < 0) return { text: 'Atrasada', className: 'text-red-500 bg-red-50 border border-red-100', icon: '🔴' }
-  if (diff === 0) return { text: 'Hoje', className: 'text-brand-purple bg-brand-purple/5 border border-brand-purple/10', icon: '' }
-  if (diff === 1) return { text: 'Amanhã', className: 'text-amber-600 bg-amber-50 border border-amber-100', icon: '' }
+  if (diff < 0) return { text: 'Atrasada', className: 'text-red-500 bg-red-500/10 border border-red-500/20', icon: '🔴' }
+  if (diff === 0) return { text: 'Hoje', className: 'text-purple-400 bg-purple-500/10 border border-purple-500/20', icon: '' }
+  if (diff === 1) return { text: 'Amanhã', className: 'text-amber-500 bg-amber-500/10 border border-amber-500/20', icon: '' }
   return {
     text: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
-    className: 'text-slate-500 bg-slate-50 border border-slate-100',
+    className: 'text-slate-400 bg-white/5 border border-white/5',
     icon: '',
   }
 }
@@ -66,11 +66,11 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
         onContextMenu={handleContextMenu}
         {...dragListeners}
         className={`
-          group relative cursor-grab rounded-2xl border-l-[4px]
-          transition-all duration-300 active:cursor-grabbing overflow-hidden
+          group relative cursor-grab rounded-[24px] border-l-[4px]
+          transition-all duration-300 active:cursor-grabbing overflow-hidden border border-white/5
           ${isDraggingOverlay
-            ? `shadow-2xl ${priorityConfig.shadow} ring-2 ring-brand-purple/20 scale-105 rotate-2`
-            : `border-slate-100 shadow-sm ${priorityConfig.shadow} hover:shadow-md hover:scale-[1.01] hover:border-slate-200`
+            ? `shadow-2xl ${priorityConfig.shadow} ring-2 ring-purple-500/20 scale-105 rotate-2 bg-[#1a1a1a]`
+            : `shadow-xl ${priorityConfig.shadow} hover:shadow-2xl hover:scale-[1.02] hover:border-white/10`
           }
         `}
         style={{
@@ -93,10 +93,10 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
               )}
             </button>
             <p
-              className={`flex-1 text-sm leading-snug font-bold tracking-tight ${
+              className={`flex-1 text-[13px] leading-snug font-black tracking-tight ${
                 isCompleted
-                  ? 'text-slate-400 line-through'
-                  : 'text-slate-800'
+                  ? 'text-slate-600 line-through'
+                  : 'text-white'
               }`}
             >
               {task.title}
@@ -133,14 +133,14 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
           {subtasks.length > 0 && (
             <div className="mt-3 ml-[31px] space-y-2">
               <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-1.5 flex-1 rounded-full bg-white/5 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-brand-purple transition-all duration-500 ease-out"
+                    className="h-full rounded-full bg-purple-600 transition-all duration-500 ease-out shadow-[0_0_10px_rgba(168,85,247,0.4)]"
                     style={{ width: `${(completedSubs / subtasks.length) * 100}%` }}
                   />
                 </div>
-                <span className={`text-[10px] font-extrabold tracking-tight ${
-                  completedSubs === subtasks.length ? 'text-emerald-500' : 'text-slate-400'
+                <span className={`text-[10px] font-black tracking-widest ${
+                  completedSubs === subtasks.length ? 'text-emerald-500' : 'text-slate-600'
                 }`}>
                   {completedSubs}/{subtasks.length}
                 </span>
@@ -210,7 +210,7 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
                   <div 
                     key={asg.user_id}
                     title={asg.profiles?.full_name}
-                    className="h-6 w-6 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center overflow-hidden transition-transform hover:scale-110 shadow-sm"
+                    className="h-6 w-6 rounded-full border border-white/20 bg-black flex items-center justify-center overflow-hidden transition-all hover:scale-125 hover:z-10 shadow-lg shadow-black/50"
                   >
                     {asg.profiles?.avatar_url ? (
                       <img src={asg.profiles.avatar_url} alt={asg.profiles.full_name} className="h-full w-full object-cover" />

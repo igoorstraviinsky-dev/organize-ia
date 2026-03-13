@@ -21,9 +21,9 @@ import KanbanCard from './KanbanCard'
 import TaskForm from './TaskForm'
 
 const STATUS_COLUMNS = [
-  { key: 'pending', label: 'Pendente', gradient: 'bg-slate-100 text-slate-500', iconColor: 'bg-slate-400' },
-  { key: 'in_progress', label: 'Em Progresso', gradient: 'bg-brand-purple/10 text-brand-purple', iconColor: 'bg-brand-purple' },
-  { key: 'completed', label: 'Concluída', gradient: 'bg-emerald-50 text-emerald-600', iconColor: 'bg-emerald-500' },
+  { key: 'pending', label: 'Pendente', gradient: 'bg-slate-500/10 text-slate-400', iconColor: 'bg-slate-500' },
+  { key: 'in_progress', label: 'Em Progresso', gradient: 'bg-purple-500/10 text-purple-400', iconColor: 'bg-purple-500' },
+  { key: 'completed', label: 'Concluída', gradient: 'bg-emerald-500/10 text-emerald-400', iconColor: 'bg-emerald-500' },
 ]
 
 // Prefixo para IDs das colunas — evita conflito com UUIDs de tasks
@@ -52,7 +52,7 @@ function SortableCard({ task }) {
       <div
         ref={setNodeRef}
         style={style}
-        className="rounded-2xl border-2 border-dashed border-brand-purple/20 bg-brand-purple/5 opacity-40"
+        className="rounded-[24px] border-2 border-dashed border-purple-500/20 bg-purple-500/5 opacity-40 h-24"
       >
         <KanbanCard task={task} isPlaceholder />
       </div>
@@ -89,20 +89,20 @@ function DroppableColumn({
   return (
     <div className="flex w-[320px] flex-shrink-0 flex-col">
       {/* Header da coluna */}
-      <div className="mb-5 flex items-center gap-3 px-3">
+      <div className="mb-6 flex items-center gap-4 px-4 py-2 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md">
         <div
-          className={`flex h-6 w-6 items-center justify-center rounded-lg font-bold text-[10px] ${gradient}`}
+          className={`flex h-6 w-6 items-center justify-center rounded-lg font-black text-[10px] shadow-lg ${gradient}`}
         >
           {count}
         </div>
-        <h3 className="text-xs font-extrabold tracking-widest text-slate-800 uppercase">
+        <h3 className="text-[11px] font-black tracking-[0.3em] text-slate-300 uppercase">
           {title}
         </h3>
         <button
           onClick={onAddClick}
-          className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition-all hover:bg-slate-100 hover:text-brand-purple"
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white/10 hover:text-purple-400 active:scale-90"
         >
-          <Plus size={18} strokeWidth={2.5} />
+          <Plus size={18} strokeWidth={3} />
         </button>
       </div>
 
@@ -135,12 +135,12 @@ function DroppableColumn({
         {!isAdding && count === 0 && (
           <button
             onClick={onAddClick}
-            className="group flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-4 py-12 text-sm text-slate-400 transition-all hover:border-brand-purple/30 hover:bg-brand-purple/5 hover:text-brand-purple"
+            className="group flex flex-col items-center justify-center gap-4 rounded-[28px] border-2 border-dashed border-white/5 bg-white/[0.02] px-6 py-16 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 transition-all hover:border-purple-500/30 hover:bg-white/[0.05] hover:text-purple-400 dark-neo-recessed"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-sm border border-slate-100 group-hover:border-brand-purple/20 transition-all">
-              <Plus size={20} className="text-slate-400 group-hover:text-brand-purple" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/5 border border-white/10 group-hover:scale-110 group-hover:border-purple-500/40 transition-all shadow-2xl">
+              <Plus size={24} strokeWidth={3} className="text-slate-500 group-hover:text-purple-500" />
             </div>
-            <span className="font-bold">Adicionar tarefa</span>
+            <span>Adicionar tarefa</span>
           </button>
         )}
       </div>
@@ -321,12 +321,12 @@ export default function KanbanBoard({ projectId }) {
           ))}
 
           <div className="w-[320px] flex-shrink-0">
-            <form onSubmit={handleAddSection} className="px-3 pt-1">
+            <form onSubmit={handleAddSection} className="px-3">
               <input
                 value={newSectionName}
                 onChange={(e) => setNewSectionName(e.target.value)}
                 placeholder="+ Nova seção..."
-                className="w-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-5 py-4 text-xs font-extrabold uppercase tracking-widest text-slate-400 outline-none transition-all placeholder:text-slate-300 focus:border-brand-purple/30 focus:bg-brand-purple/5 focus:text-brand-purple"
+                className="w-full rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-6 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 outline-none transition-all placeholder:text-slate-800 focus:border-purple-500/40 focus:bg-white/5 focus:text-purple-400 dark-neo-recessed"
               />
             </form>
           </div>
