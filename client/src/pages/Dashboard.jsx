@@ -16,6 +16,7 @@ import SettingsPage from './SettingsPage';
 import { motion, AnimatePresence } from 'framer-motion';
 import PomodoroTimer from "../components/focus/PomodoroTimer";
 import AchievementToast from "../components/gamification/AchievementToast";
+import XPBar from "../components/gamification/XPBar";
 
 export default function Dashboard({ onSignOut }) {
   const { view, id } = useParams();
