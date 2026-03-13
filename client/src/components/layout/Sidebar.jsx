@@ -134,7 +134,6 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
         <div className="h-4 w-4 rounded-full bg-green-500 border-2 border-[#0a0a0a] -mt-12 ml-10 shadow-[0_0_10px_rgba(34,197,94,0.4)]" />
       </div>
 
-      <XPBar />
 
       <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 custom-scrollbar">
         {navItems.map((item) => {

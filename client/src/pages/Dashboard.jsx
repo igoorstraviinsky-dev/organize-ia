@@ -127,13 +127,13 @@ export default function Dashboard({ onSignOut }) {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-y-0 right-0 w-80 bg-white shadow-2xl z-50 flex flex-col border-l border-slate-100"
+      className="fixed inset-y-0 right-0 w-80 bg-[#0a0a0a]/95 backdrop-blur-2xl shadow-2xl z-50 flex flex-col border-l border-white/5"
     >
-      <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Meus Projetos</h2>
+      <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
+        <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] italic">Meus Projetos</h2>
         <button 
           onClick={() => setIsProjectsOpen(false)}
-          className="p-2 hover:bg-slate-200 rounded-xl text-slate-400 transition-all"
+          className="p-2 hover:bg-white/5 rounded-xl text-slate-500 hover:text-white transition-all"
         >
           <X size={18} />
         </button>
@@ -152,7 +152,7 @@ export default function Dashboard({ onSignOut }) {
                   setIsProjectsOpen(false);
                 }}
                 className={`w-full group flex items-center justify-between p-3.5 rounded-2xl transition-all ${
-                  isActive ? 'bg-brand-purple/5 border border-brand-purple/10' : 'hover:bg-slate-50'
+                  isActive ? 'bg-purple-600/10 border border-purple-500/20' : 'hover:bg-white/5 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ export default function Dashboard({ onSignOut }) {
                   >
                     <Hash size={14} strokeWidth={3} />
                   </div>
-                  <span className={`text-sm font-bold ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>{project.name}</span>
+                  <span className={`text-sm font-bold ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{project.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {projectTasksCount > 0 && (
@@ -200,22 +200,22 @@ export default function Dashboard({ onSignOut }) {
         })}
 
         {projects.filter(p => p.name !== 'Inbox').length === 0 && (
-          <div className="py-12 text-center">
-            <Folder size={40} className="mx-auto text-slate-200 mb-3" />
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhum projeto ainda</p>
+          <div className="py-20 text-center">
+            <Folder size={40} className="mx-auto text-white/5 mb-4 p-2 rounded-2xl bg-white/5" />
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Nenhum projeto ainda</p>
           </div>
         )}
       </div>
 
-      <div className="p-4 bg-slate-50 border-t border-slate-100">
+      <div className="p-4 bg-black/20 border-t border-white/5">
         {showNewProjectForm ? (
-          <form onSubmit={handleCreateProject} className="space-y-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+          <form onSubmit={handleCreateProject} className="space-y-4 p-5 rounded-2xl bg-white/5 border border-white/10 shadow-2xl backdrop-blur-md">
             <input
               autoFocus
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
               placeholder="Nome do projeto"
-              className="w-full bg-slate-50 border-0 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-brand-purple/20 transition-all font-bold"
+              className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:ring-1 focus:ring-purple-500/30 transition-all font-bold"
             />
             <div className="flex flex-wrap gap-2 justify-center">
               {COLORS.map((c) => (
@@ -232,14 +232,14 @@ export default function Dashboard({ onSignOut }) {
               <button 
                 type="button" 
                 onClick={() => setShowNewProjectForm(false)}
-                className="flex-1 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 transition-all uppercase tracking-widest"
+                className="flex-1 rounded-xl px-4 py-3 text-[10px] font-black text-slate-500 hover:text-white hover:bg-white/5 transition-all uppercase tracking-widest"
               >
                 Cancelar
               </button>
               <button 
                 type="submit"
                 disabled={!newProjectName.trim()}
-                className="flex-1 rounded-xl bg-brand-purple px-4 py-2.5 text-xs font-bold text-white hover:bg-brand-purple/90 transition-all shadow-lg shadow-brand-purple/20 uppercase tracking-widest disabled:opacity-50"
+                className="flex-1 rounded-xl bg-purple-600 px-4 py-3 text-[10px] font-black text-white hover:bg-purple-500 transition-all shadow-lg shadow-purple-600/20 uppercase tracking-widest disabled:opacity-50"
               >
                 Criar
               </button>
@@ -248,9 +248,10 @@ export default function Dashboard({ onSignOut }) {
         ) : (
           <button
             onClick={() => setShowNewProjectForm(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-200 p-4 text-xs font-black text-slate-400 hover:border-brand-purple hover:text-brand-purple transition-all uppercase tracking-[0.15em]"
+            className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 bg-white/5 p-4 text-[10px] font-black text-slate-400 hover:border-purple-500/50 hover:text-purple-400 transition-all uppercase tracking-widest italic overflow-hidden relative group"
           >
-            <Plus size={16} />
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/0 via-purple-600/10 to-purple-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <Plus size={14} strokeWidth={3} />
             Novo Projeto
           </button>
         )}
@@ -332,6 +333,9 @@ export default function Dashboard({ onSignOut }) {
               <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent truncate max-w-[150px] md:max-w-none">
                 {getTitle()}
               </h1>
+              
+              <XPBar layout="compact" />
+
               {(currentView === 'inbox' || currentView === 'project') && (
                 <button
                   onClick={() => setIsProjectsOpen(true)}
