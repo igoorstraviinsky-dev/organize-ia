@@ -90,7 +90,7 @@ check_prerequisites() {
     log_ok "PM2: $(pm2 -v)"
   fi
 
-  # Nginx (para o frontend estático em produção)
+  # Nginx
   if ! command -v nginx &>/dev/null; then
     log_warn "Nginx não encontrado. Instalando..."
     apt-get install -y nginx &>/dev/null
@@ -111,48 +111,49 @@ configure_env() {
 
   ENV_SERVER="$INSTALL_DIR/server/.env"
   ENV_AGENT="$INSTALL_DIR/agent/.env"
+  ENV_CLIENT="$INSTALL_DIR/client/.env"
 
   if [ -f "$ENV_SERVER" ]; then
-    log_ok ".env do server já existe. Mantendo configuração atual."
+    log_ok "server/.env já existe. Mantendo."
   else
     echo -e "\n\e[1;33mPreencha as credenciais do Supabase e OpenAI:\e[0m"
     read -rp "  SUPABASE_URL: " SUPABASE_URL
     read -rp "  SUPABASE_SERVICE_KEY: " SUPABASE_SERVICE_KEY
+    read -rp "  SUPABASE_ANON_KEY: " SUPABASE_ANON_KEY
     read -rp "  OPENAI_API_KEY: " OPENAI_API_KEY
-    read -rp "  OPENAI_MODEL [gpt-4o]: " OPENAI_MODEL
-    OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
-
+    read -rp "  VITE_SERVER_URL [http://seu-ip]: " VITE_SERVER_URL
+    
     cat > "$ENV_SERVER" <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 
 OPENAI_API_KEY=$OPENAI_API_KEY
-OPENAI_MODEL=$OPENAI_MODEL
-
-WHATSAPP_TOKEN=your-whatsapp-access-token
-WHATSAPP_VERIFY_TOKEN=your-custom-verify-token
-WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+OPENAI_MODEL=gpt-4o
 
 PORT=3001
 EOF
     log_ok "server/.env criado."
   fi
 
-  if [ -f "$ENV_AGENT" ]; then
-    log_ok ".env do agente já existe. Mantendo configuração atual."
-  else
-    # Copia as credenciais do server para o agente
+  if [ ! -f "$ENV_CLIENT" ]; then
+    cat > "$ENV_CLIENT" <<EOF
+VITE_SUPABASE_URL=$SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+VITE_SERVER_URL=$VITE_SERVER_URL
+EOF
+    log_ok "client/.env criado."
+  fi
+
+  if [ ! -f "$ENV_AGENT" ]; then
     cp "$ENV_SERVER" "$ENV_AGENT"
-    echo "" >> "$ENV_AGENT"
     cat >> "$ENV_AGENT" <<EOF
 
 # Agente
 AGENT_PORT=8005
 WEBHOOK_SECRET=organizador_webhook_secret_2024
-
-# WazAPI (WhatsApp)
 WAZAPI_URL=http://localhost:5000
-WAZAPI_TOKEN=seu_token_aqui
+WAZAPI_TOKEN=seu_token
 WAZAPI_INSTANCE=organizador
 EOF
     log_ok "agent/.env criado."
@@ -161,197 +162,137 @@ EOF
 }
 
 # ──────────────────────────────────────────────
-# INSTALAÇÃO COMPLETA (PRIMEIRA VEZ)
+# INSTALAÇÃO COMPLETA
 # ──────────────────────────────────────────────
 run_install() {
-  local TOTAL=7
-
+  local TOTAL=8
   stravinsky_animation
   echo -e "\e[1;32m  MODO: INSTALAÇÃO COMPLETA\e[0m"
   echo "--------------------------------------------------------------------------------"
-  echo ""
-
+  
   check_prerequisites
 
-  # 1. Clone do repositório
-  log_step 1 $TOTAL "📥 Clonando repositório do GitHub..."
+  log_step 1 $TOTAL "📥 Clonando repositório..."
   if [ -d "$INSTALL_DIR/.git" ]; then
-    log_warn "Pasta $INSTALL_DIR já tem um repositório. Pulando clone."
+    log_warn "Diretório já existe. Pulando clone."
   else
-    git clone -b "$BRANCH" "$REPO_URL" "$INSTALL_DIR"
-    log_ok "Repositório clonado em $INSTALL_DIR"
+    git clone -b "$BRANCH" "$REPO_URL" "$INSTALL_DIR" || log_fail "Erro ao clonar."
   fi
 
-  # 2. Configurar .env
-  log_step 2 $TOTAL "🔑 Configurando variáveis de ambiente..."
+  log_step 2 $TOTAL "🔑 Configurando .env..."
   configure_env
 
-  # 3. Instalar dependências do Backend (Node.js)
-  log_step 3 $TOTAL "🧠 Instalando dependências do Backend (Node.js)..."
-  cd "$INSTALL_DIR/server" && npm install --silent
-  log_ok "Dependências do server instaladas."
+  log_step 3 $TOTAL "🧠 Buildando Backend..."
+  cd "$INSTALL_DIR/server" || exit
+  npm install && npm run build
+  log_ok "Backend pronto."
 
-  # 4. Build + Instalar dependências do Frontend (React)
-  log_step 4 $TOTAL "🎨 Buildando Frontend (React/Vite)..."
-  cd "$INSTALL_DIR/client" && npm install --silent && npm run build
-  log_ok "Frontend buildado com sucesso."
+  log_step 4 $TOTAL "🎨 Buildando Frontend..."
+  cd "$INSTALL_DIR/client" || exit
+  npm install && npm run build
+  log_ok "Frontend pronto."
 
-  # 5. Configurar ambiente Python virtual + Dependências
   log_step 5 $TOTAL "🤖 Configurando Agente Python..."
-  cd "$INSTALL_DIR/agent"
+  cd "$INSTALL_DIR/agent" || exit
   python3 -m venv venv
   source venv/bin/activate
-  pip install --upgrade pip --quiet
-  pip install -r requirements.txt --quiet
+  pip install --upgrade pip
+  pip install -r requirements.txt
   deactivate
-  log_ok "Agente Python configurado."
+  log_ok "Agente pronto."
 
-  # 6. Configurar Nginx (servir o client buildado)
-  log_step 6 $TOTAL "🌐 Configurando Nginx para o frontend..."
-  cat > /etc/nginx/sites-available/organizador <<'NGINXCONF'
+  log_step 6 $TOTAL "⚙️  Configurando PM2..."
+  # Garantir logs e ecosystem
+  mkdir -p "$INSTALL_DIR/logs"
+  # O ecosystem.config.js deve vir do git, se não existir criamos um básico
+  if [ ! -f "$INSTALL_DIR/ecosystem.config.js" ]; then
+    cat > "$INSTALL_DIR/ecosystem.config.js" <<EOF
+module.exports = {
+  apps: [
+    { name: 'server', cwd: './server', script: 'dist/index.js', env: { NODE_ENV: 'production' } },
+    { name: 'agent', cwd: './agent', script: 'main.py', interpreter: './venv/bin/python3' }
+  ]
+}
+EOF
+  fi
+
+  log_step 7 $TOTAL "🌐 Configurando Nginx..."
+  cat > /etc/nginx/sites-available/organizador <<EOF
 server {
     listen 80;
     server_name _;
-
-    root /var/www/organizador/client/dist;
+    root $INSTALL_DIR/client/dist;
     index index.html;
 
-    # API Backend
     location /api/ {
         proxy_pass http://localhost:3001;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
     }
 
-    # Agente Python
-    location /agent/ {
-        proxy_pass http://localhost:8005;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-    }
-
-    # SPA fallback
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
 }
-NGINXCONF
-
-  # Ativar site e reiniciar Nginx
+EOF
   ln -sf /etc/nginx/sites-available/organizador /etc/nginx/sites-enabled/organizador
   rm -f /etc/nginx/sites-enabled/default
-  nginx -t && systemctl reload nginx
-  log_ok "Nginx configurado e recarregado."
+  systemctl restart nginx
 
-  # 7. Iniciar processos com PM2
-  log_step 7 $TOTAL "🚀 Iniciando serviços com PM2..."
+  log_step 8 $TOTAL "🚀 Iniciando PM2..."
   cd "$INSTALL_DIR"
   pm2 startOrRestart ecosystem.config.js --env production
-  pm2 save --force
-  pm2 startup | tail -1 | bash 2>/dev/null || true
-  log_ok "Serviços iniciados no PM2."
-
-  stravinsky_animation
-  echo -e "\e[1;32m  ✅ INSTALAÇÃO COMPLETA COM SUCESSO!\e[0m"
-  echo "--------------------------------------------------------------------------------"
-  echo -e "  📦 Projeto instalado em: \e[1;36m$INSTALL_DIR\e[0m"
-  echo -e "  🌍 Acesse pelo IP do servidor na porta 80"
-  echo -e "  📊 Status dos processos:"
-  echo ""
-  pm2 list
+  pm2 save
+  log_ok "SISTEMA ONLINE!"
 }
 
 # ──────────────────────────────────────────────
-# ATUALIZAÇÃO (CÓDIGO JÁ INSTALADO)
+# ATUALIZAÇÃO
 # ──────────────────────────────────────────────
 run_update() {
   local TOTAL=5
-
   stravinsky_animation
   echo -e "\e[1;33m  MODO: ATUALIZAÇÃO\e[0m"
-  echo "--------------------------------------------------------------------------------"
-  echo ""
 
-  # 1. Puxar código mais novo do GitHub
-  log_step 1 $TOTAL "📥 Puxando novidades do GitHub (branch: $BRANCH)..."
+  log_step 1 $TOTAL "📥 Atualizando código..."
   cd "$INSTALL_DIR"
   git fetch origin
   git reset --hard origin/$BRANCH
-  log_ok "Código atualizado para o último commit."
 
-  # 2. Preservar .env (nunca sobrescreve — estão no .gitignore)
-  log_step 2 $TOTAL "🔑 Verificando arquivos de ambiente..."
-  if [ -f "$INSTALL_DIR/server/.env" ]; then
-    log_ok "server/.env preservado."
-  else
-    log_warn "server/.env não encontrado! Crie manualmente antes de reiniciar."
-  fi
-  if [ -f "$INSTALL_DIR/agent/.env" ]; then
-    log_ok "agent/.env preservado."
-  else
-    log_warn "agent/.env não encontrado! Crie manualmente antes de reiniciar."
-  fi
+  log_step 2 $TOTAL "🧠 Atualizando Server..."
+  cd "$INSTALL_DIR/server"
+  npm install && npm run build
 
-  # 3. Reinstalar dependências e rebuildar
-  log_step 3 $TOTAL "🧠 Atualizando dependências e buildando..."
-  cd "$INSTALL_DIR/server" && npm install --silent && log_ok "Backend: dependências atualizadas."
-  cd "$INSTALL_DIR/client" && npm install --silent && npm run build && log_ok "Frontend: build gerado."
+  log_step 3 $TOTAL "🎨 Atualizando Frontend..."
+  cd "$INSTALL_DIR/client"
+  npm install && npm run build
 
-  # 4. Atualizar dependências Python
-  log_step 4 $TOTAL "🤖 Atualizando dependências do Agente Python..."
+  log_step 4 $TOTAL "🤖 Atualizando Agente..."
   cd "$INSTALL_DIR/agent"
   source venv/bin/activate
-  pip install --upgrade pip --quiet
-  pip install -r requirements.txt --quiet
+  pip install -r requirements.txt
   deactivate
-  log_ok "Agente Python: dependências atualizadas."
 
-  # 5. Reiniciar tudo com PM2 injetando novos .env
-  log_step 5 $TOTAL "🔄 Reiniciando serviços e limpando logs..."
+  log_step 5 $TOTAL "🔄 Reiniciando..."
   cd "$INSTALL_DIR"
   pm2 restart all --update-env
-  pm2 flush
-  pm2 save --force
-  log_ok "Serviços reiniciados com êxito."
-
-  stravinsky_animation
-  echo -e "\e[1;32m  ✅ SISTEMA ATUALIZADO E RODANDO LIMPO!\e[0m"
-  echo "--------------------------------------------------------------------------------"
-  pm2 list
+  log_ok "ATUALIZADO!"
 }
 
 # ──────────────────────────────────────────────
-# MENU PRINCIPAL
+# MENU
 # ──────────────────────────────────────────────
 stravinsky_animation
-
-echo -e "\e[1;37m  Bem-vindo ao Stravinsky Deploy System!\e[0m"
-echo -e "  Projeto: \e[1;36mOrganize IA\e[0m  |  Branch: \e[1;36m$BRANCH\e[0m"
-echo ""
-echo -e "  O que você deseja fazer?"
-echo ""
-echo -e "  \e[1;32m[1]\e[0m Instalação completa \e[2m(primeira vez no servidor)\e[0m"
-echo -e "  \e[1;33m[2]\e[0m Atualização \e[2m(puxar novidades do GitHub e reiniciar)\e[0m"
-echo -e "  \e[1;31m[0]\e[0m Sair"
-echo ""
-read -rp "  ➜ Sua escolha: " CHOICE
+echo -e "  [1] Instalação Completa"
+echo -e "  [2] Atualização Rápida"
+echo -e "  [0] Sair"
+read -rp "  ➜: " CHOICE
 
 case "$CHOICE" in
-  1)
-    run_install
-    ;;
-  2)
-    run_update
-    ;;
-  0)
-    echo -e "\n\e[1;33m  Saindo...\e[0m\n"
-    exit 0
-    ;;
-  *)
-    echo -e "\n\e[1;31m  Opção inválida. Execute novamente e escolha 1 ou 2.\e[0m\n"
-    exit 1
-    ;;
+  1) run_install ;;
+  2) run_update ;;
+  *) exit 0 ;;
 esac

@@ -1,10 +1,12 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.0.0 -> 1.1.0
-- Modified Principles: Principle III (Premium Visual Identity) updated to mandate theme_color consistency.
-- Added Sections: Principle VI (Centralized Navigation Paradigm) added to codify the "Inbox Focus" and "Panel de Projetos Superior" UI patterns.
+- Version Change: 1.1.0 -> 2.0.0
+- Modified Principles: 
+    - Added Principle VII (Type-Safe Architecture) mandating TypeScript, Strict Mode, and no 'any'.
+    - Updated Stack Tecnológica to reflect TypeScript mandatory status across all modules (server, agent, client).
+- Added Sections: Principle VII (Type-Safe Architecture).
 - Removed Sections: None.
-- Templates requiring updates: ✅ None needed. Generic constitution checks in templates remain valid.
+- Templates requiring updates: ✅ Generic constitution checks in templates remain valid.
 - Follow-up TODOs: None.
 -->
 # Organizador Constitution
@@ -35,12 +37,16 @@ A unidade fundamental do sistema é a Tarefa. Cada tarefa deve possuir estados c
 
 A navegação web principal baseia-se num modelo de Dashboard centralizado focado no Inbox (Tarefas Gerais ou visualização Global). Acessos a projetos ou outras ramificações complexas DEVEM ocorrer por meio de componentes de interface sobrepostos ou secundários (ex: Drawer lateral/pop-overs), garantindo que a tela central seja sempre focada na ação (o que está solto ou agendado para o momento atual).
 
+### VII. Type-Safe Architecture (TypeScript First)
+
+O uso de TypeScript é OBRIGATÓRIO em todos os módulos (server, agent, client). Deve-se adotar o 'Strict Mode' e evitar o uso de `any`, priorizando definições de tipos e interfaces baseadas nos esquemas do Supabase. A 'blindagem de usuários' e o 'isolamento RLS' devem ser reforçados por tipagem forte para garantir a segurança e prevenir regressões.
+
 ## Tecnologias e Padrões
 
 ### Stack Tecnológica
 
-- **Frontend**: Next.js (React), React Native (Expo), Lucide Icons, Vanilla CSS (Glassmorphism), framer-motion (Animações de UI).
-- **Backend/API**: Node.js (Express), Python (Agentes AI), OpenAI API, UazAPI (WhatsApp).
+- **Frontend**: Next.js (TypeScript), React Native (Expo/TypeScript), Lucide Icons, Vanilla CSS (Glassmorphism), framer-motion (Animações de UI).
+- **Backend/API**: Node.js (Express/TypeScript), Python (Agentes AI com tipagem estrita), OpenAI API, UazAPI (WhatsApp).
 - **Database**: Supabase (PostgreSQL, RLS, Auth).
 - **Automação**: n8n (Workflow Orchestration).
 
@@ -51,9 +57,10 @@ A navegação web principal baseia-se num modelo de Dashboard centralizado focad
 - Alterações em RLS devem ser testadas contra múltiplos perfis (Admin e Colaborador).
 - Novas funcionalidades DEVEM ser acompanhadas de documentação evolutiva (ex: atualização sistemática do `conversaia.md` e geração de walkthroughs).
 - Commits devem ser descritivos e seguir o padrão de conventional commits.
+- **Dívida Técnica**: Migrações de JS para TS são prioridade máxima para estabilidade e segurança.
 
 ## Governance
 
 Esta constituição prevalece sobre práticas ad-hoc. Mudanças estruturais exigem atualização deste documento e revisão de todos os artefatos de especificação e tarefas afetados.
 
-**Version**: 1.1.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-11
+**Version**: 2.0.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-13

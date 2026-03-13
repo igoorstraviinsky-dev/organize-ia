@@ -1,0 +1,471 @@
+import type { ChatCompletionTool } from 'openai/resources/chat/completions.js';
+
+/**
+ * Definição das tools para OpenAI Function Calling.
+ * Fortemente tipado como ChatCompletionTool[] para garantir
+ * compatibilidade com a API da OpenAI.
+ */
+export const tools: ChatCompletionTool[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_task',
+      description:
+        'Cria uma nova tarefa no sistema de gerenciamento. Use quando o usuário quiser adicionar uma tarefa, item, atividade ou lembrete.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Título da tarefa. Ex: "Comprar café", "Revisar relatório"',
+          },
+          description: {
+            type: 'string',
+            description: 'Descrição detalhada da tarefa (opcional)',
+          },
+          due_date: {
+            type: 'string',
+            description:
+              'Data de vencimento no formato YYYY-MM-DD. Assuma sempre o Fuso Horário de Brasília (UTC-3) para interpretar e preencher as datas.',
+          },
+          due_time: {
+            type: 'string',
+            description:
+              'Hora de vencimento no formato HH:MM (24h). Ex: "18:00", "09:30". Assuma sempre UTC-3 (Horário de Brasília).',
+          },
+          priority: {
+            type: 'integer',
+            enum: [1, 2, 3, 4],
+            description: 'Prioridade: 1=urgente, 2=alta, 3=média, 4=normal (padrão)',
+          },
+          project_name: {
+            type: 'string',
+            description:
+              'Nome do projeto onde a tarefa será criada. Se não especificado, vai para o Inbox.',
+          },
+          section_name: {
+            type: 'string',
+            description:
+              'Nome da seção dentro do projeto. Se não existir, será criada automaticamente.',
+          },
+          parent_task_id: {
+            type: 'string',
+            description:
+              'ID UUID da tarefa pai para criar como subtarefa. Use search_tasks ou list_tasks primeiro para obter o ID.',
+          },
+          labels: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Lista de nomes de etiquetas/labels para associar à tarefa. Labels inexistentes serão criadas.',
+          },
+          assigned_user_identifier: {
+            type: 'string',
+            description: 'Nome ou e-mail do colaborador para atribuir na hora da criação',
+          },
+        },
+        required: ['title'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'edit_task',
+      description:
+        'Edita os campos de uma tarefa existente. Use quando o usuário quiser alterar título, descrição, data, hora, prioridade, projeto ou etiquetas de uma tarefa.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            description:
+              'ID da tarefa (UUID). Use search_tasks ou list_tasks para encontrar o ID pelo título.',
+          },
+          title: { type: 'string', description: 'Novo título da tarefa (opcional)' },
+          description: { type: 'string', description: 'Nova descrição da tarefa (opcional)' },
+          due_date: {
+            type: 'string',
+            description: 'Nova data de vencimento no formato YYYY-MM-DD (opcional)',
+          },
+          due_time: {
+            type: 'string',
+            description: 'Novo horário de vencimento no formato HH:MM (opcional)',
+          },
+          priority: {
+            type: 'integer',
+            enum: [1, 2, 3, 4],
+            description: 'Nova prioridade: 1=urgente, 2=alta, 3=média, 4=normal (opcional)',
+          },
+          project_name: { type: 'string', description: 'Mover tarefa para outro projeto (opcional)' },
+          section_name: { type: 'string', description: 'Mover tarefa para outra seção (opcional)' },
+          labels: {
+            type: 'array',
+            items: { type: 'string' },
+            description:
+              'Substituir todas as etiquetas da tarefa por estas (opcional). Passar array vazio [] para remover todas.',
+          },
+        },
+        required: ['task_id'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_task',
+      description:
+        'Deleta permanentemente uma tarefa. Aceita o UUID ou o título da tarefa — se passar o título, o sistema resolve o ID automaticamente. Use somente quando o usuário confirmar que quer apagar/deletar/excluir a tarefa.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            description:
+              'ID da tarefa (UUID). Prefira passar o UUID. Se não souber o UUID, pode passar o título e o sistema localiza.',
+          },
+          task_title: {
+            type: 'string',
+            description: 'Título/nome da tarefa. Usado como fallback quando o task_id não for um UUID válido.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_project',
+      description:
+        'Deleta permanentemente um projeto e todas as suas tarefas. NÃO pode deletar o projeto "Inbox". Use somente quando o usuário confirmar explicitamente que quer apagar o projeto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: { type: 'string', description: 'Nome exato do projeto a ser deletado' },
+        },
+        required: ['project_name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_all_user_tasks',
+      description:
+        "Apaga TODAS as tarefas criadas pelo usuário. Use somente quando o usuário disser explicitamente 'apague tudo', 'limpe todas as tarefas' ou similar. Requer confirm: true.",
+      parameters: {
+        type: 'object',
+        properties: {
+          confirm: {
+            type: 'boolean',
+            description: 'Deve ser true para confirmar a operação de limpeza total.',
+          },
+        },
+        required: ['confirm'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'create_project',
+      description: 'Cria um novo projeto no Organizador.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nome do projeto a ser criado.' },
+          description: { type: 'string', description: 'Descrição opcional do projeto.' },
+          assigned_user_identifier: {
+            type: 'string',
+            description: 'Nome ou e-mail do colaborador para atribuir na hora da criação',
+          },
+        },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_tasks',
+      description:
+        'Busca tarefas por texto no título ou descrição. Use para verificar se uma tarefa já existe antes de criá-la ou para encontrar o ID de uma tarefa específica.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Texto para buscar no título ou descrição da tarefa' },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_projects',
+      description:
+        'Busca projetos pelo nome. USE SEMPRE antes de sugerir criar um novo projeto para evitar duplicatas.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nome do projeto para buscar' },
+        },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'search_labels',
+      description:
+        'Busca etiquetas/labels pelo nome. USE SEMPRE antes de sugerir criar uma nova etiqueta para evitar duplicatas.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nome da etiqueta para buscar' },
+        },
+        required: ['name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_labels',
+      description:
+        'Lista todas as etiquetas/labels cadastradas do usuário. Use para conhecer as opções de filtragem disponíveis.',
+      parameters: { type: 'object', properties: {} },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'assign_task',
+      description:
+        'Atribui uma tarefa a um usuário pelo nome ou email. Use quando o usuário quiser delegar ou atribuir uma tarefa a alguém.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: { type: 'string', description: 'ID da tarefa (UUID)' },
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário que receberá a tarefa. Ex: "Rafael", "rafael@gmail.com"',
+          },
+        },
+        required: ['task_id', 'user_identifier'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remove_project_member',
+      description:
+        'Remove um colaborador de um projeto. Use quando o usuário quiser remover, retirar ou desatribuir alguém de um projeto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: { type: 'string', description: 'Nome do projeto' },
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário a ser removido. Ex: "Rafael", "rafael@gmail.com"',
+          },
+        },
+        required: ['project_name', 'user_identifier'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'assign_project_member',
+      description:
+        'Adiciona um colaborador a um projeto. Use quando o usuário quiser convidar ou atribuir alguém a um projeto inteiro.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: { type: 'string', description: 'Nome do projeto' },
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário a ser adicionado. Ex: "Rafael", "rafael@gmail.com"',
+          },
+          role: {
+            type: 'string',
+            enum: ['admin', 'member'],
+            description: 'Papel do usuário no projeto (padrão: member)',
+          },
+        },
+        required: ['project_name', 'user_identifier'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_tasks',
+      description:
+        'Lista tarefas com filtros específicos por projeto, etiqueta ou e-mail (Visão Micro). Use para detalhar o conteúdo de um projeto ou buscar tarefas pendentes.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: { type: 'string', description: 'Filtrar por nome do projeto.' },
+          label_name: { type: 'string', description: 'Filtrar por nome da etiqueta.' },
+          user_email: {
+            type: 'string',
+            description: 'Opcional: Filtrar por e-mail do usuário (apenas para Admins).',
+          },
+          filter: {
+            type: 'string',
+            enum: ['all', 'pending', 'completed', 'today', 'overdue'],
+            description: 'Filtro de status ou data.',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'send_message',
+      description:
+        'Envia uma mensagem WhatsApp para um usuário do sistema pelo nome ou email. Use quando o usuário quiser mandar, enviar ou encaminhar uma mensagem para alguém da equipe.',
+      parameters: {
+        type: 'object',
+        properties: {
+          user_identifier: {
+            type: 'string',
+            description: 'Nome ou Email do usuário que receberá a mensagem. Ex: "Diego", "diego@naprata.com"',
+          },
+          message: { type: 'string', description: 'Texto da mensagem a ser enviada' },
+        },
+        required: ['user_identifier', 'message'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_status',
+      description:
+        'Atualiza o status de uma tarefa ou subtarefa. Aceita termos naturais como "em progresso", "concluída", "pendente". Use para mover cards entre colunas ou finalizar itens.',
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            description:
+              'ID da tarefa (UUID). Se o usuário mencionou o título, use search_tasks primeiro para encontrar o ID.',
+          },
+          status: {
+            type: 'string',
+            description: 'Novo status. Exemplos: "pending", "in_progress", "completed", "cancelled".',
+          },
+        },
+        required: ['task_id', 'status'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'list_projects',
+      description:
+        'Recupera a lista de projetos vinculados ao usuário logado, junto de suas respectivas tarefas (Visão Macro e Dashboard).',
+      parameters: {
+        type: 'object',
+        properties: {
+          target_user: {
+            type: 'string',
+            description:
+              'Opcional. Nome ou e-mail de um usuário específico para buscar projetos (apenas permitido para Admins).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'edit_project',
+      description:
+        'Edita nome, descrição ou tema visual (gradiente de cor) de um projeto existente. Use quando o usuário quiser personalizar, renomear ou mudar a cor/tema de um projeto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          project_name: { type: 'string', description: 'Nome atual do projeto a ser editado.' },
+          new_name: { type: 'string', description: 'Novo nome do projeto (opcional).' },
+          description: { type: 'string', description: 'Nova descrição do projeto (opcional).' },
+          theme_gradient: {
+            type: 'string',
+            description:
+              "Gradiente CSS para o tema visual do projeto. Ex: 'linear-gradient(135deg, #6366f1, #8b5cf6)'.",
+          },
+        },
+        required: ['project_name'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'start_focus_session',
+      description:
+        "Inicia uma sessão de foco (Pomodoro) vinculada a uma tarefa. Use quando o usuário disser 'quero focar', 'iniciar cronômetro' ou similar.",
+      parameters: {
+        type: 'object',
+        properties: {
+          task_id: {
+            type: 'string',
+            description: 'ID da tarefa para a qual focar (opcional). Se não informado, inicia uma sessão geral.',
+          },
+          task_title: {
+            type: 'string',
+            description: 'Título da tarefa (opcional). Caso o ID não esteja disponível.',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'end_focus_session',
+      description:
+        'Encerra a sessão de foco atual. Calcula o tempo decorrido e salva na tarefa/perfil do usuário.',
+      parameters: {
+        type: 'object',
+        properties: {
+          status: {
+            type: 'string',
+            enum: ['completed', 'interrupted'],
+            description: 'Status do encerramento (padrão: completed).',
+          },
+        },
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'update_ai_settings',
+      description:
+        'Atualiza as configurações do Agente de IA, incluindo o resumo matinal (ativar/desativar e horário).',
+      parameters: {
+        type: 'object',
+        properties: {
+          morning_summary_enabled: {
+            type: 'boolean',
+            description: 'Ativar ou desativar o resumo matinal no WhatsApp.',
+          },
+          morning_summary_time: {
+            type: 'string',
+            description: "Horário para envio do resumo no formato HH:MM (24h). Ex: '08:30'.",
+          },
+        },
+      },
+    },
+  },
+];

@@ -98,11 +98,12 @@ _Todas _ as tabelas do projeto (`todoit`) estão com o **RLS HABILITADO (`rls_en
 2.  **Segurança**: O `.gitignore` foi atualizado para **NUNCA** permitir o push de arquivos `.env`. Mantenha as chaves locais e use variáveis de ambiente.
 3.  **CORREÇÃO CRÍTICA (10/03)**: Foi resolvido um erro onde as funções no `executor.js` falhavam por receber o `phoneNumber` no lugar errado do objeto. Isso causava o "apagão" de dados no WhatsApp.
 4.  **Sincronização Python**: O Agente Python (`agent/db.py`) foi atualizado para espelhar a lógica do Node.js, garantindo que tarefas atribuídas e projetos onde o usuário é membro sejam listados corretamente.
+6.  **Migração TypeScript (Fase 1)**: Iniciada a migração obrigatória para TypeScript em todos os módulos. O objetivo é eliminar erros de runtime e fortalecer a segurança via tipagem estrita, especialmente no isolamento RLS e lógica de agentes.
 5.  **Prompt**: Sempre que adicionar uma tabela no banco, atualize o `systemPrompt` no `openai.js` para que o Cérebro saiba que ela existe.
 
 ---
 
-**Última Atualização de Transferência: 10/03/2026 - Status: Estável e Sincronizado.** 🦾🚀
+**Última Atualização de Transferência: 13/03/2026 - Status: Em migração para TypeScript (v2.0.0).** 🦾🚀
 
 ### 🛠️ Correções Críticas Realizadas em Produção (VPS) - 10/03:
 
