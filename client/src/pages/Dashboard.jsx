@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
-import { List, LayoutGrid, Folder, Plus, ChevronRight, Hash, X, Palette } from "lucide-react";
+import { List, LayoutGrid, Folder, Plus, ChevronRight, Hash, X, Palette, Menu } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useProjects, useCreateProject, useUpdateProject } from "../hooks/useProjects";
 import GradientPicker from "../components/projects/GradientPicker";
@@ -32,6 +32,7 @@ export default function Dashboard({ onSignOut }) {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectColor, setNewProjectColor] = useState("#7c3aed");
   const [editingThemeProjectId, setEditingThemeProjectId] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const COLORS = ['#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6366f1'];
 
@@ -266,15 +267,36 @@ export default function Dashboard({ onSignOut }) {
 
       <Sidebar
         currentView={currentView}
-        onViewChange={(newView) => navigate(`/app/${newView}`)}
-        onProjectSelect={(projectId) => navigate(`/app/project/${projectId}`)}
+        onViewChange={(newView) => {
+          navigate(`/app/${newView}`);
+          setIsMobileMenuOpen(false);
+        }}
+        onProjectSelect={(projectId) => {
+          navigate(`/app/project/${projectId}`);
+          setIsMobileMenuOpen(false);
+        }}
         currentProjectId={currentProjectId}
         onSignOut={onSignOut}
         role={user?.profile?.role}
         userId={user?.id}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
-      <main className="flex-1 overflow-hidden p-8 flex flex-col relative">
-        <div className="flex-1 jetted-glass flex flex-col overflow-hidden bg-[#0a0a0a]/40 border-white/5">
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          />
+        )}
+      </AnimatePresence>
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 flex flex-col relative md:pl-24 transition-all duration-700">
+        <div className="flex-1 jetted-glass flex flex-col bg-[#0a0a0a]/40 border-white/5 min-h-[calc(100vh-2rem)] md:min-h-0">
           {/* Banner de tema do projeto ativo - Premium Vibe */}
           {currentView === 'project' && (() => {
             const proj = projects.find(p => p.id === currentProjectId);
@@ -298,8 +320,16 @@ export default function Dashboard({ onSignOut }) {
                 />
               ) : null;
             })()}
-            <div className="flex items-center gap-10">
-              <h1 className="text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+            <div className="flex items-center gap-6 md:gap-10">
+              {/* Mobile Menu Button */}
+              <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="flex items-center justify-center rounded-xl bg-white/5 p-3 text-white transition-all hover:bg-white/10 active:scale-95 md:hidden"
+              >
+                <Menu size={24} />
+              </button>
+
+              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent truncate max-w-[150px] md:max-w-none">
                 {getTitle()}
               </h1>
               {(currentView === 'inbox' || currentView === 'project') && (

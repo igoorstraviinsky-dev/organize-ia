@@ -30,18 +30,19 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10 px-4">
         {/* Browser Chrome Simulation for Context (Optional, but matching UI Presentation) */}
-        <div className="jetted-glass p-12 relative overflow-hidden border-white/5 bg-[#0a0a0a]/80 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
+        <div className="jetted-glass p-8 md:p-12 relative overflow-hidden border-white/5 bg-[#0a0a0a]/80 shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
           {/* Internal gradient shine */}
           <div className="absolute -top-[30%] -right-[30%] w-full h-full bg-purple-500/5 blur-[100px] pointer-events-none" />
           
           <div className="mb-14 text-center relative z-10">
             <div 
-              className="mx-auto mb-10 flex h-24 w-24 items-center justify-center rounded-[28px] shadow-[0_20px_50px_rgba(106,27,154,0.4)] transition-all hover:scale-110 duration-700 group"
+              className="mx-auto mb-10 flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-[24px] md:rounded-[28px] shadow-[0_20px_50px_rgba(106,27,154,0.4)] transition-all hover:scale-110 duration-700 group"
               style={{ background: 'linear-gradient(135deg, #6a1b9a 0%, #7e57c2 100%)' }}
             >
-              <CheckSquare size={48} className="text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] group-hover:rotate-12 transition-transform" strokeWidth={1.5} />
+              <CheckSquare size={40} className="text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] group-hover:rotate-12 transition-transform md:hidden" strokeWidth={1.5} />
+              <CheckSquare size={48} className="hidden md:block text-white drop-shadow-[0_4px_10px_rgba(0,0,0,0.3)] group-hover:rotate-12 transition-transform" strokeWidth={1.5} />
             </div>
-            <h1 className="text-4xl font-black tracking-tighter text-purple-600 uppercase font-display" style={{ textShadow: '0 0 30px rgba(126, 87, 194, 0.3)' }}>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-purple-600 uppercase font-display" style={{ textShadow: '0 0 30px rgba(126, 87, 194, 0.3)' }}>
               Organizador
             </h1>
             <p className="mt-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.4em]">
