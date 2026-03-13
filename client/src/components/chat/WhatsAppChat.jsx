@@ -135,8 +135,8 @@ function MessageBubble({ msg }) {
     <div className={`flex items-end gap-1.5 ${isOut ? 'justify-end' : 'justify-start'}`}>
       <div className={`group relative max-w-[75%] px-4 py-2.5 shadow-sm transition-all hover:shadow-md ${
         isOut
-          ? 'rounded-2xl rounded-tr-sm bg-indigo-600 text-white'
-          : 'rounded-2xl rounded-tl-sm bg-white text-gray-800 ring-1 ring-gray-200 shadow-gray-200/50'
+          ? 'rounded-2xl rounded-tr-sm bg-purple-600 text-white'
+          : 'rounded-2xl rounded-tl-sm bg-[#151515] text-slate-200 border border-white/5 shadow-[8px_8px_16px_rgba(0,0,0,0.5)]'
       }`}>
         {type === 'audio' ? (
           <AudioPlayer src={msg.media_url} isOut={isOut} />
@@ -289,8 +289,8 @@ function ChatInputBar({ phone }) {
   // Preview imagem selecionada
   if (imagePreview) {
     return (
-      <div className="border-t border-gray-100 bg-white/80 backdrop-blur-md px-4 py-3">
-        <div className="flex items-start gap-3 rounded-2xl bg-white p-3 shadow-md shadow-gray-200/50 ring-1 ring-gray-900/5 transition-all">
+      <div className="border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-md px-4 py-3">
+        <div className="flex items-start gap-3 rounded-2xl bg-[#1a1a1a] p-3 shadow-2xl border border-white/10 transition-all">
           <div className="relative flex-shrink-0">
             <img src={imagePreview} alt="preview" className="h-20 w-20 rounded-xl object-cover shadow-sm ring-1 ring-black/5" />
             <button onClick={cancelImage}
@@ -337,16 +337,16 @@ function ChatInputBar({ phone }) {
   }
 
   return (
-    <div className="flex items-end gap-2.5 border-t border-gray-100 bg-white/80 backdrop-blur-md px-4 py-3.5">
+    <div className="flex items-end gap-2.5 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-md px-4 py-3.5">
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
 
       <button type="button" onClick={() => fileInputRef.current?.click()}
-        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-gray-400 bg-gray-50 transition-all hover:bg-gray-100 hover:text-gray-600"
+        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-slate-400 bg-white/5 transition-all hover:bg-white/10 hover:text-white"
         title="Enviar imagem">
         <Paperclip size={20} />
       </button>
 
-      <div className="flex flex-1 items-end rounded-3xl bg-gray-50 ring-1 ring-inset ring-gray-200 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-200 focus-within:shadow-sm">
+      <div className="flex flex-1 items-end rounded-3xl bg-black/40 border border-white/10 transition-all focus-within:border-purple-500/50 focus-within:bg-black/60">
         <textarea
           ref={textareaRef}
           value={text}
@@ -404,14 +404,14 @@ function ConversationItem({ conv, active, onClick }) {
       
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between">
-          <span className={`truncate text-[15px] font-semibold tracking-tight transition-colors ${active ? 'text-indigo-900' : 'text-gray-900 group-hover:text-indigo-600'}`}>
+          <span className={`truncate text-[15px] font-bold tracking-tight transition-colors ${active ? 'text-purple-400' : 'text-slate-200 group-hover:text-purple-400'}`}>
             {name}
           </span>
-          <span className={`ml-2 flex-shrink-0 text-[11px] font-medium ${active ? 'text-indigo-500' : 'text-gray-400'}`}>
+          <span className={`ml-2 flex-shrink-0 text-[10px] font-black uppercase tracking-widest ${active ? 'text-purple-500' : 'text-slate-500'}`}>
             {formatConvDate(conv.last_at)}
           </span>
         </div>
-        <p className="mt-1 flex items-center gap-1.5 truncate text-[13px] text-gray-500">
+        <p className="mt-1 flex items-center gap-1.5 truncate text-[12px] font-medium text-slate-500">
           {conv.last_direction === 'out' && (
             <CheckCheck size={14} className={`flex-shrink-0 ${active ? 'text-indigo-500' : 'text-emerald-500'}`} />
           )}
@@ -450,9 +450,9 @@ function ChatWindow({ phone, onBack }) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden bg-gray-50/30">
+    <div className="flex flex-1 flex-col overflow-hidden bg-[#050505]">
       {/* Header com Glassmorphism */}
-      <div className="z-10 flex cursor-default select-none items-center gap-3 border-b border-gray-100 bg-white/80 px-5 py-3.5 backdrop-blur-xl transition-all">
+      <div className="z-10 flex cursor-default select-none items-center gap-3 border-b border-white/5 bg-[#0a0a0a]/90 px-5 py-3.5 backdrop-blur-xl transition-all">
         <button onClick={onBack}
           className="mr-2 flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 lg:hidden">
           <ArrowLeft size={18} />
@@ -476,9 +476,9 @@ function ChatWindow({ phone, onBack }) {
       </div>
 
       {/* Área de mensagens */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5"
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cdefs%3E%3Cpattern id='p' width='60' height='60' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='10' cy='10' r='1' fill='%23d9dbd8' fill-opacity='.4'/%3E%3Ccircle cx='40' cy='40' r='1' fill='%23d9dbd8' fill-opacity='.4'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='300' height='300' fill='%23e5ddd5'/%3E%3Crect width='300' height='300' fill='url(%23p)'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cdefs%3E%3Cpattern id='p' width='60' height='60' patternUnits='userSpaceOnUse'%3E%3Ccircle cx='10' cy='10' r='1' fill='%23ffffff' fill-opacity='.03'/%3E%3Ccircle cx='40' cy='40' r='1' fill='%23ffffff' fill-opacity='.03'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='300' height='300' fill='%23050505'/%3E%3Crect width='300' height='300' fill='url(%23p)'/%3E%3C/svg%3E")`,
         }}>
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
@@ -494,8 +494,8 @@ function ChatWindow({ phone, onBack }) {
         ) : (
           grouped.map((item) =>
             item.type === 'date' ? (
-              <div key={item.key} className="flex justify-center py-2">
-                <span className="rounded-lg bg-white/80 px-3 py-1 text-[11px] text-[#54656f] shadow-sm">
+              <div key={item.key} className="flex justify-center py-4">
+                <span className="rounded-full bg-white/5 border border-white/5 px-4 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm backdrop-blur-md">
                   {item.label}
                 </span>
               </div>
@@ -595,21 +595,21 @@ function NewConversationModal({ onClose, onStart }) {
 
 function EmptyState() {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-gray-50/50 p-6 cursor-default select-none">
-      <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-white shadow-xl shadow-indigo-100/50 ring-1 ring-gray-900/5">
-        <MessageSquare size={40} className="text-indigo-500" />
-        <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-white">
+    <div className="flex h-full w-full flex-col items-center justify-center bg-[#050505] p-6 cursor-default select-none">
+      <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-[#0a0a0a] shadow-2xl shadow-purple-950/20 border border-white/10">
+        <MessageSquare size={40} className="text-purple-500" />
+        <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg ring-4 ring-[#050505]">
           <CheckCheck size={16} />
         </div>
       </div>
       <div className="text-center max-w-sm space-y-2">
-        <h3 className="font-display text-2xl font-bold tracking-tight text-gray-900">Organizador Chat</h3>
-        <p className="text-[15px] leading-relaxed text-gray-500">
+        <h3 className="font-display text-2xl font-black uppercase tracking-tighter text-white">Organizador Chat</h3>
+        <p className="text-[13px] font-medium leading-relaxed text-slate-400">
           Selecione uma conversa na lista ao lado para iniciar o atendimento ou acompanhe os registros em tempo real.
         </p>
       </div>
-      <div className="mt-8 flex items-center justify-center gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3 shadow-sm">
-        <div className="flex items-center gap-2 text-[13px] font-medium text-emerald-600">
+      <div className="mt-8 flex items-center justify-center gap-4 rounded-xl border border-white/5 bg-white/5 px-5 py-3">
+        <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-emerald-500">
           <Wifi size={16} /> Instância conectada
         </div>
       </div>
@@ -644,7 +644,7 @@ export default function WhatsAppChat() {
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl shadow-gray-200/40 ring-1 ring-gray-900/5">
+    <div className="relative flex h-full w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a] shadow-2xl shadow-black/60">
 
       {/* Modal nova conversa */}
       {showNewConv && (
@@ -655,13 +655,13 @@ export default function WhatsAppChat() {
       )}
 
       {/* Sidebar: lista de conversas */}
-      <div className={`flex w-full md:w-[380px] lg:w-[400px] flex-shrink-0 flex-col border-r border-gray-100 bg-white transition-all ${showChat ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex w-full md:w-[380px] lg:w-[400px] flex-shrink-0 flex-col border-r border-white/5 bg-[#0a0a0a] transition-all ${showChat ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Header da sidebar */}
-        <div className="z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-5 py-4 backdrop-blur-md">
+        <div className="z-10 flex items-center justify-between border-b border-white/5 bg-[#0a0a0a]/95 px-5 py-4 backdrop-blur-md">
           <div className="flex items-center gap-2">
-            <h2 className="font-display text-lg font-bold tracking-tight text-gray-900">Conversas</h2>
-            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">Beta</span>
+            <h2 className="text-sm font-black uppercase tracking-widest text-white">Conversas</h2>
+            <span className="rounded-full bg-purple-600/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-purple-400">Beta</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -681,14 +681,14 @@ export default function WhatsAppChat() {
         </div>
 
         {/* Busca */}
-        <div className="border-b border-gray-50 bg-white px-4 py-3">
-          <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-4 py-2.5 transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-indigo-100 focus-within:shadow-sm">
-            <Search size={16} className="text-gray-400" />
+        <div className="border-b border-white/5 bg-transparent px-4 py-3">
+          <div className="flex items-center gap-2.5 rounded-xl bg-white/5 px-4 py-2.5 transition-all focus-within:bg-white/10 focus-within:ring-1 focus-within:ring-white/20">
+            <Search size={16} className="text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Pesquisar contatos..."
-              className="flex-1 bg-transparent text-[14px] text-gray-900 outline-none placeholder:text-gray-400"
+              className="flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-slate-500"
             />
           </div>
         </div>

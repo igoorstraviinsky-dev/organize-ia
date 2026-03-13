@@ -21,7 +21,7 @@ export default function LabelsPage() {
               Tarefas com esta etiqueta
             </h2>
             {tasks.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl bg-white border border-slate-100 shadow-sm">
+              <div className="p-12 text-center rounded-2xl dark-neo-recessed bg-[#0a0a0a]/40 border border-white/10 shadow-lg">
                 <p className="text-sm font-semibold text-slate-400">Nenhuma tarefa encontrada com esta etiqueta.</p>
               </div>
             ) : (
@@ -33,9 +33,9 @@ export default function LabelsPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-32 rounded-3xl bg-white/50 border-2 border-dashed border-slate-200">
-            <Tag size={48} strokeWidth={1.5} className="text-slate-300" />
-            <p className="mt-4 text-sm font-bold text-slate-400">Selecione uma etiqueta ao lado para ver as tarefas associadas.</p>
+          <div className="flex flex-col items-center justify-center py-32 rounded-3xl dark-neo-recessed bg-[#0a0a0a]/40 border-2 border-dashed border-white/10">
+            <Tag size={48} strokeWidth={1} className="text-purple-500/50" />
+            <p className="mt-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500">Selecione uma etiqueta ao lado para ver as tarefas associadas.</p>
           </div>
         )}
       </div>

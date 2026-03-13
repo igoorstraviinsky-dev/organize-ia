@@ -86,18 +86,21 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-slate-400 transition-all hover:bg-slate-50 hover:text-brand-purple border border-dashed border-slate-200"
+        className="flex w-full items-center gap-3 rounded-[24px] px-8 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 transition-all hover:text-purple-400 bg-[#0a0a0a]/40 border border-dashed border-white/10 group dark-neo-recessed"
       >
-        <Plus size={18} className="text-brand-purple" />
+        <Plus size={18} className="text-purple-500 group-hover:scale-125 transition-transform" />
         <span>Adicionar tarefa</span>
       </button>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="neo-raised p-8 border border-white/60 bg-[#fefefe]/80 backdrop-blur-sm">
+    <form onSubmit={handleSubmit} className="jetted-glass p-8 border border-white/10 bg-[#0a0a0a]/60 backdrop-blur-xl shadow-2xl relative overflow-hidden rounded-[32px]">
+      {/* Glow effect background */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/5 blur-[80px] pointer-events-none" />
+      
       {error && (
-        <div className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-xs font-bold text-red-500 border border-red-100">{error}</div>
+        <div className="mb-6 rounded-2xl bg-red-500/10 px-5 py-3 text-[11px] font-bold text-red-400 border border-red-500/20 uppercase tracking-widest">{error}</div>
       )}
 
       <input
@@ -105,46 +108,46 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="O que precisa ser feito?"
-        className="w-full bg-transparent text-base font-bold text-slate-800 outline-none placeholder:text-slate-300"
+        className="w-full bg-transparent text-xl font-black text-white outline-none placeholder:text-slate-700 tracking-tight"
         onKeyDown={(e) => e.key === 'Escape' && (onClose ? onClose() : setExpanded(false))}
       />
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Adicionar descrição..."
-        className="mt-2 w-full bg-transparent text-sm font-semibold text-slate-500 outline-none placeholder:text-slate-300"
+        placeholder="Adicionar descrição detalhada..."
+        className="mt-3 w-full bg-transparent text-[13px] font-medium text-slate-400 outline-none placeholder:text-slate-800"
       />
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
-          <CalendarDays size={14} className="text-slate-400" />
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-2.5 transition-all hover:bg-white/10">
+          <CalendarDays size={16} className="text-purple-500" />
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide"
+            className="bg-transparent text-[11px] font-black text-slate-300 outline-none uppercase tracking-widest cursor-pointer"
           />
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
-          <Clock size={14} className="text-slate-400" />
+        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-2.5 transition-all hover:bg-white/10">
+          <Clock size={16} className="text-purple-500" />
           <input
             type="time"
             value={dueTime}
             onChange={(e) => setDueTime(e.target.value)}
-            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide"
+            className="bg-transparent text-[11px] font-black text-slate-300 outline-none uppercase tracking-widest cursor-pointer"
           />
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 transition-all hover:border-slate-200">
-          <Flag size={14} className="text-slate-400" />
+        <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 px-4 py-2.5 transition-all hover:bg-white/10">
+          <Flag size={16} className="text-purple-500" />
           <select
             value={priority}
             onChange={(e) => setPriority(Number(e.target.value))}
-            className="bg-transparent text-[11px] font-bold text-slate-600 outline-none uppercase tracking-wide cursor-pointer"
+            className="bg-transparent text-[11px] font-black text-slate-300 outline-none uppercase tracking-widest cursor-pointer"
           >
             {PRIORITIES.map((p) => (
-              <option key={p.value} value={p.value} className="bg-white text-slate-800">{p.label}</option>
+              <option key={p.value} value={p.value} className="bg-[#1a1a1a] text-white font-bold">{p.label}</option>
             ))}
           </select>
         </div>
@@ -153,13 +156,13 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
           <button
             type="button"
             onClick={() => setShowLabels(!showLabels)}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-all ${
+            className={`flex items-center gap-3 rounded-2xl border px-4 py-2.5 text-[11px] font-black uppercase tracking-widest transition-all ${
               selectedLabelIds.length > 0 
-                ? 'border-brand-purple/20 bg-brand-purple/5 text-brand-purple' 
-                : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
+                ? 'border-purple-500/40 bg-purple-500/10 text-purple-400' 
+                : 'border-white/5 bg-white/5 text-slate-500 hover:text-white hover:bg-white/10'
             }`}
           >
-            <Tag size={14} />
+            <Tag size={16} />
             {selectedLabelIds.length > 0 ? `${selectedLabelIds.length} etiquetas` : 'Etiquetas'}
           </button>
           
@@ -189,18 +192,18 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
         </div>
       </div>
 
-      <div className="mt-8 flex justify-end gap-3 pt-4 border-t border-slate-50">
+      <div className="mt-10 flex justify-end gap-4 pt-6 border-t border-white/5">
         <button
           type="button"
           onClick={() => (onClose ? onClose() : setExpanded(false))}
-          className="rounded-xl px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-widest text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-600"
+          className="rounded-2xl px-6 py-3 text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 transition-all hover:text-white hover:bg-white/5"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={!title.trim() || createTask.isPending}
-          className="rounded-xl bg-brand-purple px-6 py-2.5 text-[11px] font-extrabold uppercase tracking-widest text-white shadow-lg shadow-brand-purple/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+          className="rounded-2xl bg-purple-600 px-8 py-3 text-[11px] font-black uppercase tracking-[0.3em] text-white shadow-[0_10px_30px_rgba(126,87,194,0.3)] transition-all hover:scale-[1.05] active:scale-95 disabled:opacity-50"
         >
           {createTask.isPending ? 'Criando...' : 'Adicionar'}
         </button>

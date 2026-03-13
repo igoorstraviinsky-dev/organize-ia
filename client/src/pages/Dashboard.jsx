@@ -297,8 +297,8 @@ export default function Dashboard({ onSignOut }) {
           />
         )}
       </AnimatePresence>
-      <main className="flex-1 overflow-y-auto p-4 md:p-10 flex flex-col relative md:pl-32 transition-all duration-700">
-        <div className="flex-1 jetted-glass flex flex-col bg-[#0a0a0a]/40 border-white/10 min-h-[calc(100vh-2rem)] md:min-h-0 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+      <main className="flex-1 overflow-y-auto p-4 md:p-12 flex flex-col relative md:pl-44 transition-all duration-700">
+        <div className="flex-1 jetted-glass flex flex-col bg-[#0a0a0a]/40 border-white/10 min-h-[calc(100vh-2rem)] md:min-h-0 shadow-[0_0_80px_rgba(0,0,0,0.8),0_0_20px_rgba(255,255,255,0.02)]">
           {/* Banner de tema do projeto ativo - Premium Vibe */}
           {currentView === 'project' && (() => {
             const proj = projects.find(p => p.id === currentProjectId);
@@ -355,7 +355,7 @@ export default function Dashboard({ onSignOut }) {
             </div>
           </div>
           
-          <div className={`flex-1 overflow-auto custom-scrollbar ${isFullHeight ? '' : 'px-12 py-10'}`}>
+          <div className={`flex-1 overflow-auto custom-scrollbar ${isFullHeight ? 'p-0' : 'px-16 py-12'}`}>
             {currentView === "upcoming" && <Upcoming />}
             {currentView === "labels" && <LabelsPage />}
             {currentView === "chat" && <WhatsAppChat />}
