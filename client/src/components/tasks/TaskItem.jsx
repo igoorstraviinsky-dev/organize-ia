@@ -19,10 +19,10 @@ function formatDate(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diff = Math.floor((date - today) / 86400000)
-  if (diff < 0) return { text: 'Atrasada', className: 'text-red-500' }
-  if (diff === 0) return { text: 'Hoje', className: 'text-green-600' }
-  if (diff === 1) return { text: 'Amanhã', className: 'text-orange-500' }
-  return { text: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }), className: 'text-gray-500' }
+  if (diff < 0) return { text: 'Atrasada', className: 'text-red-400' }
+  if (diff === 0) return { text: 'Hoje', className: 'text-emerald-400' }
+  if (diff === 1) return { text: 'Amanhã', className: 'text-orange-400' }
+  return { text: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }), className: 'text-slate-400' }
 }
 
 function formatTime(timeStr) {
@@ -105,12 +105,12 @@ export default function TaskItem({ task }) {
 
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="space-y-1">
-            <p className={`text-base font-semibold tracking-tight ${isCompleted ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+            <p className={`text-base font-semibold tracking-tight ${isCompleted ? 'line-through text-slate-500' : 'text-white'}`}>
               {task.title}
             </p>
 
             {task.description && (
-              <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{task.description}</p>
+              <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">{task.description}</p>
             )}
 
             {hasSubtasks && (
@@ -125,11 +125,11 @@ export default function TaskItem({ task }) {
 
           <div className="flex flex-wrap items-center gap-2.5 pt-1">
             {dateInfo && (
-              <span className={`flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${dateInfo.className}`}>
+              <span className={`flex items-center gap-1 rounded-lg bg-white/5 border border-white/5 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${dateInfo.className}`}>
                 <CalendarDays size={13} />
                 {dateInfo.text}
                 {time && (
-                  <span className="flex items-center gap-1 ml-1 border-l border-slate-200 pl-2">
+                  <span className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
                     <Clock size={11} />
                     {time}
                   </span>
@@ -138,21 +138,21 @@ export default function TaskItem({ task }) {
             )}
 
             {task.priority < 4 && (
-              <span className={`flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${PRIORITY_COLORS[task.priority].split(' ')[1]}`}>
+              <span className={`flex items-center gap-1 rounded-lg bg-white/5 border border-white/5 px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${PRIORITY_COLORS[task.priority].split(' ')[1]}`}>
                 <Flag size={13} />
                 {PRIORITY_LABELS[task.priority]}
               </span>
             )}
 
             {commentsCount > 0 && (
-              <span className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 hover:text-brand-purple transition-colors">
+              <span className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/5 px-2 py-1 text-[11px] font-bold text-slate-400 hover:text-purple-400 transition-colors">
                 <MessageSquare size={13} />
                 {commentsCount}
               </span>
             )}
 
             {task.project && (
-              <span className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+              <span className="flex items-center gap-1 rounded-lg bg-white/5 border border-white/5 px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white/50">
                 <Hash size={13} style={{ color: task.project.color }} />
                 {task.project.name}
               </span>
