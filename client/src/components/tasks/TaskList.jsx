@@ -115,39 +115,50 @@ export default function TaskList({ projectId, title, filterToday }) {
   // Visualização de Inbox / Hoje
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
-      {/* KPIs Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className="rounded-lg bg-blue-50 p-3 text-blue-600">
-            <Activity size={20} strokeWidth={2.5} />
+      {/* KPIs Dashboard - Jetted Glass Style */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Activity size={48} strokeWidth={1} />
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Velocidade Média</p>
-            <p className="text-xl font-black text-slate-800 leading-none mt-1">{data.analytics.velocidade_media}</p>
+          <div className="flex items-center gap-3">
+             <div className="rounded-2xl electric-blue-gradient p-3 text-white shadow-lg shadow-blue-500/30">
+              <Activity size={20} strokeWidth={2.5} />
+            </div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Velocidade Média</p>
+          </div>
+          <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.velocidade_media}</p>
+        </div>
+
+        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <ClockAlert size={48} strokeWidth={1} />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={`rounded-2xl p-3 shadow-lg ${data.analytics.atencao_critica > 0 ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-slate-200 text-slate-400 shadow-slate-200/30'}`}>
+              <ClockAlert size={20} strokeWidth={2.5} />
+            </div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Atenção Crítica</p>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.atencao_critica}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">frias {'>'} 48h</p>
           </div>
         </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className={`rounded-lg p-3 ${data.analytics.atencao_critica > 0 ? 'bg-amber-50 text-amber-500' : 'bg-slate-50 text-slate-400'}`}>
-            <ClockAlert size={20} strokeWidth={2.5} />
+
+        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Users size={48} strokeWidth={1} />
           </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Atenção Crítica</p>
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <p className="text-xl font-black text-slate-800 leading-none">{data.analytics.atencao_critica}</p>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">frias {'>'} 48h</p>
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl royal-purple-gradient p-3 text-white shadow-lg shadow-purple-500/30">
+              <Users size={20} strokeWidth={2.5} />
             </div>
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Volume Atribuído</p>
           </div>
-        </div>
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm flex items-center gap-4">
-          <div className="rounded-lg bg-purple-50 p-3 text-brand-purple">
-            <Users size={20} strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume Atribuído</p>
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <p className="text-xl font-black text-slate-800 leading-none">{data.analytics.volume_atribuido}</p>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">para mim</p>
-            </div>
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.volume_atribuido}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">para mim</p>
           </div>
         </div>
       </div>

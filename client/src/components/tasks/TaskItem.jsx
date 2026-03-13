@@ -84,11 +84,10 @@ export default function TaskItem({ task }) {
     <>
       <div
         onClick={() => setShowDetail(true)}
-        className={`group relative flex cursor-pointer items-start gap-4 rounded-xl p-4 transition-all duration-300 border hover:shadow-md overflow-hidden
-        ${isCompleted ? 'opacity-60 bg-slate-50 border-slate-100' : isCold ? 'border-yellow-400 ring-1 ring-yellow-400/50 hover:border-yellow-500' : 'border-slate-100'}`}
+        className={`group relative flex cursor-pointer items-start gap-5 rounded-[24px] p-6 transition-all duration-500 overflow-hidden
+        ${isCompleted ? 'opacity-50 grayscale bg-slate-50 border-transparent shadow-none' : isCold ? 'border-amber-400 ring-2 ring-amber-400/20 neo-raised' : 'neo-raised border-white/50 border'}`}
         style={!isCompleted ? {
-          borderLeft: `4px solid ${cardColor}`,
-          backgroundColor: `${cardColor}08`
+          borderLeft: `6px solid ${cardColor}`
         } : {}}
       >
         <button

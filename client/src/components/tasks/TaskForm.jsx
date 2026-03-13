@@ -95,7 +95,7 @@ export default function TaskForm({ projectId, sectionId, parentId, onClose }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="premium-card p-5 border border-slate-200">
+    <form onSubmit={handleSubmit} className="neo-raised p-8 border border-white/60 bg-[#fefefe]/80 backdrop-blur-sm">
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 px-4 py-2.5 text-xs font-bold text-red-500 border border-red-100">{error}</div>
       )}

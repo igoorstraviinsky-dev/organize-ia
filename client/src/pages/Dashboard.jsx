@@ -260,7 +260,10 @@ export default function Dashboard({ onSignOut }) {
   const isBoardMode = viewMode === "board" && showViewToggle;
 
   return (
-    <div className="flex h-screen bg-brand-gray text-slate-900 font-sans relative overflow-hidden">
+    <div className="flex h-screen bg-[#f8f9fa] text-slate-900 font-sans relative overflow-hidden">
+      {/* Texture overlay for off-white background */}
+      <div className="absolute inset-0 opacity-[0.4] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+
       <Sidebar
         currentView={currentView}
         onViewChange={(newView) => navigate(`/app/${newView}`)}
@@ -285,29 +288,29 @@ export default function Dashboard({ onSignOut }) {
               </div>
             ) : null;
           })()}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-white px-10 py-8 relative">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 backdrop-blur-md px-10 py-10 relative">
             {/* Sutil brilho do tema no header */}
             {currentView === 'project' && (() => {
               const proj = projects.find(p => p.id === currentProjectId);
               return proj?.theme_gradient ? (
                 <div 
                   style={{ background: proj.theme_gradient }}
-                  className="absolute bottom-0 left-0 w-full h-[1px] opacity-30 shadow-[0_0_15px_rgba(0,0,0,0.1)]"
+                  className="absolute bottom-0 left-0 w-full h-[2px] opacity-40 shadow-[0_0_20px_rgba(0,0,0,0.1)]"
                 />
               ) : null;
             })()}
-            <div className="flex items-center gap-6">
-              <h1 className="text-3xl font-extrabold tracking-tight font-display uppercase" style={{ color: '#17112E' }}>
+            <div className="flex items-center gap-8">
+              <h1 className="text-4xl font-black tracking-tighter text-[#17112E] uppercase">
                 {getTitle()}
               </h1>
               {(currentView === 'inbox' || currentView === 'project') && (
                 <button
                   onClick={() => setIsProjectsOpen(true)}
-                  className="flex items-center gap-2.5 rounded-2xl border border-slate-100 bg-white px-5 py-2.5 text-xs font-black text-slate-600 shadow-sm hover:border-brand-purple hover:text-brand-purple hover:shadow-md transition-all active:scale-95 uppercase tracking-widest group"
+                  className="flex items-center gap-3 rounded-[20px] neo-raised bg-white px-6 py-3 text-[10px] font-black text-slate-600 hover:text-purple-600 transition-all active:scale-95 uppercase tracking-[0.2em] group"
                 >
-                  <Folder size={14} className="text-brand-purple group-hover:fill-brand-purple transition-all" />
+                  <Folder size={14} className="text-purple-500 group-hover:fill-purple-500/10 transition-all" />
                   Meus Projetos
-                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-lg bg-slate-50 text-[10px] text-slate-400 group-hover:bg-brand-purple group-hover:text-white transition-all">
+                  <span className="ml-2 flex h-6 w-6 items-center justify-center rounded-lg bg-slate-50 text-[10px] text-slate-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
                     {projects.filter(p => p.name !== 'Inbox').length}
                   </span>
                 </button>

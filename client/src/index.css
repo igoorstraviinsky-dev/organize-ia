@@ -5,10 +5,23 @@
   --text-muted: #64748b;
   --pure-white: #ffffff;
   --accent-purple: #8e44ad;
+  --accent-purple-rich: #6b21a8;
   --accent-green: #2ecc71;
-  --card-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --card-radius: 16px;
+  --accent-blue-electric: #3b82f6;
+  
+  /* Glassmorphism Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  
+  /* Neomorphic Tokens */
+  --neo-bg: #f8f9fa;
+  --neo-shadow-light: #ffffff;
+  --neo-shadow-dark: #d1d9e6;
+  --neo-recessed-shadow: inset 6px 6px 12px #d1d9e6, inset -6px -6px 12px #ffffff;
+  --neo-raised-shadow: 6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff;
+
+  --card-radius: 24px;
 }
 
 @tailwind base;
@@ -20,7 +33,7 @@
     @apply min-h-screen antialiased;
     background-color: var(--bg-primary);
     color: var(--text-main);
-    font-family: "Inter", sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
   h1,
@@ -29,7 +42,8 @@
   h4,
   h5,
   h6 {
-    font-family: "Poppins", sans-serif;
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
   }
 }
 
@@ -37,8 +51,43 @@
   .premium-card {
     background: var(--pure-white);
     border-radius: var(--card-radius);
-    box-shadow: var(--card-shadow);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: var(--neo-raised-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+
+  .jetted-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .neo-recessed {
+    background: var(--neo-bg);
+    box-shadow: var(--neo-recessed-shadow);
+    border-radius: 16px;
+  }
+
+  .neo-raised {
+    background: var(--neo-bg);
+    box-shadow: var(--neo-raised-shadow);
+    border-radius: 16px;
+  }
+
+  .dark-neo-recessed {
+    background: #0a0a0a;
+    box-shadow: inset 4px 4px 8px #000000, inset -4px -4px 8px #1a1a1a;
+    border-radius: 16px;
+  }
+
+  .royal-purple-gradient {
+    background: linear-gradient(135deg, #8e44ad 0%, #6b21a8 100%);
+  }
+
+  .electric-blue-gradient {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   }
 
   /* Sidebar active helper if needed elsewhere */
