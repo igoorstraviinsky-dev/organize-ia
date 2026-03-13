@@ -322,36 +322,40 @@ export default function Dashboard({ onSignOut }) {
                 />
               ) : null;
             })()}
-            <div className="flex items-center gap-6 md:gap-10">
-              {/* Mobile Menu Button */}
-              <button 
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="flex items-center justify-center rounded-xl bg-white/5 p-3 text-white transition-all hover:bg-white/10 active:scale-95 md:hidden"
-              >
-                <Menu size={24} />
-              </button>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  {/* Mobile Menu Button */}
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(true)}
+                    className="flex items-center justify-center rounded-xl bg-white/5 p-3 text-white transition-all hover:bg-white/10 active:scale-95 md:hidden"
+                  >
+                    <Menu size={24} />
+                  </button>
 
-              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent truncate max-w-[150px] md:max-w-none">
-                {getTitle()}
-              </h1>
-              
-              <XPBar layout="compact" />
+                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent truncate max-w-[150px] md:max-w-none">
+                    {getTitle()}
+                  </h1>
+                </div>
+                
+                <XPBar layout="compact" />
+              </div>
 
-              {(currentView === 'inbox' || currentView === 'project') && (
-                <button
-                  onClick={() => setIsProjectsOpen(true)}
-                  className="flex items-center gap-3 rounded-[24px] dark-neo-recessed bg-[#0a0a0a] px-8 py-4 text-[11px] font-black text-slate-400 hover:text-purple-400 transition-all active:scale-95 uppercase tracking-[0.3em] group border-white/5"
-                >
-                  <Folder size={16} className="text-purple-500 group-hover:fill-purple-500/10 transition-all" />
-                  Meus Projetos
-                  <span className="ml-3 flex h-7 w-7 items-center justify-center rounded-xl bg-purple-950/30 text-[10px] text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
-                    {projects.filter(p => p.name !== 'Inbox').length}
-                  </span>
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              {showViewToggle && <ViewToggle />}
+              <div className="flex items-center gap-4">
+                {(currentView === 'inbox' || currentView === 'project') && (
+                  <button
+                    onClick={() => setIsProjectsOpen(true)}
+                    className="flex items-center gap-3 rounded-[24px] dark-neo-recessed bg-[#0a0a0a] px-8 py-4 text-[11px] font-black text-slate-400 hover:text-purple-400 transition-all active:scale-95 uppercase tracking-[0.3em] group border-white/5"
+                  >
+                    <Folder size={16} className="text-purple-500 group-hover:fill-purple-500/10 transition-all" />
+                    Meus Projetos
+                    <span className="ml-3 flex h-7 w-7 items-center justify-center rounded-xl bg-purple-950/30 text-[10px] text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
+                      {projects.filter(p => p.name !== 'Inbox').length}
+                    </span>
+                  </button>
+                )}
+                {showViewToggle && <ViewToggle />}
+              </div>
             </div>
           </div>
           
