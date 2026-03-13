@@ -260,9 +260,9 @@ export default function Dashboard({ onSignOut }) {
   const isBoardMode = viewMode === "board" && showViewToggle;
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa] text-slate-900 font-sans relative overflow-hidden">
-      {/* Texture overlay for off-white background */}
-      <div className="absolute inset-0 opacity-[0.4] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+    <div className="flex h-screen bg-[#050505] text-[#e2e8f0] font-sans relative overflow-hidden">
+      {/* Texture overlay for dark background */}
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
       <Sidebar
         currentView={currentView}
@@ -274,43 +274,42 @@ export default function Dashboard({ onSignOut }) {
         userId={user?.id}
       />
       <main className="flex-1 overflow-hidden p-8 flex flex-col relative">
-        <div className="flex-1 premium-card flex flex-col overflow-hidden">
+        <div className="flex-1 jetted-glass flex flex-col overflow-hidden bg-[#0a0a0a]/40 border-white/5">
           {/* Banner de tema do projeto ativo - Premium Vibe */}
           {currentView === 'project' && (() => {
             const proj = projects.find(p => p.id === currentProjectId);
             return proj?.theme_gradient ? (
-              <div className="relative h-1.5 w-full overflow-hidden rounded-t-2xl">
+              <div className="relative h-2 w-full overflow-hidden rounded-t-[28px]">
                 <div
                   style={{ background: proj.theme_gradient }}
-                  className="absolute inset-0 w-full h-full opacity-90"
+                  className="absolute inset-0 w-full h-full opacity-60"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-transparent" />
               </div>
             ) : null;
           })()}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-white/80 backdrop-blur-md px-10 py-10 relative">
+          <div className="flex items-center justify-between border-b border-white/5 bg-transparent px-12 py-10 relative">
             {/* Sutil brilho do tema no header */}
             {currentView === 'project' && (() => {
               const proj = projects.find(p => p.id === currentProjectId);
               return proj?.theme_gradient ? (
                 <div 
                   style={{ background: proj.theme_gradient }}
-                  className="absolute bottom-0 left-0 w-full h-[2px] opacity-40 shadow-[0_0_20px_rgba(0,0,0,0.1)]"
+                  className="absolute bottom-0 left-0 w-full h-[2px] opacity-20 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
                 />
               ) : null;
             })()}
-            <div className="flex items-center gap-8">
-              <h1 className="text-4xl font-black tracking-tighter text-[#17112E] uppercase">
+            <div className="flex items-center gap-10">
+              <h1 className="text-5xl font-black tracking-tighter text-white uppercase bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                 {getTitle()}
               </h1>
               {(currentView === 'inbox' || currentView === 'project') && (
                 <button
                   onClick={() => setIsProjectsOpen(true)}
-                  className="flex items-center gap-3 rounded-[20px] neo-raised bg-white px-6 py-3 text-[10px] font-black text-slate-600 hover:text-purple-600 transition-all active:scale-95 uppercase tracking-[0.2em] group"
+                  className="flex items-center gap-3 rounded-[24px] dark-neo-recessed bg-[#0a0a0a] px-8 py-4 text-[11px] font-black text-slate-400 hover:text-purple-400 transition-all active:scale-95 uppercase tracking-[0.3em] group border-white/5"
                 >
-                  <Folder size={14} className="text-purple-500 group-hover:fill-purple-500/10 transition-all" />
+                  <Folder size={16} className="text-purple-500 group-hover:fill-purple-500/10 transition-all" />
                   Meus Projetos
-                  <span className="ml-2 flex h-6 w-6 items-center justify-center rounded-lg bg-slate-50 text-[10px] text-slate-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
+                  <span className="ml-3 flex h-7 w-7 items-center justify-center rounded-xl bg-purple-950/30 text-[10px] text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-all">
                     {projects.filter(p => p.name !== 'Inbox').length}
                   </span>
                 </button>

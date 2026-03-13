@@ -107,29 +107,27 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
 
   return (
     <aside 
-      className="flex h-screen w-64 flex-col border-r border-white/5 shadow-2xl relative overflow-hidden"
-      style={{ 
-        background: 'radial-gradient(circle at 20% 50%, #1e1b2e 0%, #17112E 100%)'
-      }}
+      className="flex h-screen w-24 flex-col border-r border-white/5 shadow-2xl relative overflow-hidden bg-[#0a0a0a] transition-all duration-700"
     >
       {/* Texture overlay */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(126,87,194,0.1)_0%,transparent_70%)]" />
 
-      <div className="flex items-center gap-3 px-6 py-8 border-b border-white/5">
+      <div className="flex flex-col items-center gap-10 px-4 py-12 relative z-10 border-b border-white/5">
         <div 
-          className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-xl overflow-hidden border border-white/10"
-          style={{ backgroundColor: '#8E44AD', boxShadow: '0 10px 15px -3px rgba(142, 68, 173, 0.3)' }}
+          className="flex h-14 w-14 items-center justify-center rounded-[20px] shadow-[0_10px_30px_rgba(106,27,154,0.3)] overflow-hidden border border-white/10 group transition-transform hover:scale-110 duration-500"
+          style={{ background: 'linear-gradient(135deg, #6a1b9a 0%, #7e57c2 100%)' }}
         >
           {user?.profile?.avatar_url ? (
             <img src={user.profile.avatar_url} alt="Logo" className="h-full w-full object-cover" />
           ) : (
-            <span className="font-black text-xl text-white italic">
-              {user?.profile?.full_name?.charAt(0).toUpperCase() || 'O'}
-            </span>
+             <CheckSquare size={28} className="text-white drop-shadow-lg" strokeWidth={2.5} />
           )}
         </div>
-        <span className="text-xl font-black tracking-tight text-white font-display uppercase italic">Organizador</span>
+        <div className="h-4 w-4 rounded-full bg-green-500 border-2 border-[#0a0a0a] -mt-12 ml-10 shadow-[0_0_10px_rgba(34,197,94,0.4)]" />
       </div>
+
+      <XPBar />
 
       <XPBar />
 

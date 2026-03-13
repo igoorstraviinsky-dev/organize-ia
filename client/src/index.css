@@ -1,27 +1,27 @@
 :root {
-  --bg-primary: #f8f9fa;
-  --bg-sidebar: #17112e;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
+  --bg-primary: #050505;
+  --bg-sidebar: #0a0a0a;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
   --pure-white: #ffffff;
-  --accent-purple: #8e44ad;
-  --accent-purple-rich: #6b21a8;
+  --accent-purple: #7e57c2;
+  --accent-purple-rich: #6a1b9a;
   --accent-green: #2ecc71;
   --accent-blue-electric: #3b82f6;
   
-  /* Glassmorphism Tokens */
-  --glass-bg: rgba(255, 255, 255, 0.4);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  /* Glassmorphism Tokens - Dark Refined */
+  --glass-bg: rgba(10, 10, 10, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
   
-  /* Neomorphic Tokens */
-  --neo-bg: #f8f9fa;
-  --neo-shadow-light: #ffffff;
-  --neo-shadow-dark: #d1d9e6;
-  --neo-recessed-shadow: inset 6px 6px 12px #d1d9e6, inset -6px -6px 12px #ffffff;
-  --neo-raised-shadow: 6px 6px 12px #d1d9e6, -6px -6px 12px #ffffff;
+  /* Neomorphic Tokens - Dark Sophisticated */
+  --neo-bg: #0a0a0a;
+  --neo-shadow-light: #1a1a1a;
+  --neo-shadow-dark: #000000;
+  --neo-recessed-shadow: inset 8px 8px 16px #000000, inset -8px -8px 16px #151515;
+  --neo-raised-shadow: 10px 10px 20px #000000, -10px -10px 20px #151515;
 
-  --card-radius: 24px;
+  --card-radius: 28px;
 }
 
 @tailwind base;
@@ -57,8 +57,8 @@
 
   .jetted-glass {
     background: var(--glass-bg);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
     border-radius: var(--card-radius);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
@@ -67,23 +67,26 @@
   .neo-recessed {
     background: var(--neo-bg);
     box-shadow: var(--neo-recessed-shadow);
-    border-radius: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
   }
 
   .neo-raised {
     background: var(--neo-bg);
     box-shadow: var(--neo-raised-shadow);
-    border-radius: 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .dark-neo-recessed {
-    background: #0a0a0a;
-    box-shadow: inset 4px 4px 8px #000000, inset -4px -4px 8px #1a1a1a;
-    border-radius: 16px;
+    background: #050505;
+    box-shadow: inset 6px 6px 12px #000000, inset -6px -6px 12px #101010;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.01);
   }
 
   .royal-purple-gradient {
-    background: linear-gradient(135deg, #8e44ad 0%, #6b21a8 100%);
+    background: linear-gradient(135deg, #7e57c2 0%, #6a1b9a 100%);
   }
 
   .electric-blue-gradient {

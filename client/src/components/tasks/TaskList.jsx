@@ -114,71 +114,71 @@ export default function TaskList({ projectId, title, filterToday }) {
 
   // Visualização de Inbox / Hoje
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
-      {/* KPIs Dashboard - Jetted Glass Style */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Activity size={48} strokeWidth={1} />
+    <div className="space-y-12 animate-in fade-in duration-700">
+      {/* KPIs Dashboard - Dark Neomorphic Recessed Style */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+            <Activity size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-3">
-             <div className="rounded-2xl electric-blue-gradient p-3 text-white shadow-lg shadow-blue-500/30">
-              <Activity size={20} strokeWidth={2.5} />
+          <div className="flex items-center gap-4">
+             <div className="rounded-2xl royal-purple-gradient p-3.5 text-white shadow-[0_10px_30px_rgba(106,27,154,0.3)]">
+              <Activity size={22} strokeWidth={2.5} />
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Velocidade Média</p>
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Velocidade Média</p>
           </div>
-          <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.velocidade_media}</p>
+          <p className="text-4xl font-black text-white tracking-tighter" style={{ textShadow: '0 0 20px rgba(255,255,255,0.1)' }}>{data.analytics.velocidade_media}</p>
         </div>
 
-        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <ClockAlert size={48} strokeWidth={1} />
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+            <ClockAlert size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-3">
-            <div className={`rounded-2xl p-3 shadow-lg ${data.analytics.atencao_critica > 0 ? 'bg-orange-500 text-white shadow-orange-500/30' : 'bg-slate-200 text-slate-400 shadow-slate-200/30'}`}>
-              <ClockAlert size={20} strokeWidth={2.5} />
+          <div className="flex items-center gap-4">
+            <div className={`rounded-2xl p-3.5 shadow-lg ${data.analytics.atencao_critica > 0 ? 'bg-orange-600 text-white shadow-orange-600/20' : 'bg-[#151515] text-slate-600'}`}>
+              <ClockAlert size={22} strokeWidth={2.5} />
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Atenção Crítica</p>
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Atenção Crítica</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.atencao_critica}</p>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">frias {'>'} 48h</p>
+          <div className="flex items-baseline gap-3">
+            <p className="text-4xl font-black text-white tracking-tighter">{data.analytics.atencao_critica}</p>
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">frias {'>'} 48h</p>
           </div>
         </div>
 
-        <div className="jetted-glass p-6 flex flex-col gap-4 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-500">
-          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users size={48} strokeWidth={1} />
+        <div className="dark-neo-recessed p-8 flex flex-col gap-6 relative overflow-hidden group">
+          <div className="absolute -top-4 -right-4 p-4 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity rotate-12">
+            <Users size={80} strokeWidth={1} />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl royal-purple-gradient p-3 text-white shadow-lg shadow-purple-500/30">
-              <Users size={20} strokeWidth={2.5} />
+          <div className="flex items-center gap-4">
+            <div className="rounded-2xl royal-purple-gradient p-3.5 text-white shadow-[0_10px_30px_rgba(106,27,154,0.3)]">
+              <Users size={22} strokeWidth={2.5} />
             </div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Volume Atribuído</p>
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-[0.3em]">Volume Atribuído</p>
           </div>
-          <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-black text-slate-800 tracking-tighter">{data.analytics.volume_atribuido}</p>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">para mim</p>
+          <div className="flex items-baseline gap-3">
+            <p className="text-4xl font-black text-white tracking-tighter">{data.analytics.volume_atribuido}</p>
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">para mim</p>
           </div>
         </div>
       </div>
 
       {/* Tarefas Gerais (Sem Projeto) */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-          {filterToday ? 'Tarefas para Hoje' : 'Tarefas Gerais / Inbox'}
+      <section className="space-y-6">
+        <h2 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.4em] px-4 flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full bg-purple-600 shadow-[0_0_10px_rgba(126,87,194,0.5)]" />
+          {filterToday ? 'Tarefas para Hoje' : 'Mensagens Pendentes'}
         </h2>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {generalTasks.map((task) => (
             <TaskItem key={task.id} task={task} />
           ))}
           {generalTasks.length === 0 && (
-            <div className="py-12 border-2 border-dashed border-slate-50 rounded-2xl flex flex-col items-center">
-              <p className="text-xs font-black text-slate-300 uppercase tracking-widest">Tudo limpo por aqui</p>
+            <div className="py-20 dark-neo-recessed flex flex-col items-center border border-white/5 opacity-40">
+              <p className="text-xs font-black text-slate-600 uppercase tracking-[0.3em]">Tudo limpo por aqui</p>
             </div>
           )}
-          <div className="pt-2">
+          <div className="pt-4">
             <TaskForm projectId={null} />
           </div>
         </div>
@@ -186,13 +186,13 @@ export default function TaskList({ projectId, title, filterToday }) {
 
       {/* Concluídas Gerais */}
       {generalCompletedTasks.length > 0 && (
-        <details className="mt-10 group opacity-40 hover:opacity-100 transition-opacity">
-          <summary className="cursor-pointer text-xs font-extrabold text-slate-400 hover:text-slate-600 uppercase tracking-widest list-none flex items-center gap-2 px-1">
-            <div className="h-px bg-slate-100 flex-1 group-open:hidden" />
+        <details className="mt-16 group opacity-30 hover:opacity-100 transition-all duration-500">
+          <summary className="cursor-pointer text-[11px] font-black text-slate-600 hover:text-slate-400 uppercase tracking-[0.3em] list-none flex items-center gap-4 px-4">
+            <div className="h-px bg-white/5 flex-1 group-open:hidden" />
             Concluídas ({generalCompletedTasks.length})
-            <div className="h-px bg-slate-100 flex-1 group-open:hidden" />
+            <div className="h-px bg-white/5 flex-1 group-open:hidden" />
           </summary>
-          <div className="mt-4 space-y-3 px-1">
+          <div className="mt-6 space-y-4 px-2">
             {generalCompletedTasks.map((task) => (
               <TaskItem key={task.id} task={task} />
             ))}
