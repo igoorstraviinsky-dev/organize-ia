@@ -16,6 +16,9 @@ import {
   Plug2,
   MessageCircle,
   Users,
+  Settings,
+  Power,
+  CheckSquare,
 } from 'lucide-react'
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../../hooks/useProjects'
 import { useAuth } from '../../hooks/useAuth'
@@ -155,28 +158,26 @@ export default function Sidebar({ currentView, onViewChange, onProjectSelect, cu
         })}
       </nav>
 
-      <div className="mt-auto border-t border-white/5 p-4">
+      <div className="mt-auto border-t border-white/5 p-4 flex items-center justify-between gap-2">
         <button
           onClick={() => onViewChange('settings')}
-          className="flex w-full items-center gap-3 px-2 py-3 rounded-2xl transition-all hover:bg-white/5 group border border-transparent hover:border-white/5 justify-start md:justify-center lg:justify-start"
+          className="flex flex-1 items-center gap-3 px-4 py-3 rounded-2xl transition-all hover:bg-white/5 group border border-transparent hover:border-white/5 overflow-hidden"
+          title="Configurações"
         >
-          <div className="h-10 w-10 rounded-full bg-purple-600/20 flex items-center justify-center overflow-hidden border border-white/5 ring-1 ring-white/5 group-hover:scale-110 transition-transform flex-shrink-0">
-             {user?.profile?.avatar_url ? (
-               <img 
-                 src={user.profile.avatar_url} 
-                 alt="User Profile" 
-                 className="h-full w-full object-cover"
-               />
-             ) : (
-               <span className="text-sm font-black text-white italic">
-                 {user?.profile?.full_name?.charAt(0).toUpperCase() || 'U'}
-               </span>
-             )}
+          <div className="h-10 w-10 rounded-xl bg-purple-600/10 flex items-center justify-center border border-purple-500/20 group-hover:bg-purple-600 group-hover:border-purple-500 transition-all flex-shrink-0 shadow-lg shadow-purple-900/20">
+             <Settings size={20} className="text-purple-400 group-hover:text-white transition-colors" />
           </div>
           <div className="flex-1 min-w-0 text-left md:hidden lg:block">
-            <p className="text-sm font-semibold text-white truncate group-hover:text-purple-400 transition-colors">{user?.profile?.full_name || 'Usuário'}</p>
-            <p className="text-[10px] text-slate-500 truncate uppercase font-black tracking-widest mt-0.5">Configurações</p>
+            <p className="text-xs font-black text-white truncate group-hover:text-purple-400 transition-colors uppercase tracking-widest">{user?.profile?.full_name || 'Usuário'}</p>
           </div>
+        </button>
+
+        <button
+          onClick={onSignOut}
+          className="h-12 w-12 flex items-center justify-center rounded-2xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-90 border border-transparent hover:border-red-500/20"
+          title="Sair"
+        >
+          <Power size={20} />
         </button>
       </div>
     </aside>
