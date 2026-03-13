@@ -341,7 +341,8 @@ export default function Dashboard({ onSignOut }) {
                 <XPBar layout="compact" />
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end gap-3 ml-auto">
+                {showViewToggle && <ViewToggle />}
                 {(currentView === 'inbox' || currentView === 'project') && (
                   <button
                     onClick={() => setIsProjectsOpen(true)}
@@ -354,7 +355,6 @@ export default function Dashboard({ onSignOut }) {
                     </span>
                   </button>
                 )}
-                {showViewToggle && <ViewToggle />}
               </div>
             </div>
           </div>
