@@ -1,13 +1,12 @@
 <!--
 Sync Impact Report:
-- Version Change: 1.1.0 -> 2.0.0
-- Modified Principles: 
-    - Added Principle VII (Type-Safe Architecture) mandating TypeScript, Strict Mode, and no 'any'.
-    - Updated Stack Tecnológica to reflect TypeScript mandatory status across all modules (server, agent, client).
-- Added Sections: Principle VII (Type-Safe Architecture).
-- Removed Sections: None.
-- Templates requiring updates: ✅ Generic constitution checks in templates remain valid.
-- Follow-up TODOs: None.
+- Version Change: 2.1.0 -> 3.0.0
+- New Principles:
+    - Principle IX (Immutable Infrastructure & Deployment): Docker as the absolute environment standard; GitHub Actions as the sole production gatekeeper.
+- Modified Principles:
+    - Principle VIII (Resilient Real-Time Orchestration): Added requirements for SSE heartbeat mechanism and automatic reconnection patterns.
+- Governance Update: Explicit prohibition of manual scripts (vps_update.sh, iniciar_tudo.bat) after CI/CD validation.
+- Templates requiring updates: ✅ Templates remained aligned.
 -->
 # Organizador Constitution
 
@@ -37,16 +36,32 @@ A unidade fundamental do sistema é a Tarefa. Cada tarefa deve possuir estados c
 
 A navegação web principal baseia-se num modelo de Dashboard centralizado focado no Inbox (Tarefas Gerais ou visualização Global). Acessos a projetos ou outras ramificações complexas DEVEM ocorrer por meio de componentes de interface sobrepostos ou secundários (ex: Drawer lateral/pop-overs), garantindo que a tela central seja sempre focada na ação (o que está solto ou agendado para o momento atual).
 
-### VII. Type-Safe Architecture (TypeScript First)
+### VII. Type-Safe & Isolated Architecture (Strict First)
 
-O uso de TypeScript é OBRIGATÓRIO em todos os módulos (server, agent, client). Deve-se adotar o 'Strict Mode' e evitar o uso de `any`, priorizando definições de tipos e interfaces baseadas nos esquemas do Supabase. A 'blindagem de usuários' e o 'isolamento RLS' devem ser reforçados por tipagem forte para garantir a segurança e prevenir regressões.
+O uso de TypeScript é OBRIGATÓRIO em todos os módulos (server, agent, client). 
+1. **Strict Mode**: O servidor DEVE rodar em modo estrito (`strict: true`) sem exceções de `any`.
+2. **Blindagem B2B**: O isolamento de usuários e clientes B2B DEVE ser garantido por interfaces e tipos que forcem o filtro de `tenant_id` ou `owner_id` em todas as camadas de abstração de dados, agindo como uma segunda camada de defesa além do RLS.
+3. **Interfaces de Contrato**: Comunicações entre módulos devem ser tipadas preventivamente para evitar vazamentos de dados brutos do banco.
+
+### VIII. Resilient Real-Time Orchestration (Live Mode)
+
+O sistema DEVE priorizar a integridade das conexões de longa duração. 
+1. **SSE (Server-Sent Events)**: A lógica de transmissão em tempo real deve ser fortemente tipada e resiliente a quedas de proxy/nginx. É OBRIGATÓRIA a implementação de um mecanismo de **heartbeat** (ping/pong) e lógica de **reconexão automática** no client para eliminar loops de carregamento infinitos.
+2. **Auditoria de Estado**: Garantir que atualizações de geolocalização e precificação dinâmica (metais) sejam propagadas instantaneamente via canais tipados, mantendo o "Live Mode" inquebrável.
+
+### IX. Immutable Infrastructure & Deployment
+
+O padrão de execução do Organizador é a imutabilidade e a automação.
+1. **Dockerização**: O uso de Docker e Docker Compose é o padrão MANDATÓRIO para desenvolvimento e produção. O conceito "funciona na minha máquina" está proibido; se não roda no container, não é considerado código válido.
+2. **CI/CD Gatekeeper**: O GitHub Actions passa a ser o único guardião (gatekeeper) para o ambiente de produção. Deploys manuais são permitidos apenas durante a fase de transição técnica.
+
 
 ## Tecnologias e Padrões
 
 ### Stack Tecnológica
 
 - **Frontend**: Next.js (TypeScript), React Native (Expo/TypeScript), Lucide Icons, Vanilla CSS (Glassmorphism), framer-motion (Animações de UI).
-- **Backend/API**: Node.js (Express/TypeScript), Python (Agentes AI com tipagem estrita), OpenAI API, UazAPI (WhatsApp).
+- **Backend/API**: Node.js (Express/TypeScript), Python (Agentes AI com tipagem estrita/Pydantic), OpenAI API, UazAPI (WhatsApp).
 - **Database**: Supabase (PostgreSQL, RLS, Auth).
 - **Automação**: n8n (Workflow Orchestration).
 
@@ -57,10 +72,11 @@ O uso de TypeScript é OBRIGATÓRIO em todos os módulos (server, agent, client)
 - Alterações em RLS devem ser testadas contra múltiplos perfis (Admin e Colaborador).
 - Novas funcionalidades DEVEM ser acompanhadas de documentação evolutiva (ex: atualização sistemática do `conversaia.md` e geração de walkthroughs).
 - Commits devem ser descritivos e seguir o padrão de conventional commits.
-- **Dívida Técnica**: Migrações de JS para TS são prioridade máxima para estabilidade e segurança.
+- **Dívida Técnica**: O extermínio de arquivos `.js` em favor de `.ts` (Server) e Python tipado (Agent) é prioridade absoluta.
+- **Depreciação de Scripts**: Scripts manuais (`iniciar_tudo.bat`, `vps_update.sh`) devem ser marcados como depreciados e removidos assim que o pipeline de CI/CD for validado.
 
 ## Governance
 
 Esta constituição prevalece sobre práticas ad-hoc. Mudanças estruturais exigem atualização deste documento e revisão de todos os artefatos de especificação e tarefas afetados.
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-13
+**Version**: 3.0.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-13

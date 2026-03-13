@@ -44,8 +44,13 @@ export const authenticate = async (
       return;
     }
 
-    // Identidade real do usuário (extraída do JWT)
-    req.user = user;
+    // Identidade real do usuário (extraída do JWT) mapeada para AuthUser
+    req.user = {
+      id: user.id,
+      email: user.email || '',
+      tenant_id: user.user_metadata?.tenant_id || user.id, // Mantém compatibilidade usando o ID como tenant_id se não houver B2B formal
+      role: (user.user_metadata?.role as 'admin' | 'colaborador') || 'colaborador'
+    };
 
     // Cliente Supabase específico para esta requisição (respeita RLS)
     req.sb = createClient(supabaseUrl!, supabaseServiceKey!, {

@@ -40,11 +40,30 @@ app.use('/api/ai', aiRouter);
 // Configurações Globais (.env)
 app.use('/api/config', configRouter);
 
+import metalRouter from './routes/metal.js';
+
+// ... (existing imports)
+
 // Team Management
 app.use('/api/team', teamRouter);
 
+// Metal Pricing
+app.use('/api/metal', metalRouter);
+
+import { sseDispatcher } from './services/SSEDispatcher.js';
+import { authenticate } from './middleware/auth.js';
+
+// ... (existing code)
+
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+/**
+ * Endpoint central de eventos SSE para o Dashboard.
+ */
+app.get('/api/events', authenticate, (req: Request, res: Response) => {
+  sseDispatcher.addClient(res);
 });
 
 app.listen(PORT, () => {

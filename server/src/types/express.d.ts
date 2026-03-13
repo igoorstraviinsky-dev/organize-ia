@@ -1,17 +1,20 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { User } from '@supabase/supabase-js';
 
 /**
- * Augmentação global do Express Request para incluir
- * os campos injetados pelo middleware de autenticação.
- * 
- * - req.user: O usuário autenticado via JWT Supabase
- * - req.sb: Cliente Supabase com as credenciais do usuário (respeita RLS)
+ * Interface customizada para o usuário autenticado,
+ * incluindo o tenant_id para blindagem B2B.
  */
+export interface AuthUser {
+  id: string;
+  email: string;
+  tenant_id: string;
+  role: 'admin' | 'colaborador';
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: AuthUser;
       sb?: SupabaseClient;
     }
   }
