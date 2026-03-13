@@ -16,9 +16,9 @@ function formatDate(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const diff = Math.floor((date - today) / 86400000)
-  if (diff < 0) return { text: 'Atrasada', className: 'text-red-500 bg-red-500/10 border border-red-500/20', icon: '🔴' }
-  if (diff === 0) return { text: 'Hoje', className: 'text-purple-400 bg-purple-500/10 border border-purple-500/20', icon: '' }
-  if (diff === 1) return { text: 'Amanhã', className: 'text-amber-500 bg-amber-500/10 border border-amber-500/20', icon: '' }
+  if (diff < 0) return { text: 'Atrasada', className: 'text-red-400 bg-red-500/[0.08] border border-red-500/10', icon: '' }
+  if (diff === 0) return { text: 'Hoje', className: 'text-emerald-400 bg-emerald-500/[0.08] border border-emerald-500/10', icon: '' }
+  if (diff === 1) return { text: 'Amanhã', className: 'text-orange-400 bg-orange-500/[0.08] border border-orange-500/10', icon: '' }
   return {
     text: date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }),
     className: 'text-slate-400 bg-white/5 border border-white/5',
