@@ -168,13 +168,24 @@ function UazapiCard({ existing }: IntegrationCardProps) {
         'x-user-token': session?.access_token || '',
       }
       await fetch(`${SERVER_URL}/api/uazapi/sse/start`, { method: 'POST', headers })
-      // Aguarda 5s para a conexão SSE estabelecer (VPS pode ter latência)
-      await new Promise((r) => setTimeout(r, 5000))
-      const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
-      if (statusRes.ok) {
-        const statusData = await statusRes.json()
-        setSseStatus(statusData.connected ? 'connected' : 'error')
-      } else {
+      
+      // Polling inteligente: tenta verificar o status até 5 vezes (total 10s)
+      let attempts = 0
+      let connected = false
+      while (attempts < 5 && !connected) {
+        attempts++
+        await new Promise((r) => setTimeout(r, 2000))
+        const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
+        if (statusRes.ok) {
+          const statusData = await statusRes.json()
+          if (statusData.connected) {
+            connected = true
+            setSseStatus('connected')
+          }
+        }
+      }
+
+      if (!connected) {
         setSseStatus('error')
       }
     } catch {

@@ -251,14 +251,20 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   if (eventName && !data.event) data.event = eventName;
 
   const dataType = (data.type || data.event || data.EventType || data.eventType || '').toLowerCase();
-  if (dataType === 'connection' || dataType === 'status' || dataType === 'ping') {
-    addLog(integrationId, 'info', `Handshake/sistema: "${dataType}" — aguardando mensagens...`);
+  
+  // Ignora eventos de sistema comuns que não são mensagens
+  if (['connection', 'status', 'ping', 'chats', 'presence', 'contacts'].some(t => dataType.includes(t))) {
+    // Apenas loga como info se for 'connection' ou 'status'
+    if (dataType === 'connection' || dataType === 'status' || dataType.includes('ping')) {
+       addLog(integrationId, 'info', `Handshake/sistema: "${dataType}" — aguardando mensagens...`);
+    }
     return;
   }
 
   const parsed = parseWebhookPayload(data);
   if (!parsed) {
-    addLog(integrationId, 'warn', `Payload não reconhecido (type="${dataType || 'N/A'}") — formato desconhecido`);
+    // Se não for um dos tipos ignorados acima e mesmo assim não parsear, logamos como aviso
+    addLog(integrationId, 'warn', `Evento não mapeado (type="${dataType || 'N/A'}")`);
     return;
   }
 
