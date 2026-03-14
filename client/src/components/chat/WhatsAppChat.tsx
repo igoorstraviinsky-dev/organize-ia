@@ -14,6 +14,7 @@ import {
   useSendAudio,
   useSendImage,
   useStartSSE,
+  useSSEStatus,
   ChatMessage,
   Conversation
 } from '../../hooks/useChatMessages'
@@ -633,6 +634,7 @@ function EmptyState() {
 
 export default function WhatsAppChat() {
   const { data: conversations = [], isLoading: loadingConvs } = useConversations()
+  const { data: sseData } = useSSEStatus()
   const { data: statusData } = useInstanceStatus()
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -643,7 +645,7 @@ export default function WhatsAppChat() {
   useStartSSE()
 
   const isSyncing = statusData?.status === 'syncing'
-  const isConnected = statusData?.connected === true || isSyncing
+  const isConnected = sseData?.connected === true || isSyncing
 
   const filtered = conversations.filter((c) => {
     const name = (c.contact_name || '').toLowerCase()

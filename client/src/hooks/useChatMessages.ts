@@ -140,6 +140,14 @@ export function useInstanceStatus() {
   })
 }
 
+export function useSSEStatus() {
+  return useQuery<{ connected: boolean; active: boolean; error?: string }>({
+    queryKey: ['uazapi_sse_status'],
+    queryFn: () => serverRequest('/sse/status'),
+    refetchInterval: 5000, 
+  })
+}
+
 export function useConnectInstance() {
   const queryClient = useQueryClient()
   return useMutation({
