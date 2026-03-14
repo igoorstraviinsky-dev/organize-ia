@@ -53,12 +53,16 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
     const state = result.state || 'unknown';
 
     const stateStr = state.toLowerCase();
-    const isConnected = stateStr === 'open' || stateStr === 'connected' || stateStr === 'online' ||
-      stateStr.includes('connect') || stateStr.includes('open');
+    // Lista expandida de estados considerados "conectados"
+    const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => stateStr.includes(s)) || (result.raw?.connected === true);
 
     await req.sb!
       .from('integrations')
-      .update({ status: isConnected ? 'connected' : 'disconnected' })
+      .update({ 
+        status: isConnected ? 'connected' : 'disconnected',
+        // Se a API retornou um nome de instância real, atualizamos o banco para bater
+        instance_name: result.raw?.instance?.instanceName || result.raw?.name || integration.instance_name
+      })
       .eq('id', integration.id);
 
     res.json({ connected: isConnected, state, raw: result.raw });

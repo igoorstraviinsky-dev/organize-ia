@@ -168,8 +168,8 @@ function UazapiCard({ existing }: IntegrationCardProps) {
         'x-user-token': session?.access_token || '',
       }
       await fetch(`${SERVER_URL}/api/uazapi/sse/start`, { method: 'POST', headers })
-      // Aguarda 2s para a conexão SSE estabelecer
-      await new Promise((r) => setTimeout(r, 2000))
+      // Aguarda 5s para a conexão SSE estabelecer (VPS pode ter latência)
+      await new Promise((r) => setTimeout(r, 5000))
       const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
       if (statusRes.ok) {
         const statusData = await statusRes.json()
