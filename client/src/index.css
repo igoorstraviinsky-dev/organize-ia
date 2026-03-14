@@ -1,0 +1,208 @@
+:root {
+  --bg-primary: #050505;
+  --bg-sidebar: #0a0a0a;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --pure-white: #ffffff;
+  --accent-purple: #7e57c2;
+  --accent-purple-rich: #6a1b9a;
+  --accent-green: #2ecc71;
+  --accent-blue-electric: #3b82f6;
+  
+  /* Glassmorphism Tokens - Dark Refined */
+  --glass-bg: rgba(10, 10, 10, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
+  
+  /* Neomorphic Tokens - Dark Sophisticated */
+  --neo-bg: #0a0a0a;
+  --neo-shadow-light: #1a1a1a;
+  --neo-shadow-dark: #000000;
+  --neo-recessed-shadow: inset 8px 8px 16px #000000, inset -8px -8px 16px #151515;
+  --neo-raised-shadow: 10px 10px 20px #000000, -10px -10px 20px #151515;
+
+  --card-radius: 28px;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen antialiased;
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: "Inter", sans-serif;
+    font-weight: 800;
+  }
+}
+
+@layer components {
+  .premium-card {
+    background: var(--pure-white);
+    border-radius: var(--card-radius);
+    box-shadow: var(--neo-raised-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+  }
+
+  .jetted-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .neo-recessed {
+    background: var(--neo-bg);
+    box-shadow: var(--neo-recessed-shadow);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+  }
+
+  .neo-raised {
+    background: var(--neo-bg);
+    box-shadow: var(--neo-raised-shadow);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .dark-neo-recessed {
+    background: #050505;
+    box-shadow: inset 6px 6px 12px #000000, inset -6px -6px 12px #101010;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .royal-purple-gradient {
+    background: linear-gradient(135deg, #7e57c2 0%, #6a1b9a 100%);
+  }
+
+  .electric-blue-gradient {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  /* Sidebar active helper if needed elsewhere */
+  .sidebar-active-light {
+    background: rgba(142, 68, 173, 0.1);
+    color: var(--accent-purple);
+    font-weight: 700;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Autofill Reset */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #0a0a0a inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+  /* Gradient Picker Styles - Vanilla CSS Refined */
+  .gradient-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin-top: 0.5rem;
+  }
+  .gradient-picker__grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+  .gradient-picker__swatch {
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .gradient-picker__swatch:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  .gradient-picker__swatch.active {
+    border-color: #1e293b;
+    transform: scale(1.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  .gradient-picker__preview {
+    height: 3rem;
+    width: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+  }
+  .gradient-picker__preview-label {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  .gradient-picker__custom {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .gradient-picker__input {
+    flex: 1;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 10px;
+    font-weight: 700;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .gradient-picker__input:focus {
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  }
+  .gradient-picker__apply-btn {
+    padding: 0.5rem 1rem;
+    background: #1e293b;
+    color: white;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .gradient-picker__apply-btn:hover {
+    background: #334155;
+  }
+}

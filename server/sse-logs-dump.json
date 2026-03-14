@@ -1,0 +1,167 @@
+[
+  [
+    "179863e7-fc29-4434-96b1-530d155e3dfc",
+    [
+      {
+        "ts": "2026-03-07T14:13:58.031Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse/todooist"
+      },
+      {
+        "ts": "2026-03-07T14:13:58.844Z",
+        "level": "warn",
+        "msg": "/sse/todooist → HTTP 404 (tentando próximo...)"
+      },
+      {
+        "ts": "2026-03-07T14:13:58.847Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse"
+      },
+      {
+        "ts": "2026-03-07T14:13:59.509Z",
+        "level": "info",
+        "msg": "Conectado em https://stravauto.uazapi.com/sse (instância: todooist)"
+      },
+      {
+        "ts": "2026-03-07T14:13:59.510Z",
+        "level": "info",
+        "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+      },
+      {
+        "ts": "2026-03-07T14:13:59.512Z",
+        "level": "info",
+        "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+      },
+      {
+        "ts": "2026-03-07T14:19:04.282Z",
+        "level": "warn",
+        "msg": "Conexão encerrada: terminated"
+      },
+      {
+        "ts": "2026-03-07T14:19:04.285Z",
+        "level": "warn",
+        "msg": "Reconectando em 5s..."
+      },
+      {
+        "ts": "2026-03-07T14:19:09.295Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse/todooist"
+      },
+      {
+        "ts": "2026-03-07T14:19:10.143Z",
+        "level": "warn",
+        "msg": "/sse/todooist → HTTP 404 (tentando próximo...)"
+      },
+      {
+        "ts": "2026-03-07T14:19:10.145Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse"
+      },
+      {
+        "ts": "2026-03-07T14:19:11.064Z",
+        "level": "info",
+        "msg": "Conectado em https://stravauto.uazapi.com/sse (instância: todooist)"
+      },
+      {
+        "ts": "2026-03-07T14:19:11.066Z",
+        "level": "info",
+        "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+      },
+      {
+        "ts": "2026-03-07T14:19:11.067Z",
+        "level": "info",
+        "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+      },
+      {
+        "ts": "2026-03-07T14:26:43.896Z",
+        "level": "warn",
+        "msg": "Conexão encerrada: terminated"
+      },
+      {
+        "ts": "2026-03-07T14:26:43.899Z",
+        "level": "warn",
+        "msg": "Reconectando em 5s..."
+      },
+      {
+        "ts": "2026-03-07T14:31:11.839Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse/todooist"
+      },
+      {
+        "ts": "2026-03-07T14:31:11.907Z",
+        "level": "warn",
+        "msg": "/sse/todooist → Erro: fetch failed"
+      },
+      {
+        "ts": "2026-03-07T14:31:11.926Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse"
+      },
+      {
+        "ts": "2026-03-07T14:31:11.999Z",
+        "level": "warn",
+        "msg": "/sse → Erro: fetch failed"
+      },
+      {
+        "ts": "2026-03-07T14:31:12.003Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/events"
+      },
+      {
+        "ts": "2026-03-07T14:31:12.009Z",
+        "level": "warn",
+        "msg": "/events → Erro: fetch failed"
+      },
+      {
+        "ts": "2026-03-07T14:31:12.010Z",
+        "level": "error",
+        "msg": "Nenhum path SSE funcionou para https://stravauto.uazapi.com. Retentando em 10s..."
+      },
+      {
+        "ts": "2026-03-07T14:31:22.020Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse/todooist"
+      },
+      {
+        "ts": "2026-03-07T14:31:22.903Z",
+        "level": "warn",
+        "msg": "/sse/todooist → HTTP 404 (tentando próximo...)"
+      },
+      {
+        "ts": "2026-03-07T14:31:22.905Z",
+        "level": "info",
+        "msg": "Tentando conectar em https://stravauto.uazapi.com/sse"
+      },
+      {
+        "ts": "2026-03-07T14:31:23.651Z",
+        "level": "info",
+        "msg": "Conectado em https://stravauto.uazapi.com/sse (instância: todooist)"
+      },
+      {
+        "ts": "2026-03-07T14:31:23.653Z",
+        "level": "info",
+        "msg": "Evento recebido: type=\"N/A\" | {\"type\": \"connection\", \"message\": \"Connection established\"}"
+      },
+      {
+        "ts": "2026-03-07T14:31:23.654Z",
+        "level": "info",
+        "msg": "Handshake/sistema: \"connection\" — aguardando mensagens..."
+      },
+      {
+        "ts": "2026-03-07T14:31:43.006Z",
+        "level": "info",
+        "msg": "Evento recebido: type=\"N/A\" | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"messages_update\",\"event\":{\"BroadcastListOwner\":\"\",\"Chat\":\"5511962027835@s.whatsapp.net\",\"IsFromMe\":false,\"IsGroup\":false,\"MessageIDs\":[\"3EB0AF22A"
+      },
+      {
+        "ts": "2026-03-07T14:31:43.008Z",
+        "level": "info",
+        "msg": "Payload: chaves=[BaseUrl,EventType,event,instanceName,owner,state,token,type] | {\"BaseUrl\":\"https://stravauto.uazapi.com\",\"EventType\":\"messages_update\",\"event\":{\"BroadcastListOwner\":\"\",\"Chat\":\"5511962027835@s.whatsapp.net\",\"IsFromMe\":false,\"IsGroup\":false,\"MessageIDs\":[\"3EB0AF22AEEDAA582FFB13\",\"3EB0C20295557DEEA245EE\",\"3EB085A645C36957B8EF43\",\"3EB0A15AFA9815092615A1\",\"3EB028F24"
+      },
+      {
+        "ts": "2026-03-07T14:31:43.011Z",
+        "level": "warn",
+        "msg": "Payload não reconhecido (type=\"readreceipt\") — formato desconhecido"
+      }
+    ]
+  ]
+]
