@@ -70,83 +70,133 @@ check_dependencies() {
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 3. CONFIGURAÇÃO DE VARIÁVEIS (.ENV)
+# 3. VERIFICAÇÃO DE INTEGRIDADE DE AMBIENTE (Princípio XI)
 # ──────────────────────────────────────────────────────────────────────────────
-configure_env() {
-    echo -e "\n${BLUE}[Configuração] Vamos configurar suas credenciais:${NC}"
-    echo "Pressione ENTER para manter o valor atual (se existir)."
+check_env_integrity() {
+    echo -e "${BLUE}[2/3] Validando integridade do ambiente...${NC}"
+    
+    MANDATORY_VARS=(
+        "VITE_SUPABASE_URL" 
+        "VITE_SUPABASE_ANON_KEY" 
+        "SUPABASE_SERVICE_KEY" 
+        "OPENAI_API_KEY" 
+        "WAZAPI_TOKEN" 
+        "WAZAPI_INSTANCE"
+        "VITE_API_URL"
+    )
 
-    # Função para ler entrada com default
-    read_with_default() {
+    MISSING=0
+    if [ ! -f .env ]; then
+        echo -e "${YELLOW}⚠️ Arquivo .env não encontrado na raiz.${NC}"
+        MISSING=1
+    else
+        for var in "${MANDATORY_VARS[@]}"; do
+            val=$(grep "^$var=" .env | cut -d= -f2-)
+            if [ -z "$val" ]; then
+                echo -e "${RED}❌ Variável ausente ou vazia: $var${NC}"
+                MISSING=1
+            fi
+        done
+    fi
+
+    if [ $MISSING -eq 1 ]; then
+        echo -e "${YELLOW}Iniciando Setup Wizard Compulsório...${NC}"
+        sleep 2
+        run_setup_wizard
+    else
+        echo -e "${GREEN}✅ Ambiente íntegro!${NC}"
+    fi
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 4. SETUP WIZARD INTERATIVO
+# ──────────────────────────────────────────────────────────────────────────────
+run_setup_wizard() {
+    stravinsky_header
+    echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║          ASSISTENTE DE CONFIGURAÇÃO INTERATIVO             ║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "Este assistente irá gerar o arquivo .env mestre para todos os containers."
+    echo -e "Campos vazios NÃO são aceitos para chaves críticas.\n"
+
+    # Função para ler entrada com validação rigorosa
+    read_required() {
         local var_name=$1
         local current_val=$2
         local prompt_text=$3
-        read -p "$prompt_text [$current_val]: " input
-        echo "${input:-$current_val}"
+        local input=""
+        
+        while [ -z "$input" ]; do
+            read -p "➜ $prompt_text [$current_val]: " input
+            input="${input:-$current_val}"
+            
+            # Impedir valores placeholder
+            if [[ "$input" == *"seu-projeto"* || "$input" == *"sua-chave"* || "$input" == *"seu_token"* ]]; then
+                echo -e "${RED}   Erro: Por favor, insira um valor real.${NC}"
+                input=""
+            fi
+            
+            if [ -z "$input" ]; then
+                echo -e "${RED}   Erro: Este campo é obrigatório.${NC}"
+            fi
+        done
+        echo "$input"
     }
 
-    # Carregar valores atuais se existirem
-    if [ -f server/.env ]; then
-        SUPABASE_URL_CURRENT=$(grep "SUPABASE_URL=" server/.env | cut -d= -f2-)
-        SUPABASE_ANON_KEY_CURRENT=$(grep "VITE_SUPABASE_ANON_KEY=" .env | cut -d= -f2-)
-        SUPABASE_SERVICE_KEY_CURRENT=$(grep "SUPABASE_SERVICE_KEY=" server/.env | cut -d= -f2-)
-        OPENAI_API_KEY_CURRENT=$(grep "OPENAI_API_KEY=" server/.env | cut -d= -f2-)
-        DNS_DOMAIN_CURRENT=$(grep "VITE_API_URL=" server/.env | cut -d/ -f3 | cut -d: -f1)
-        WAZAPI_TOKEN_CURRENT=$(grep "WAZAPI_TOKEN=" agent/.env | cut -d= -f2-)
-        WAZAPI_INSTANCE_CURRENT=$(grep "WAZAPI_INSTANCE=" agent/.env | cut -d= -f2-)
+    # Carregar valores atuais se existirem para sugerir default
+    if [ -f .env ]; then
+        S_URL_CUR=$(grep "^SUPABASE_URL=" .env | cut -d= -f2-)
+        S_ANON_CUR=$(grep "^VITE_SUPABASE_ANON_KEY=" .env | cut -d= -f2-)
+        S_SERV_CUR=$(grep "^SUPABASE_SERVICE_KEY=" .env | cut -d= -f2-)
+        O_KEY_CUR=$(grep "^OPENAI_API_KEY=" .env | cut -d= -f2-)
+        W_TOK_CUR=$(grep "^WAZAPI_TOKEN=" .env | cut -d= -f2-)
+        W_INS_CUR=$(grep "^WAZAPI_INSTANCE=" .env | cut -d= -f2-)
+        D_DOM_CUR=$(grep "^VITE_API_URL=" .env | cut -d/ -f3 | cut -d: -f1)
     fi
 
-    SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL_CURRENT:-https://seu-projeto.supabase.co}" "Supabase URL")
-    SUPABASE_ANON_KEY=$(read_with_default "SUPABASE_ANON_KEY" "${SUPABASE_ANON_KEY_CURRENT:-sua-chave-anon-publica}" "Supabase Anon Key (Public)")
-    SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key (Private)")
-    OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY_CURRENT:-sk-proj-xxx}" "OpenAI API Key")
-    WAZAPI_TOKEN=$(read_with_default "WAZAPI_TOKEN" "${WAZAPI_TOKEN_CURRENT:-seu_token_aqui}" "UazAPI Token")
-    WAZAPI_INSTANCE=$(read_with_default "WAZAPI_INSTANCE" "${WAZAPI_INSTANCE_CURRENT:-organizador}" "UazAPI Instance Name")
-    DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome)")
-    
-    CLEAN_DOMAIN=$(echo $DNS_DOMAIN | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+    S_URL=$(read_required "S_URL" "${S_URL_CUR:-https://seu-projeto.supabase.co}" "Supabase URL")
+    S_ANON=$(read_required "S_ANON" "${S_ANON_CUR:-sua-chave-anon-publica}" "Supabase Anon Key")
+    S_SERV=$(read_required "S_SERV" "${S_SERV_CUR:-sua-chave-service}" "Supabase Service Key")
+    O_KEY=$(read_required "O_KEY" "${O_KEY_CUR:-sk-proj-xxx}" "OpenAI API Key")
+    W_TOK=$(read_required "W_TOK" "${W_TOK_CUR:-seu_token_aqui}" "UazAPI Token")
+    W_INS=$(read_required "W_INS" "${W_INS_CUR:-organizador}" "UazAPI Instance Name")
+    D_DOM=$(read_required "D_DOM" "${D_DOM_CUR:-localhost}" "Domínio/IP da VPS")
 
-    echo -e "${YELLOW}Salvando configurações...${NC}"
-    
-    # .env Global (Raiz) - Fonte para Interpolação do Docker Compose
+    CLEAN_DOM=$(echo $D_DOM | sed -e 's|^[^/]*//||' -e 's|/.*$||' | cut -d: -f1)
+
+    # Persistência Unificada (Fonte de verdade para docker-compose)
     cat > .env <<EOF
-VITE_SUPABASE_URL=$SUPABASE_URL
-VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-VITE_API_URL=http://$CLEAN_DOMAIN:3001
-SUPABASE_URL=$SUPABASE_URL
-SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
-OPENAI_API_KEY=$OPENAI_API_KEY
-WAZAPI_URL=http://host.docker.internal:5000
-WAZAPI_TOKEN=$WAZAPI_TOKEN
-EOF
+# CONFIGURAÇÕES GERADAS PELO SETUP WIZARD EM $(date)
+# FRONTEND (Build ARGs)
+VITE_SUPABASE_URL=$S_URL
+VITE_SUPABASE_ANON_KEY=$S_ANON
+VITE_API_URL=http://$CLEAN_DOM:3001
 
-    # server/.env
-    cat > server/.env <<EOF
-SUPABASE_URL=$SUPABASE_URL
-SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
-OPENAI_API_KEY=$OPENAI_API_KEY
+# BACKEND (Runtime ENV)
+SUPABASE_URL=$S_URL
+SUPABASE_SERVICE_KEY=$S_SERV
+OPENAI_API_KEY=$O_KEY
 OPENAI_MODEL=gpt-4o
 PORT=3001
-VITE_API_URL=http://$CLEAN_DOMAIN:3001
 WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
-EOF
 
-    # agent/.env
-    cat > agent/.env <<EOF
-SUPABASE_URL=$SUPABASE_URL
-SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
-OPENAI_API_KEY=$OPENAI_API_KEY
-OPENAI_MODEL=gpt-4o
-BRAIN_URL=http://server:3001/api/agent/process
+# UAZAPI
 WAZAPI_URL=http://host.docker.internal:5000
-WAZAPI_TOKEN=$WAZAPI_TOKEN
-WAZAPI_INSTANCE=$WAZAPI_INSTANCE
+WAZAPI_TOKEN=$W_TOK
+WAZAPI_INSTANCE=$W_INS
+
+# AGENT
+BRAIN_URL=http://server:3001/api/agent/process
 AGENT_PORT=8005
 WEBHOOK_SECRET=organizador_webhook_secret_2024
 EOF
 
-    echo -e "${GREEN}✅ Configurações salvas!${NC}"
-    echo -e "${YELLOW}DICA: Para aplicar, rode: docker compose build --no-cache && docker compose up -d${NC}"
+    # Replicar para pastas específicas (compatibilidade)
+    cp .env server/.env
+    cp .env agent/.env
+
+    echo -e "${GREEN}✅ Arquivo .env gerado com sucesso!${NC}"
+    sleep 1
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -156,10 +206,11 @@ action_deploy() {
     local mode=$1
     if [ "$mode" == "install" ]; then
         echo -e "${BLUE}Iniciando Instalação Completa...${NC}"
-        configure_env
+        run_setup_wizard
     else
         echo -e "${BLUE}Iniciando Atualização (Pull do GHCR)...${NC}"
         git pull origin main
+        check_env_integrity
     fi
 
     echo -e "${YELLOW}Sincronizando imagens e containers...${NC}"
@@ -193,6 +244,7 @@ action_monitor_logs() {
 
 stravinsky_header
 check_dependencies
+check_env_integrity
 
 while true; do
     stravinsky_header

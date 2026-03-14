@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report:
-- Version Change: 3.0.0 -> 3.1.0
+- Version Change: 3.1.0 -> 3.2.0
 - New Principles:
-    - Zero-Build Deployment: O uso de GHCR para imagens pré-compiladas é o padrão oficial.
-    - Unified Observability: Monitoramento de logs unificado no terminal da VPS para saúde B2B.
+    - XI. Environment Integrity (Mandatory Pre-Flight): O sistema não deve iniciar se chaves essenciais estiverem ausentes. Validação obrigatória no script de boot.
+    - XII. Frontend Static Injection (Build Arguments): Variáveis VITE_* devem ser injetadas via Docker ARG no build para garantir integridade do bundle estático.
 - Modified Principles:
-    - Principle VII (Isolated Architecture): Reforço da Blindagem de Tenant no Agente Python.
-- Governance Update: vps_update.sh evolui de script de deploy para "Painel de Controle e Monitoramento".
+    - N/A
+- Governance Update: vps_update.sh agora assume papel de "Guardião de Ambiente" com validação pré-flight compulsória.
 -->
 # Organizador Constitution
 
@@ -60,10 +60,23 @@ O padrão de execução é a imutabilidade absoluta.
 A saúde do ecossistema B2B depende de visibilidade total.
 1. **Logs Unificados**: É OBRIGATÓRIO que o painel de controle (VPS) ofereça acesso imediato aos logs em tempo real de todos os containers simultaneamente para diagnóstico rápido.
 
+### XI. Environment Integrity (Mandatory Pre-Flight)
+
+O sistema é proibido de subir containers se chaves essenciais estiverem ausentes ou forem strings vazias.
+1. **Validação**: O script de boot deve validar `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `OPENAI_API_KEY` e chaves da `UAZAPI`.
+2. **Setup Wizard**: Se as chaves falharem na validação, o sistema deve interromper o boot e lançar o Assistente de Configuração interativo.
+
+### XII. Frontend Static Injection (Build Arguments)
+
+Variáveis de ambiente do frontend (prefixo `VITE_`) são tratadas como **Build Arguments**.
+1. **Baking**: Elas devem ser passadas via `docker build --build-arg` e declaradas como `ARG` no Dockerfile para que o Vite as compile no bundle estático.
+2. **Imutabilidade**: Uma vez gerada a imagem do cliente, as variáveis `VITE_` são fixas (hardcoded) para aquela versão, garantindo que o bundle se comporte de forma idêntica em qualquer VPS.
+
 ## Tecnologias e Padrões
 
 - **Container Registry**: GHCR (GitHub Container Registry).
 - **Monitoring**: Docker Compose Logs (Tail mode).
 - **Security**: Injeção dinâmica de Tenant Context no Agente Python.
+- **Workflow**: Automated Setup Wizard no script de infra.
 
-**Version**: 3.1.0 | **Ratified**: 2026-03-14 | **Last Amended**: 2026-03-14
+**Version**: 3.2.0 | **Ratified**: 2026-03-14 | **Last Amended**: 2026-03-14

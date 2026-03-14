@@ -6,7 +6,6 @@ services:
       - "3001:3001"
     env_file:
       - .env
-      - ./server/.env
     networks:
       - organize-net
 
@@ -30,7 +29,6 @@ services:
     restart: always
     env_file:
       - .env
-      - ./agent/.env
     depends_on:
       - server
     networks:
