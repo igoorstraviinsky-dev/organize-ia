@@ -66,10 +66,19 @@ app.get('/api/events', authenticate, (req: Request, res: Response) => {
   sseDispatcher.addClient(res);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  // Inicia listeners SSE para todas as integrações UazAPI ativas
-  initAllSSEListeners().catch(err => console.error('[SSE Init Error]', err.message));
+  
+  try {
+    // Sincroniza dados do .env (UazAPI) para o banco de dados
+    const { syncUazapiFromEnv } = await import('./lib/syncIntegrations.js');
+    await syncUazapiFromEnv();
+
+    // Inicia listeners SSE para todas as integrações UazAPI ativas
+    await initAllSSEListeners();
+  } catch (err: any) {
+    console.error('[Initialization Error]', err.message);
+  }
   
   // Inicia o agendador de resumo matinal
   initMorningSummary();

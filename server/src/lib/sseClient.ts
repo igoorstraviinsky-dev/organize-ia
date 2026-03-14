@@ -217,10 +217,15 @@ export async function initAllSSEListeners() {
   }
 
   if (!integrations?.length) {
-    // Busca rápida para log de depuração
-    const { data: all } = await supabase.from('integrations').select('provider');
-    const providers = all?.map(p => p.provider).join(', ') || 'nenhuma';
-    console.log(`[SSE] Nenhuma integração compatível encontrada (Provedores no banco: ${providers}).`);
+    // Busca profunda para diagnóstico
+    const { data: all } = await supabase.from('integrations').select('provider, api_url, api_token');
+    
+    if (!all || all.length === 0) {
+      console.log('[SSE] Tabela "integrations" está vazia no banco de dados.');
+    } else {
+      const report = all.map(p => `[${p.provider}] URL: ${p.api_url ? 'OK' : 'MISSING'} | Token: ${p.api_token ? 'OK' : 'MISSING'}`).join('; ');
+      console.log(`[SSE] Nenhuma integração ativável. Encontrados no banco: ${report}`);
+    }
     return;
   }
 

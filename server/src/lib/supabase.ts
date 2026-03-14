@@ -1,17 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL?.trim();
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY?.trim();
 
 if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('[Supabase] Erro: SUPABASE_URL ou SUPABASE_SERVICE_KEY ausentes no .env');
   throw new Error('[Supabase] SUPABASE_URL e SUPABASE_SERVICE_KEY são obrigatórios.');
 }
 
-/**
- * Cliente Supabase com service_role — bypassa RLS.
- * Use apenas em operações de backend seguras (agente, crons).
- * Para operações de usuário, use req.sb (criado no auth middleware).
- */
 console.log(`[Supabase] Conectado em: ${supabaseUrl}`);
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
