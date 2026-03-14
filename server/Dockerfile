@@ -19,7 +19,7 @@ RUN npm install --production
 
 COPY --from=builder /app/dist ./dist
 # Copia o ecosystem se necessário para o container, embora o compose possa disparar o node direto
-COPY ecosystem.config.js ./
+# COPY ecosystem.config.js ./
 
 EXPOSE 3001
 

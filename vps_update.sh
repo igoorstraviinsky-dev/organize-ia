@@ -86,13 +86,22 @@ configure_env() {
     }
 
     # Carregar valores atuais se existirem
-    [ -f server/.env ] && source server/.env
+    # Usamos grep para evitar erros de source com formatos não-bash
+    if [ -f server/.env ]; then
+        SUPABASE_URL_CURRENT=$(grep "SUPABASE_URL=" server/.env | cut -d= -f2-)
+        SUPABASE_SERVICE_KEY_CURRENT=$(grep "SUPABASE_SERVICE_KEY=" server/.env | cut -d= -f2-)
+        OPENAI_API_KEY_CURRENT=$(grep "OPENAI_API_KEY=" server/.env | cut -d= -f2-)
+        DNS_DOMAIN_CURRENT=$(grep "VITE_API_URL=" server/.env | cut -d/ -f3 | cut -d: -f1)
+    fi
 
-    SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL:-https://seu-projeto.supabase.co}" "Supabase URL")
-    SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY:-sua-chave-service}" "Supabase Service Key")
-    OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY:-sk-proj-xxx}" "OpenAI API Key")
-    DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN:-localhost}" "Domínio ou IP da VPS")
+    SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL_CURRENT:-https://seu-projeto.supabase.co}" "Supabase URL")
+    SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key")
+    OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY_CURRENT:-sk-proj-xxx}" "OpenAI API Key")
+    DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome, ex: organize.meu.site)")
     
+    # Limpar o domínio de possíveis http/https
+    CLEAN_DOMAIN=$(echo $DNS_DOMAIN | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+
     # Criar .env do Server
     echo -e "${YELLOW}Salvando server/.env...${NC}"
     cat > server/.env <<EOF
@@ -101,7 +110,7 @@ SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o
 PORT=3001
-VITE_API_URL=http://$DNS_DOMAIN:3001
+VITE_API_URL=http://$CLEAN_DOMAIN:3001
 EOF
 
     # Criar .env do Agente (Cópia + específicas)
@@ -133,7 +142,9 @@ action_install() {
     echo -e "${BLUE}Subindo containers com Docker Compose...${NC}"
     docker compose up -d --build
 
-    echo -e "${GREEN}🚀 Aplicação instalada e rodando em http://$(cat server/.env | grep VITE_API_URL | cut -d/ -f3 | cut -d: -f1)${NC}"
+    URL_FINAL=$(grep "VITE_API_URL=" server/.env | cut -d= -f2-)
+    echo -e "${GREEN}🚀 Aplicação instalada e rodando!${NC}"
+    echo -e "${BLUE}Acesse em: $URL_FINAL${NC}"
     read -p "Pressione ENTER para voltar ao menu..."
 }
 
