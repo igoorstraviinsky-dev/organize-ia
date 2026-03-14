@@ -88,19 +88,30 @@ configure_env() {
     # Carregar valores atuais se existirem
     if [ -f server/.env ]; then
         SUPABASE_URL_CURRENT=$(grep "SUPABASE_URL=" server/.env | cut -d= -f2-)
+        SUPABASE_ANON_KEY_CURRENT=$(grep "VITE_SUPABASE_ANON_KEY=" .env | cut -d= -f2-)
         SUPABASE_SERVICE_KEY_CURRENT=$(grep "SUPABASE_SERVICE_KEY=" server/.env | cut -d= -f2-)
         OPENAI_API_KEY_CURRENT=$(grep "OPENAI_API_KEY=" server/.env | cut -d= -f2-)
         DNS_DOMAIN_CURRENT=$(grep "VITE_API_URL=" server/.env | cut -d/ -f3 | cut -d: -f1)
     fi
 
     SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL_CURRENT:-https://seu-projeto.supabase.co}" "Supabase URL")
-    SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key")
+    SUPABASE_ANON_KEY=$(read_with_default "SUPABASE_ANON_KEY" "${SUPABASE_ANON_KEY_CURRENT:-sua-chave-anon-publica}" "Supabase Anon Key (Public)")
+    SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key (Private)")
     OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY_CURRENT:-sk-proj-xxx}" "OpenAI API Key")
     DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome)")
     
     CLEAN_DOMAIN=$(echo $DNS_DOMAIN | sed -e 's|^[^/]*//||' -e 's|/.*$||')
 
     echo -e "${YELLOW}Salvando configurações...${NC}"
+    
+    # .env Global (Raiz) - Usado pelo Docker Build Args
+    cat > .env <<EOF
+VITE_SUPABASE_URL=$SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+VITE_API_URL=http://$CLEAN_DOMAIN:3001
+EOF
+
+    # server/.env
     cat > server/.env <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
@@ -110,6 +121,7 @@ PORT=3001
 VITE_API_URL=http://$CLEAN_DOMAIN:3001
 EOF
 
+    # agent/.env
     cat > agent/.env <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY

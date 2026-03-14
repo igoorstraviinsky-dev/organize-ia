@@ -1,15 +1,21 @@
 # Tasks: Inteligência e Escala (Fase 4 - V2)
 
 **Input**: Design documents from `/specs/004-intelligence-scale/`
-**Prerequisites**: plan.md (required), spec.md (required)
+**Prerequisites**: plan.md (required), spec.md (required), data-model.md (newly added for Vite variables)
+
+## Phase 0: [URGENTE] Correção Crítica Frontend (Supabase Env)
+
+- [ ] T000: Adicionar `ARG` e `ENV` para `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no `client/Dockerfile`.
+- [ ] T001: Configurar a seção `build -> args` no `docker-compose.yml` para mapear as variáveis do arquivo `.env` para o container do cliente.
+- [ ] T002: Atualizar `vps_update.sh` para solicitar o `VITE_SUPABASE_ANON_KEY` (Chave Pública) e salvá-la no `.env` da raiz e do client.
 
 ## Phase 1: Infraestrutura e CI/CD (Zero-Build Standard)
 
-- [ ] T001: Mover `ecosystem.config.js` para a subpasta `server/` para que ele seja acessível pelo build context atual.
-- [ ] T002: Atualizar o arquivo `.github/workflows/deploy.yml` para realizar build+push para o GHCR (GitHub Container Registry).
-- [ ] T003: Modificar `docker-compose.yml` para utilizar as imagens do GHCR (`image: ghcr.io/...`) em vez de build local em produção.
-- [ ] T004: Atualizar o script de deploy no GitHub Actions para realizar `docker compose pull` antes de `up` na VPS.
-- [ ] T005: Validar o novo fluxo de deploy imutável (Sem build na VPS).
+- [ ] T003: Mover `ecosystem.config.js` para a subpasta `server/` para que ele seja acessível pelo build context atual.
+- [ ] T004: Atualizar o arquivo `.github/workflows/deploy.yml` para realizar build+push para o GHCR (GitHub Container Registry).
+- [ ] T005: Modificar `docker-compose.yml` para utilizar as imagens do GHCR (`image: ghcr.io/...`) em vez de build local em produção.
+- [ ] T006: Atualizar o job de deploy no GitHub Actions para realizar `docker compose pull` antes de `up` na VPS.
+- [ ] T007: Validar o novo fluxo de deploy imutável (Sem build na VPS).
 
 ## Phase 2: Monitoramento em Tempo Real (Painel de Controle)
 

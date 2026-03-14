@@ -10,7 +10,11 @@ services:
       - organize-net
 
   client:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     restart: always
     ports:
       - "80:80"
