@@ -291,6 +291,12 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
 
     addLog(integrationId, 'info', `📥 Recebido histórico de ${historyMessages.length} mensagens. Sincronizando...`);
     
+    // Atualiza status para syncing para feedback na UI
+    await supabase
+      .from('integrations')
+      .update({ status: 'syncing' })
+      .eq('id', integrationId);
+    
     const records = historyMessages.map(msg => {
       const p = parseWebhookPayload(msg);
       if (!p || !p.phone) return null;
@@ -321,6 +327,12 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
         addLog(integrationId, 'info', `✅ Histórico sincronizado: ${records.length} mensagens processadas.`);
       }
     }
+
+    // Retorna para connected após o sync
+    await supabase
+      .from('integrations')
+      .update({ status: 'connected' })
+      .eq('id', integrationId);
     return;
   }
 

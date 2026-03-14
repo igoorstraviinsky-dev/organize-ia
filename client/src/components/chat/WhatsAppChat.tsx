@@ -642,7 +642,8 @@ export default function WhatsAppChat() {
   useChatRealtime(selectedPhone)
   useStartSSE()
 
-  const isConnected = statusData?.connected === true
+  const isSyncing = statusData?.status === 'syncing'
+  const isConnected = statusData?.connected === true || isSyncing
 
   const filtered = conversations.filter((c) => {
     const name = (c.contact_name || '').toLowerCase()
@@ -703,6 +704,14 @@ export default function WhatsAppChat() {
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {isSyncing && (
+            <div className="bg-purple-600/10 border-b border-purple-500/20 px-6 py-3 flex items-center gap-3 animate-pulse">
+              <Loader2 size={14} className="animate-spin text-purple-500" strokeWidth={3} />
+              <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">
+                Sincronizando histórico com WhatsApp...
+              </span>
+            </div>
+          )}
           {loadingConvs ? (
             <div className="flex flex-col items-center justify-center gap-4 py-24">
               <Loader2 size={32} strokeWidth={3} className="animate-spin text-purple-600" />

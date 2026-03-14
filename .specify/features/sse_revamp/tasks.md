@@ -12,10 +12,8 @@
 - [x] Task 2.5: Melhorar detecção do dataType no loop principal do SSE.
 
 ## Phase 3: Frontend (Client)
-- [ ] Task 3.1: Add real-time status reactive badge.
-  - File: `client/src/components/integrations/IntegrationsPage.tsx`
-  - Logic: Ensure the badge updates based on the forwarded `connection` event payload.
-- [ ] Task 3.2: Add "Syncing History" loading state.
+- [x] Task 3.1: Add real-time status reactive badge.
+- [x] Task 3.2: Add "Syncing History" loading state.
 - [x] Task 3.3: Implementar resiliência no polling de status inicial (esperar handshake).
 
 ## Phase 4: Verification

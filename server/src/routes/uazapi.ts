@@ -69,7 +69,18 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
       })
       .eq('id', integration.id);
 
-    res.json({ connected: isConnected, state, raw: result.raw });
+    const { data: updatedIntegration } = await req.sb!
+      .from('integrations')
+      .select('status')
+      .eq('id', integration.id)
+      .single();
+
+    res.json({ 
+      connected: isConnected, 
+      status: updatedIntegration?.status || (isConnected ? 'connected' : 'disconnected'),
+      state, 
+      raw: result.raw 
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

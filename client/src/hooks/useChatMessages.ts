@@ -132,7 +132,7 @@ async function serverRequest(path: string, options: RequestInit = {}) {
 }
 
 export function useInstanceStatus() {
-  return useQuery<{ connected: boolean }>({
+  return useQuery<{ connected: boolean, status?: string }>({
     queryKey: ['uazapi_status'],
     queryFn: () => serverRequest('/status'),
     retry: false,
