@@ -122,8 +122,31 @@ function UazapiCard({ existing }: IntegrationCardProps) {
         api_token: existing.api_token || '',
         instance_name: existing.instance_name || '',
       })
+      // Verifica status inicial do SSE no servidor
+      checkSSEStatus()
     }
   }, [existing])
+
+  const checkSSEStatus = async () => {
+    try {
+      const { user, session } = await getAuthHeaders()
+      if (!user) return
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-user-id': user.id,
+        'x-user-token': session?.access_token || '',
+      }
+      const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
+      if (statusRes.ok) {
+        const statusData = await statusRes.json()
+        if (statusData.connected) {
+          setSseStatus('connected')
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao verificar status SSE:', err)
+    }
+  }
 
   const set = (field: keyof typeof form) => (val: string) => setForm((f) => ({ ...f, [field]: val }))
 
