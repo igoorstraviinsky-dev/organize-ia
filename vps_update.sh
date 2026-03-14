@@ -92,19 +92,23 @@ configure_env() {
         SUPABASE_SERVICE_KEY_CURRENT=$(grep "SUPABASE_SERVICE_KEY=" server/.env | cut -d= -f2-)
         OPENAI_API_KEY_CURRENT=$(grep "OPENAI_API_KEY=" server/.env | cut -d= -f2-)
         DNS_DOMAIN_CURRENT=$(grep "VITE_API_URL=" server/.env | cut -d/ -f3 | cut -d: -f1)
+        WAZAPI_TOKEN_CURRENT=$(grep "WAZAPI_TOKEN=" agent/.env | cut -d= -f2-)
+        WAZAPI_INSTANCE_CURRENT=$(grep "WAZAPI_INSTANCE=" agent/.env | cut -d= -f2-)
     fi
 
     SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL_CURRENT:-https://seu-projeto.supabase.co}" "Supabase URL")
     SUPABASE_ANON_KEY=$(read_with_default "SUPABASE_ANON_KEY" "${SUPABASE_ANON_KEY_CURRENT:-sua-chave-anon-publica}" "Supabase Anon Key (Public)")
     SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key (Private)")
     OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY_CURRENT:-sk-proj-xxx}" "OpenAI API Key")
+    WAZAPI_TOKEN=$(read_with_default "WAZAPI_TOKEN" "${WAZAPI_TOKEN_CURRENT:-seu_token_aqui}" "UazAPI Token")
+    WAZAPI_INSTANCE=$(read_with_default "WAZAPI_INSTANCE" "${WAZAPI_INSTANCE_CURRENT:-organizador}" "UazAPI Instance Name")
     DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome)")
     
     CLEAN_DOMAIN=$(echo $DNS_DOMAIN | sed -e 's|^[^/]*//||' -e 's|/.*$||')
 
     echo -e "${YELLOW}Salvando configurações...${NC}"
     
-    # .env Global (Raiz) - Usado pelo Docker Build Args e Docker Compose environment
+    # .env Global (Raiz) - Fonte para Interpolação do Docker Compose
     cat > .env <<EOF
 VITE_SUPABASE_URL=$SUPABASE_URL
 VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
@@ -113,7 +117,7 @@ SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
 WAZAPI_URL=http://host.docker.internal:5000
-WAZAPI_TOKEN=seu_token_aqui
+WAZAPI_TOKEN=$WAZAPI_TOKEN
 EOF
 
     # server/.env
@@ -124,7 +128,6 @@ OPENAI_API_KEY=$OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o
 PORT=3001
 VITE_API_URL=http://$CLEAN_DOMAIN:3001
-# Segredo para o webhook do WhatsApp (UazAPI)
 WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
 EOF
 
@@ -134,17 +137,16 @@ SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o
-# BRAIN_URL aponta para o container 'server' na rede do Docker
 BRAIN_URL=http://server:3001/api/agent/process
-# Se UazAPI/WazAPI estiver rodando na VPS fora do Docker, usamos host.docker.internal
 WAZAPI_URL=http://host.docker.internal:5000
-WAZAPI_TOKEN=seu_token_aqui
-WAZAPI_INSTANCE=organizador
+WAZAPI_TOKEN=$WAZAPI_TOKEN
+WAZAPI_INSTANCE=$WAZAPI_INSTANCE
 AGENT_PORT=8005
 WEBHOOK_SECRET=organizador_webhook_secret_2024
 EOF
 
     echo -e "${GREEN}✅ Configurações salvas!${NC}"
+    echo -e "${YELLOW}DICA: Para aplicar, rode: docker compose build --no-cache && docker compose up -d${NC}"
 }
 
 # ──────────────────────────────────────────────────────────────────────────────

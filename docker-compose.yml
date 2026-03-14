@@ -4,13 +4,8 @@ services:
     restart: always
     ports:
       - "3001:3001"
-    environment:
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
-      - PORT=3001
     env_file:
+      - .env
       - ./server/.env
     networks:
       - organize-net
@@ -33,14 +28,8 @@ services:
   agent:
     build: ./agent
     restart: always
-    environment:
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - WAZAPI_URL=${WAZAPI_URL}
-      - WAZAPI_TOKEN=${WAZAPI_TOKEN}
-      - BRAIN_URL=http://server:3001/api/agent/process
     env_file:
+      - .env
       - ./agent/.env
     depends_on:
       - server
