@@ -1,12 +1,12 @@
 <!--
 Sync Impact Report:
-- Version Change: 2.1.0 -> 3.0.0
+- Version Change: 3.0.0 -> 3.1.0
 - New Principles:
-    - Principle IX (Immutable Infrastructure & Deployment): Docker as the absolute environment standard; GitHub Actions as the sole production gatekeeper.
+    - Zero-Build Deployment: O uso de GHCR para imagens pré-compiladas é o padrão oficial.
+    - Unified Observability: Monitoramento de logs unificado no terminal da VPS para saúde B2B.
 - Modified Principles:
-    - Principle VIII (Resilient Real-Time Orchestration): Added requirements for SSE heartbeat mechanism and automatic reconnection patterns.
-- Governance Update: Explicit prohibition of manual scripts (vps_update.sh, iniciar_tudo.bat) after CI/CD validation.
-- Templates requiring updates: ✅ Templates remained aligned.
+    - Principle VII (Isolated Architecture): Reforço da Blindagem de Tenant no Agente Python.
+- Governance Update: vps_update.sh evolui de script de deploy para "Painel de Controle e Monitoramento".
 -->
 # Organizador Constitution
 
@@ -34,49 +34,36 @@ A unidade fundamental do sistema é a Tarefa. Cada tarefa deve possuir estados c
 
 ### VI. Centralized Navigation Paradigm
 
-A navegação web principal baseia-se num modelo de Dashboard centralizado focado no Inbox (Tarefas Gerais ou visualização Global). Acessos a projetos ou outras ramificações complexas DEVEM ocorrer por meio de componentes de interface sobrepostos ou secundários (ex: Drawer lateral/pop-overs), garantindo que a tela central seja sempre focada na ação (o que está solto ou agendado para o momento atual).
+A navegação web principal baseia-se num modelo de Dashboard centralizado focado no Inbox (Tarefas Gerais ou visualização Global). Acessos a projetos ou outras ramificações complexas DEVEM ocorrer por meio de componentes de interface sobrepostos ou secundários (ex: Drawer lateral/pop-overs), garantindo que a tela central seja sempre focada na ação.
 
 ### VII. Type-Safe & Isolated Architecture (Strict First)
 
-O uso de TypeScript é OBRIGATÓRIO em todos os módulos (server, agent, client). 
-1. **Strict Mode**: O servidor DEVE rodar em modo estrito (`strict: true`) sem exceções de `any`.
-2. **Blindagem B2B**: O isolamento de usuários e clientes B2B DEVE ser garantido por interfaces e tipos que forcem o filtro de `tenant_id` ou `owner_id` em todas as camadas de abstração de dados, agindo como uma segunda camada de defesa além do RLS.
-3. **Interfaces de Contrato**: Comunicações entre módulos devem ser tipadas preventivamente para evitar vazamentos de dados brutos do banco.
+O uso de TypeScript é OBRIGATÓRIO em todos os módulos. 
+1. **Strict Mode**: O servidor DEVE rodar em modo estrito sem exceções de `any`.
+2. **Blindagem B2B (MANDATÓRIA)**: O isolamento de usuários B2B deve ser garantido por `tenant_id`. No Agente Python, toda ferramenta (tool) DEVE injetar e validar o `tenant_id` da instância de origem, agindo como defesa absoluta contra vazamento de dados.
+3. **Interfaces de Contrato**: Comunicações tipadas preventivamente.
 
 ### VIII. Resilient Real-Time Orchestration (Live Mode)
 
-O sistema DEVE priorizar a integridade das conexões de longa duração. 
-1. **SSE (Server-Sent Events)**: A lógica de transmissão em tempo real deve ser fortemente tipada e resiliente a quedas de proxy/nginx. É OBRIGATÓRIA a implementação de um mecanismo de **heartbeat** (ping/pong) e lógica de **reconexão automática** no client para eliminar loops de carregamento infinitos.
-2. **Auditoria de Estado**: Garantir que atualizações de geolocalização e precificação dinâmica (metais) sejam propagadas instantaneamente via canais tipados, mantendo o "Live Mode" inquebrável.
+Prioridade total para integridade de conexões SSE. Heartbeat e reconexão automática são obrigatórios.
+**Auditoria Integrada**: Toda interação chave deve registrar geolocalização e metadados de auditoria corporativa.
 
-### IX. Immutable Infrastructure & Deployment
+### IX. Immutable Infrastructure & Zero-Build Deployment
 
-O padrão de execução do Organizador é a imutabilidade e a automação.
-1. **Dockerização**: O uso de Docker e Docker Compose é o padrão MANDATÓRIO para desenvolvimento e produção. O conceito "funciona na minha máquina" está proibido; se não roda no container, não é considerado código válido.
-2. **CI/CD Gatekeeper**: O GitHub Actions passa a ser o único guardião (gatekeeper) para o ambiente de produção. Deploys manuais são permitidos apenas durante a fase de transição técnica.
+O padrão de execução é a imutabilidade absoluta.
+1. **Zero-Build standard**: O deploy em produção NÃO DEVE realizar builds locais. Imagens DEVEM ser construídas no CI/CD e publicadas no **GitHub Container Registry (GHCR)**.
+2. **VPS Control Loop**: O script `vps_update.sh` evolui para um painel de monitoramento que realiza o `pull` das imagens prontas e oferece logs unificados dos serviços.
+3. **CI/CD Gatekeeper**: GitHub Actions é o único caminho para produção.
 
+### X. B2B Operability & Observability
+
+A saúde do ecossistema B2B depende de visibilidade total.
+1. **Logs Unificados**: É OBRIGATÓRIO que o painel de controle (VPS) ofereça acesso imediato aos logs em tempo real de todos os containers simultaneamente para diagnóstico rápido.
 
 ## Tecnologias e Padrões
 
-### Stack Tecnológica
+- **Container Registry**: GHCR (GitHub Container Registry).
+- **Monitoring**: Docker Compose Logs (Tail mode).
+- **Security**: Injeção dinâmica de Tenant Context no Agente Python.
 
-- **Frontend**: Next.js (TypeScript), React Native (Expo/TypeScript), Lucide Icons, Vanilla CSS (Glassmorphism), framer-motion (Animações de UI).
-- **Backend/API**: Node.js (Express/TypeScript), Python (Agentes AI com tipagem estrita/Pydantic), OpenAI API, UazAPI (WhatsApp).
-- **Database**: Supabase (PostgreSQL, RLS, Auth).
-- **Automação**: n8n (Workflow Orchestration).
-
-## Workflow de Desenvolvimento
-
-### Garantia de Qualidade
-
-- Alterações em RLS devem ser testadas contra múltiplos perfis (Admin e Colaborador).
-- Novas funcionalidades DEVEM ser acompanhadas de documentação evolutiva (ex: atualização sistemática do `conversaia.md` e geração de walkthroughs).
-- Commits devem ser descritivos e seguir o padrão de conventional commits.
-- **Dívida Técnica**: O extermínio de arquivos `.js` em favor de `.ts` (Server) e Python tipado (Agent) é prioridade absoluta.
-- **Depreciação de Scripts**: Scripts manuais (`iniciar_tudo.bat`, `vps_update.sh`) devem ser marcados como depreciados e removidos assim que o pipeline de CI/CD for validado.
-
-## Governance
-
-Esta constituição prevalece sobre práticas ad-hoc. Mudanças estruturais exigem atualização deste documento e revisão de todos os artefatos de especificação e tarefas afetados.
-
-**Version**: 3.0.0 | **Ratified**: 2026-03-08 | **Last Amended**: 2026-03-13
+**Version**: 3.1.0 | **Ratified**: 2026-03-14 | **Last Amended**: 2026-03-14

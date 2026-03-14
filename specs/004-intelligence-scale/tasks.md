@@ -1,33 +1,39 @@
-# Tasks: Inteligência e Escala (Fase 4)
+# Tasks: Inteligência e Escala (Fase 4 - V2)
 
 **Input**: Design documents from `/specs/004-intelligence-scale/`
 **Prerequisites**: plan.md (required), spec.md (required)
 
-## Phase 1: Infraestrutura e CI/CD (Estabilização)
+## Phase 1: Infraestrutura e CI/CD (Zero-Build Standard)
 
-- [ ] T001: Corrigir o build context em `docker-compose.yml` para a raiz e atualizar `server/Dockerfile` para acessar o `ecosystem.config.js`.
-- [ ] T002: Atualizar `.github/workflows/deploy.yml` para usar o contexto de build correto e incluir validações do `client` e `agent`.
-- [ ] T003: Implementar login no GHCR via `docker/login-action` e configurar o envio das imagens via `docker/build-push-action`.
-- [ ] T004: Atualizar o job de deploy no GitHub Actions para realizar `docker compose pull` antes de `up`, aproveitando as imagens do registro.
-- [ ] T005: Configurar segredos necessários (secretas do repo) se houver gaps detectados.
+- [ ] T001: Mover `ecosystem.config.js` para a subpasta `server/` para que ele seja acessível pelo build context atual.
+- [ ] T002: Atualizar o arquivo `.github/workflows/deploy.yml` para realizar build+push para o GHCR (GitHub Container Registry).
+- [ ] T003: Modificar `docker-compose.yml` para utilizar as imagens do GHCR (`image: ghcr.io/...`) em vez de build local em produção.
+- [ ] T004: Atualizar o script de deploy no GitHub Actions para realizar `docker compose pull` antes de `up` na VPS.
+- [ ] T005: Validar o novo fluxo de deploy imutável (Sem build na VPS).
 
-## Phase 2: Agente Python Multi-Tenant (Blindagem B2B)
+## Phase 2: Monitoramento em Tempo Real (Painel de Controle)
 
-- [ ] T006: Criar a classe `TenantContext` no `agent/types.py` (ou `models.py`) para encapsular o isolamento do cliente.
-- [ ] T007: Refatorar `agent/main.py` para buscar configurações de instância dinamicamente no Supabase ao receber um webhook (usando token ou nome).
-- [ ] T008: Injetar o `tenant_id` no ciclo de vida do agente e atualizar a função `process_message` para aceitar esse contexto.
-- [ ] T009: [P] Refatorar todas as queries em `agent/db.py` para incluírem o filtro obrigatório por `tenant_id` (Blindagem).
-- [ ] T010: Atualizar o `system_prompt` para lidar com múltiplas instâncias e contextos específicos do cliente.
+- [ ] T006: Adicionar a funcionalidade `action_monitor_logs` no script `vps_update.sh` (opção [3] no menu).
+- [ ] T007: Implementar o comando `docker compose logs -f --tail 100` com suporte ao `Ctrl+C` para retornar ao menu com segurança.
+- [ ] T008: Testar a visibilidade colorida de logs (server, client, agent) simultaneamente no console.
 
-## Phase 3: Validação, Escala e Depreciação
+## Phase 3: Agente Python Multi-Tenant (B2B Blindagem)
 
-- [ ] T011: Validar o fluxo de deploy "zero-build" na VPS (puxando imagens do GHCR).
-- [ ] T012: Testar a simultaneidade de mensagens de dois tenants diferentes (Isolamento de Dados).
-- [ ] T013: Marcar o `vps_update.sh` como **DEPRECATED** no cabeçalho e instruir o usuário no README.
-- [ ] T014: Atualizar `Walkthrough` final da Fase 4 documentando a nova capacidade B2B.
+- [ ] T009: Criar classe `TenantContext` no Agente Python (Pydantic) para isolamento do cliente.
+- [ ] T010: Refatorar `agent/main.py` para descobrir o `tenant_id` dinamicamente ao receber um webhook de qualquer instância WhatsApp.
+- [ ] T011: Modificar `agent/agent.py` para injetar o `tenant_id` em todas as `TOOLS` (OpenAI Functions/MCP).
+- [ ] T012: [P] [Urgente] Refatorar todas as queries em `agent/db.py` para exigir e filtrar obrigatoriamente por `tenant_id`.
+- [ ] T013: Garantir que logs de auditoria e geolocalização do Agente registrem o `tenant_id` correto.
+
+## Phase 4: Validação, Escala e Depreciação
+
+- [ ] T014: Simular dois clientes B2B (Múltiplas instâncias WhatsApp) e validar o isolamento total de dados.
+- [ ] T015: Atualizar o README com as instruções para o novo fluxo de deploy e monitoramento.
+- [ ] T016: Marcar oficialmente o `vps_update.sh` como **Ferramenta de Operação/Monitoramento** (não mais script de deploy manual).
 
 ## Dependencies & Execution Order
 
-1. **Phase 1**: Deve ser feita primeiro para permitir que as iterações nas fases 2 e 3 sejam testadas já no novo pipeline.
-2. **Phase 2**: Core da inteligência B2B.
-3. **Phase 3**: Conclusão e formalização.
+1. **Phase 1**: Deve ser o primeiro passo para resolver o erro de build atual e estabilizar as próximas entregas.
+2. **Phase 2**: Entrega rápida de valor operacional (monitoramento).
+3. **Phase 3**: Core da Inteligência B2B.
+4. **Phase 4**: Conclusão total.

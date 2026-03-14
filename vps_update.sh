@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ==============================================================================
-# 🚀 STRAVINSKY AUTO-DEPLOY SYSTEM
+# 🚀 STRAVINSKY AUTO-DEPLOY & CONTROL SYSTEM (v3.1.0)
 # ==============================================================================
 # Desenvolvido para: Organizador IA
-# Funções: Verificação de Dependências, Instalação e Atualização via Docker
+# Funções: Monitoramento Unificado, Zero-Build Deploy e Gestão de Containers
 # ==============================================================================
 
 # Cores para o terminal
@@ -26,7 +26,7 @@ stravinsky_header() {
     echo "      ██     ██    ██   ██ ██   ██  ██  ██  ██ ██  ██ ██      ██ ██  ██     ██    "
     echo " ██████      ██    ██   ██ ██   ██   ████   ██ ██   ████ ███████ ██   ██    ██    "
     echo -e "${NC}"
-    echo -e "${YELLOW}                     🔥 STRAVINSKY DEPLOY SYSTEM 🔥${NC}"
+    echo -e "${YELLOW}                     🔥 STRAVINSKY CONTROL PANEL 🔥${NC}"
     echo "--------------------------------------------------------------------------------"
 }
 
@@ -86,7 +86,6 @@ configure_env() {
     }
 
     # Carregar valores atuais se existirem
-    # Usamos grep para evitar erros de source com formatos não-bash
     if [ -f server/.env ]; then
         SUPABASE_URL_CURRENT=$(grep "SUPABASE_URL=" server/.env | cut -d= -f2-)
         SUPABASE_SERVICE_KEY_CURRENT=$(grep "SUPABASE_SERVICE_KEY=" server/.env | cut -d= -f2-)
@@ -97,13 +96,11 @@ configure_env() {
     SUPABASE_URL=$(read_with_default "SUPABASE_URL" "${SUPABASE_URL_CURRENT:-https://seu-projeto.supabase.co}" "Supabase URL")
     SUPABASE_SERVICE_KEY=$(read_with_default "SUPABASE_SERVICE_KEY" "${SUPABASE_SERVICE_KEY_CURRENT:-sua-chave-service}" "Supabase Service Key")
     OPENAI_API_KEY=$(read_with_default "OPENAI_API_KEY" "${OPENAI_API_KEY_CURRENT:-sk-proj-xxx}" "OpenAI API Key")
-    DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome, ex: organize.meu.site)")
+    DNS_DOMAIN=$(read_with_default "DNS_DOMAIN" "${DNS_DOMAIN_CURRENT:-localhost}" "Domínio ou IP da VPS (apenas o nome)")
     
-    # Limpar o domínio de possíveis http/https
     CLEAN_DOMAIN=$(echo $DNS_DOMAIN | sed -e 's|^[^/]*//||' -e 's|/.*$||')
 
-    # Criar .env do Server
-    echo -e "${YELLOW}Salvando server/.env...${NC}"
+    echo -e "${YELLOW}Salvando configurações...${NC}"
     cat > server/.env <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
@@ -113,8 +110,6 @@ PORT=3001
 VITE_API_URL=http://$CLEAN_DOMAIN:3001
 EOF
 
-    # Criar .env do Agente (Cópia + específicas)
-    echo -e "${YELLOW}Salvando agent/.env...${NC}"
     cat > agent/.env <<EOF
 SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
@@ -131,61 +126,65 @@ EOF
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 4. AÇÃO: INSTALAR
+# 4. AÇÃO: INSTALAR / ATUALIZAR (ZERO-BUILD)
 # ──────────────────────────────────────────────────────────────────────────────
-action_install() {
-    echo -e "${BLUE}Iniciando Instalação Completa...${NC}"
-    
-    # Configurar .env
-    configure_env
+action_deploy() {
+    local mode=$1
+    if [ "$mode" == "install" ]; then
+        echo -e "${BLUE}Iniciando Instalação Completa...${NC}"
+        configure_env
+    else
+        echo -e "${BLUE}Iniciando Atualização (Pull do GHCR)...${NC}"
+        git pull origin main
+    fi
 
-    echo -e "${BLUE}Subindo containers com Docker Compose...${NC}"
-    docker compose up -d --build
+    echo -e "${YELLOW}Sincronizando imagens e containers...${NC}"
+    # Se o pull falhar (não logado no GHCR), tentamos o build local como fallback
+    if ! docker compose pull; then
+        echo -e "${YELLOW}Aviso: Pull falhou ou GHCR não configurado. Usando build local...${NC}"
+        docker compose up -d --build
+    else
+        docker compose up -d
+    fi
 
-    URL_FINAL=$(grep "VITE_API_URL=" server/.env | cut -d= -f2-)
-    echo -e "${GREEN}🚀 Aplicação instalada e rodando!${NC}"
-    echo -e "${BLUE}Acesse em: $URL_FINAL${NC}"
+    echo -e "${GREEN}🚀 Operação concluída com sucesso!${NC}"
     read -p "Pressione ENTER para voltar ao menu..."
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 5. AÇÃO: ATUALIZAR
+# 5. AÇÃO: MONITORAR LOGS (UNIFICADO)
 # ──────────────────────────────────────────────────────────────────────────────
-action_update() {
-    echo -e "${BLUE}Iniciando Atualização...${NC}"
-    
-    echo -e "${YELLOW}Baixando últimas alterações do GitHub...${NC}"
-    git pull origin main
-
-    echo -e "${BLUE}Reconstruindo e reiniciando containers...${NC}"
-    docker compose up -d --build
-
-    echo -e "${GREEN}✅ Aplicação atualizada com sucesso!${NC}"
-    read -p "Pressione ENTER para voltar ao menu..."
+action_monitor_logs() {
+    echo -e "${BLUE}Iniciando Monitoramento de Logs em Tempo Real...${NC}"
+    echo -e "${YELLOW}Pressione Ctrl+C para sair dos logs e voltar ao menu.${NC}"
+    sleep 2
+    docker compose logs -f --tail 100
+    echo -e "\n${BLUE}Saindo do monitoramento...${NC}"
+    sleep 1
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
 # EXECUÇÃO PRINCIPAL
 # ──────────────────────────────────────────────────────────────────────────────
 
-# 1. Verificar dependências antes de qualquer coisa
 stravinsky_header
 check_dependencies
 
-# 2. Menu Principal
 while true; do
     stravinsky_header
     echo -e "${YELLOW}SELECIONE UMA OPERAÇÃO:${NC}"
     echo "--------------------------"
-    echo -e "  [1] INSTALAR  (Primeira vez / Novo Setup)"
-    echo -e "  [2] ATUALIZAR (Baixar novidades e Reiniciar)"
+    echo -e "  [1] INSTALAR  (Zero-Build Setup)"
+    echo -e "  [2] ATUALIZAR (Pull do GitHub/GHCR)"
+    echo -e "  [3] MONITORAR (Logs em tempo real 🟢)"
     echo -e "  [0] SAIR"
     echo "--------------------------"
     read -p "➜ Escolha uma opção: " OPTION
 
     case $OPTION in
-        1) action_install ;;
-        2) action_update ;;
+        1) action_deploy "install" ;;
+        2) action_deploy "update" ;;
+        3) action_monitor_logs ;;
         0) echo "Saindo..."; exit 0 ;;
         *) echo -e "${RED}Opção inválida!${NC}"; sleep 1 ;;
     esac
