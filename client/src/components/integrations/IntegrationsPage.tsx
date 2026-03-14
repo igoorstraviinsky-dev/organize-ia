@@ -268,9 +268,19 @@ function UazapiCard({ existing }: IntegrationCardProps) {
       const res = await fetch(url, { headers: { token: form.api_token } })
       if (res.ok) {
         const data = await res.json()
-        const rawState = data?.instance?.connectionStatus || data?.instance?.state || data?.connectionStatus || data?.state || data?.status || 'ativo'
-        const stateStr = typeof rawState === 'string' ? rawState : typeof rawState === 'object' ? (rawState?.status || rawState?.state || JSON.stringify(rawState).slice(0, 60)) : String(rawState)
-        setTestResult({ ok: true, msg: `Conexão OK — Estado: ${stateStr}` })
+        const rawState = data?.instance?.connectionStatus || data?.instance?.state || data?.connectionStatus || data?.state || data?.status || '';
+        
+        let stateLabel = 'DESCONECTADO';
+        const s = String(rawState).toLowerCase();
+        if (['open', 'connected', 'online', 'active', 'authenticated'].some(status => s.includes(status))) {
+          stateLabel = 'ONLINE / CONECTADO';
+        } else if (['close', 'connecting', 'disconnected'].some(status => s.includes(status))) {
+          stateLabel = 'DESCONECTADO';
+        } else if (s) {
+          stateLabel = s.toUpperCase();
+        }
+
+        setTestResult({ ok: true, msg: `Conexão OK — Instância está ${stateLabel}` })
         if (existing) await startAndCheckSSE()
       } else {
         setTestResult({ ok: false, msg: `HTTP ${res.status}: ${res.statusText}` })
