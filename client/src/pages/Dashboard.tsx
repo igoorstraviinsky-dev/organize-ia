@@ -17,6 +17,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PomodoroTimer from "../components/focus/PomodoroTimer";
 import AchievementToast from "../components/gamification/AchievementToast";
 import XPBar from "../components/gamification/XPBar";
+import { useSSE } from '../hooks/useSSE';
+import { useUazapiLive } from '../hooks/useChatMessages';
 
 interface DashboardProps {
   onSignOut: () => void;
@@ -25,7 +27,7 @@ interface DashboardProps {
 export default function Dashboard({ onSignOut }: DashboardProps) {
   const { view, id } = useParams<{ view: string; id: string }>();
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
   const { data: projects = [] } = useProjects();
   const { data: allTasks = [] } = useTasks(null);
   const createProject = useCreateProject();
@@ -42,6 +44,8 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
   const COLORS = ['#7c3aed', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#6366f1'];
 
   useRealtimeTasks();
+  useSSE(session?.access_token || ''); // Mantém conexão viva para eventos reais se logado
+  useUazapiLive(); // Escuta eventos da UazAPI via EventSource
 
   const currentView = view || "inbox";
   const currentProjectId = id || null;
@@ -369,7 +373,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
                 <KanbanBoard projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId} />
               ) : (
                 <TaskList
-                  projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId}
+                  projectId={(currentView === "today" || currentView === "inbox") ? null : (currentProjectId as string | null)}
                   title={getTitle()}
                   filterToday={currentView === "today"}
                 />

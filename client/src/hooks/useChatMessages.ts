@@ -145,11 +145,44 @@ export function useInstanceStatus() {
 }
 
 export function useSSEStatus() {
-  return useQuery<{ connected: boolean; active: boolean; error?: string }>({
+  const { data, refetch } = useQuery<{ connected: boolean; active: boolean; error?: string }>({
     queryKey: ['uazapi_sse_status'],
     queryFn: () => serverRequest('/sse/status'),
-    refetchInterval: 5000, 
+    refetchInterval: 10000, 
   })
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { detail } = e
+      if (detail.type === 'uazapi_event' && detail.payload.event.includes('connection')) {
+        refetch()
+      }
+    }
+    window.addEventListener('app-sync-event', handler)
+    return () => window.removeEventListener('app-sync-event', handler)
+  }, [refetch])
+
+  return { data }
+}
+
+export function useUazapiLive() {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { detail } = e
+      if (detail.type === 'uazapi_event') {
+        const { event, payload } = detail
+        if (event === 'messages' || event === 'history') {
+           // Força a atualização da lista se vier mensagem nova pelo SSE
+           queryClient.invalidateQueries({ queryKey: ['conversations'] })
+           queryClient.invalidateQueries({ queryKey: ['chat_messages'] })
+        }
+      }
+    }
+    window.addEventListener('app-sync-event', handler)
+    return () => window.removeEventListener('app-sync-event', handler)
+  }, [queryClient])
 }
 
 export function useConnectInstance() {

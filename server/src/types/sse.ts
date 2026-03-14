@@ -9,6 +9,7 @@ export type SSEEventType =
   | 'task_update'  // Mudança em tarefas
   | 'geo_audit'    // Novo log de auditoria
   | 'agent_status' // Status do agente IA
+  | 'uazapi_event' // Eventos vindos da UazAPI (Live Mode)
 
 export interface BaseSSEEvent {
   type: SSEEventType;
@@ -37,7 +38,17 @@ export interface TaskUpdateEvent extends BaseSSEEvent {
   };
 }
 
+export interface UazapiSSEEvent extends BaseSSEEvent {
+  type: 'uazapi_event';
+  payload: {
+    integrationId: string;
+    event: string; // connection, messages, chats, history
+    data: any;
+  };
+}
+
 export type SSEEvent = 
   | HeartbeatEvent 
   | PriceUpdateEvent 
-  | TaskUpdateEvent;
+  | TaskUpdateEvent
+  | UazapiSSEEvent;

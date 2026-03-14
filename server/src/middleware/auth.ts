@@ -20,10 +20,12 @@ export const authenticate = async (
 ): Promise<void> => {
   const authHeader = req.headers.authorization;
   const xUserToken = req.headers['x-user-token'] as string | undefined;
+  const queryToken = req.query.token as string | undefined;
 
   const token =
     (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null) ||
-    xUserToken;
+    xUserToken ||
+    queryToken;
 
   if (!token) {
     res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente.' });

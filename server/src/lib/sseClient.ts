@@ -7,6 +7,7 @@
 import { parseWebhookPayload, sendTextMessage, downloadMediaBase64 } from './uazapi.js';
 import { supabase } from './supabase.js';
 import { transcribeAudioBase64 } from './openai.js';
+import { sseDispatcher } from '../services/SSEDispatcher.js';
 import type { ParsedSSEMessage, IntegrationRow } from '../types/agent.js';
 
 interface ConnectionHandle {
@@ -259,6 +260,17 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   if (eventName && !data.event) data.event = eventName;
 
   const dataType = (data.type || data.event || data.EventType || data.eventType || '').toLowerCase();
+  
+  // Transmite para o frontend em tempo real (Live Mode)
+  sseDispatcher.broadcast({
+    type: 'uazapi_event',
+    timestamp: new Date().toISOString(),
+    payload: {
+      integrationId,
+      event: dataType,
+      data
+    }
+  });
   
   // Trata eventos de status de conexão (importante para o badge 'Online')
   if (dataType.includes('connection') || dataType.includes('status')) {

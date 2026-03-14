@@ -5,7 +5,7 @@ import {
   MessageCircle, Zap, Eye, EyeOff, RefreshCw, Send, Database
 } from 'lucide-react'
 import { useIntegrations, useSaveIntegration, useDeleteIntegration, Integration } from '../../hooks/useIntegrations'
-import { SERVER_URL } from '../../hooks/useChatMessages'
+import { SERVER_URL, useSSEStatus } from '../../hooks/useChatMessages'
 import { useSupabaseConfig, useSaveSupabaseConfig, SupabaseConfig } from '../../hooks/useConfig'
 
 // ─── Status Badge ─────────────────────────────────────────────────────────────
@@ -107,6 +107,10 @@ function WhatsAppCloudCard({ existing }: IntegrationCardProps) {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  // Live Status via SSE
+  const { data: sseData } = useSSEStatus()
+  const liveStatus = sseData?.connected ? 'connected' : (existing?.status || 'disconnected')
+
   const [form, setForm] = useState({
     phone_number_id: existing?.phone_number_id || '',
     waba_id: existing?.waba_id || '',
@@ -184,7 +188,7 @@ function WhatsAppCloudCard({ existing }: IntegrationCardProps) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Integração nativa Meta (Necessita Business)</p>
         </div>
         <div className="flex items-center gap-4">
-          <StatusBadge status={existing?.status || 'disconnected'} />
+          <StatusBadge status={liveStatus} />
           <div className={`p-2 rounded-xl transition-colors ${open ? 'bg-white/10 text-white' : 'bg-transparent text-slate-600'}`}>
             {open ? <ChevronUp size={20} strokeWidth={3} /> : <ChevronDown size={20} strokeWidth={3} />}
           </div>
