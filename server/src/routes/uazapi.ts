@@ -32,7 +32,7 @@ async function getIntegration(userId: string, sb: any): Promise<IntegrationRow> 
     .from('integrations')
     .select('*')
     .eq('user_id', userId)
-    .eq('provider', 'uazapi')
+    .or('provider.ilike.uazapi,provider.ilike.wazapi')
     .single();
 
   if (error || !data) throw new Error('Integração UazAPI não encontrada. Acesse Integrações e salve suas credenciais UazAPI.');

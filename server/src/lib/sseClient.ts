@@ -82,12 +82,14 @@ export function startSSEListener(integration: IntegrationRow): ConnectionHandle 
     const base = api_url.replace(/\/$/, '');
     const name = instance_name || '';
 
-    const uazCloudQuery = `?token=${encodeURIComponent(api_token)}&events=messages,messages.upsert,message,chats,chats.upsert`;
+    // UazapiGO V2 exige token e events na URL
+    const uazCloudQuery = `?token=${encodeURIComponent(api_token)}&events=chats,messages`;
+    
     const paths = [
       `/sse${uazCloudQuery}`,
-      `/chat/sse?instanceName=${name}`,
-      name ? `/chat/sse/${name}` : null,
-      '/events',
+      `/chat/sse${uazCloudQuery}&instanceName=${name}`,
+      name ? `/chat/sse/${name}${uazCloudQuery}` : null,
+      `/events${uazCloudQuery}`,
     ].filter(Boolean) as string[];
 
     abortController = new AbortController();
@@ -201,10 +203,11 @@ export function stopSSEListener(integrationId: string) {
  * Inicializa listeners SSE para todas as integrações UazAPI no boot.
  */
 export async function initAllSSEListeners() {
+  // Busca integrações uazapi ou wazapi (legado)
   const { data: integrations, error } = await supabase
     .from('integrations')
-    .select('id, api_url, api_token, instance_name, user_id')
-    .eq('provider', 'uazapi')
+    .select('id, provider, api_url, api_token, instance_name, user_id')
+    .or('provider.ilike.uazapi,provider.ilike.wazapi')
     .not('api_url', 'is', null)
     .not('api_token', 'is', null);
 
@@ -214,7 +217,10 @@ export async function initAllSSEListeners() {
   }
 
   if (!integrations?.length) {
-    console.log('[SSE] Nenhuma integração UazAPI encontrada.');
+    // Busca rápida para log de depuração
+    const { data: all } = await supabase.from('integrations').select('provider');
+    const providers = all?.map(p => p.provider).join(', ') || 'nenhuma';
+    console.log(`[SSE] Nenhuma integração compatível encontrada (Provedores no banco: ${providers}).`);
     return;
   }
 

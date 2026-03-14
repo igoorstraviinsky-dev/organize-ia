@@ -80,6 +80,7 @@ check_env_integrity() {
         "VITE_SUPABASE_ANON_KEY" 
         "SUPABASE_SERVICE_KEY" 
         "OPENAI_API_KEY" 
+        "UAZAPI_URL"
         "UAZAPI_TOKEN" 
         "UAZAPI_INSTANCE"
         "VITE_API_URL"
@@ -149,6 +150,7 @@ run_setup_wizard() {
         S_ANON_CUR=$(grep "^VITE_SUPABASE_ANON_KEY=" .env | cut -d= -f2-)
         S_SERV_CUR=$(grep "^SUPABASE_SERVICE_KEY=" .env | cut -d= -f2-)
         O_KEY_CUR=$(grep "^OPENAI_API_KEY=" .env | cut -d= -f2-)
+        W_URL_CUR=$(grep "^UAZAPI_URL=" .env | cut -d= -f2-)
         W_TOK_CUR=$(grep "^UAZAPI_TOKEN=" .env | cut -d= -f2-)
         W_INS_CUR=$(grep "^UAZAPI_INSTANCE=" .env | cut -d= -f2-)
         D_DOM_CUR=$(grep "^VITE_API_URL=" .env | cut -d/ -f3 | cut -d: -f1)
@@ -158,6 +160,7 @@ run_setup_wizard() {
     S_ANON=$(read_required "S_ANON" "${S_ANON_CUR:-sua-chave-anon-publica}" "Supabase Anon Key")
     S_SERV=$(read_required "S_SERV" "${S_SERV_CUR:-sua-chave-service}" "Supabase Service Key")
     O_KEY=$(read_required "O_KEY" "${O_KEY_CUR:-sk-proj-xxx}" "OpenAI API Key")
+    W_URL=$(read_required "W_URL" "${W_URL_CUR:-https://sua-instancia.uazapi.com}" "UazAPI URL (URL base)")
     W_TOK=$(read_required "W_TOK" "${W_TOK_CUR:-seu_token_aqui}" "UazAPI Token")
     W_INS=$(read_required "W_INS" "${W_INS_CUR:-organizador}" "UazAPI Instance Name")
     D_DOM=$(read_required "D_DOM" "${D_DOM_CUR:-localhost}" "Domínio/IP da VPS")
@@ -181,7 +184,7 @@ PORT=3001
 WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
 
 # UAZAPI
-UAZAPI_URL=http://host.docker.internal:5000
+UAZAPI_URL=$W_URL
 UAZAPI_TOKEN=$W_TOK
 UAZAPI_INSTANCE=$W_INS
 
