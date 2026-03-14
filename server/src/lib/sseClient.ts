@@ -273,8 +273,41 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
 
   // Trata sincronização de Histórico (Bulk Sync)
   if (dataType.includes('history')) {
-    addLog(integrationId, 'info', `📥 Recebido histórico de mensagens. Iniciando sincronização em massa...`);
-    // Lógica de processamento de histórico será implementada na Task 2.2
+    const historyMessages = data.messages || data.data?.messages || [];
+    if (!Array.isArray(historyMessages) || historyMessages.length === 0) return;
+
+    addLog(integrationId, 'info', `📥 Recebido histórico de ${historyMessages.length} mensagens. Sincronizando...`);
+    
+    const records = historyMessages.map(msg => {
+      const p = parseWebhookPayload(msg);
+      if (!p || !p.phone) return null;
+      
+      const dir = p.fromMe ? 'out' : 'in';
+      return {
+        integration_id: integrationId,
+        user_id: integration.user_id,
+        phone: p.phone,
+        contact_name: dir === 'in' ? p.contactName : null,
+        direction: dir,
+        body: String(p.text || ''),
+        message_id: p.messageId,
+        status: dir === 'in' ? 'read' : 'sent',
+        created_at: p.timestamp,
+      };
+    }).filter(Boolean);
+
+    if (records.length > 0) {
+      // Upsert para evitar erro de duplicidade se a mensagem já existir
+      const { error: bulkErr } = await supabase
+        .from('chat_messages')
+        .upsert(records, { onConflict: 'message_id', ignoreDuplicates: true });
+        
+      if (bulkErr) {
+        addLog(integrationId, 'error', `Erro na sincronização de histórico: ${bulkErr.message}`);
+      } else {
+        addLog(integrationId, 'info', `✅ Histórico sincronizado: ${records.length} mensagens processadas.`);
+      }
+    }
     return;
   }
 
