@@ -127,6 +127,13 @@ function UazapiCard({ existing }: IntegrationCardProps) {
     }
   }, [existing])
 
+  // Polling periódico para manter o status sincronizado (cada 30s)
+  useEffect(() => {
+    if (!existing) return
+    const interval = setInterval(checkSSEStatus, 30000)
+    return () => clearInterval(interval)
+  }, [existing])
+
   const checkSSEStatus = async () => {
     try {
       const { user, session } = await getAuthHeaders()
@@ -139,9 +146,7 @@ function UazapiCard({ existing }: IntegrationCardProps) {
       const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
       if (statusRes.ok) {
         const statusData = await statusRes.json()
-        if (statusData.connected) {
-          setSseStatus('connected')
-        }
+        setSseStatus(statusData.connected ? 'connected' : 'error')
       }
     } catch (err) {
       console.error('Erro ao verificar status SSE:', err)
@@ -278,7 +283,7 @@ function UazapiCard({ existing }: IntegrationCardProps) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Conecte via instância Self-Hosted</p>
         </div>
         <div className="flex items-center gap-4">
-          <StatusBadge status={existing?.status || 'disconnected'} />
+          <StatusBadge status={sseStatus || existing?.status || 'disconnected'} />
           <div className={`p-2 rounded-xl transition-colors ${open ? 'bg-white/10 text-white' : 'bg-transparent text-slate-600'}`}>
             {open ? <ChevronUp size={20} strokeWidth={3} /> : <ChevronDown size={20} strokeWidth={3} />}
           </div>
