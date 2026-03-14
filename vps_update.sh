@@ -164,6 +164,14 @@ run_setup_wizard() {
     W_TOK=$(read_required "W_TOK" "${W_TOK_CUR:-seu_token_aqui}" "UazAPI Token")
     W_INS=$(read_required "W_INS" "${W_INS_CUR:-organizador}" "UazAPI Instance Name")
     D_DOM=$(read_required "D_DOM" "${D_DOM_CUR:-localhost}" "Domínio/IP da VPS")
+    
+    read -p "➜ Usar HTTPS para a API? (s/n) [n]: " USE_SSL
+    API_PROTOCOL="http"
+    API_PORT=":3001"
+    if [[ "$USE_SSL" == "s" || "$USE_SSL" == "S" ]]; then
+        API_PROTOCOL="https"
+        API_PORT="" # Geralmente via proxy porta padrão
+    fi
 
     CLEAN_DOM=$(echo $D_DOM | sed -e 's|^[^/]*//||' -e 's|/.*$||' | cut -d: -f1)
 
@@ -173,7 +181,7 @@ run_setup_wizard() {
 # FRONTEND (Build ARGs)
 VITE_SUPABASE_URL=$S_URL
 VITE_SUPABASE_ANON_KEY=$S_ANON
-VITE_API_URL=http://$CLEAN_DOM:3001
+VITE_API_URL=$API_PROTOCOL://$CLEAN_DOM$API_PORT
 
 # BACKEND (Runtime ENV)
 SUPABASE_URL=$S_URL
@@ -242,6 +250,42 @@ action_monitor_logs() {
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 6. AÇÃO: DIAGNÓSTICO DE AMBIENTE
+# ──────────────────────────────────────────────────────────────────────────────
+action_diagnose() {
+    clear
+    stravinsky_header
+    echo -e "${BLUE}🔍 Iniciando Diagnóstico de Ambiente...${NC}\n"
+    
+    echo -e "${YELLOW}--- Verificação de Arquivos ---${NC}"
+    [ -f .env ] && echo -e "${GREEN}✅ .env mestre encontrado${NC}" || echo -e "${RED}❌ .env mestre ausente${NC}"
+    
+    echo -e "\n${YELLOW}--- Variáveis de Ambiente (Reduzidas) ---${NC}"
+    if [ -f .env ]; then
+        grep "SUPABASE_URL" .env | sed 's/=.*/=HIDDEN/'
+        grep "VITE_API_URL" .env
+        grep "UAZAPI_URL" .env
+    fi
+
+    echo -e "\n${YELLOW}--- Status dos Containers ---${NC}"
+    docker compose ps
+
+    echo -e "\n${YELLOW}--- Portas em Uso (Host) ---${NC}"
+    netstat -tuln | grep -E '80|3001|8005' || echo "Nenhuma porta padrão em uso no Host (isso é normal se estiver em bridge)"
+
+    echo -e "\n${YELLOW}--- Teste de Conexão Supabase ---${NC}"
+    S_URL=$(grep "^SUPABASE_URL=" .env | cut -d= -f2-)
+    if curl -s --head "$S_URL" | grep "200" > /dev/null; then
+        echo -e "${GREEN}✅ Conexão com Supabase URL OK${NC}"
+    else
+        echo -e "${RED}❌ Falha ao alcançar Supabase URL${NC}"
+    fi
+
+    echo -e "\n${BLUE}Diagnóstico concluído.${NC}"
+    read -p "Pressione ENTER para voltar ao menu..."
+}
+
+# ──────────────────────────────────────────────────────────────────────────────
 # EXECUÇÃO PRINCIPAL
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -256,6 +300,7 @@ while true; do
     echo -e "  [1] INSTALAR  (Zero-Build Setup)"
     echo -e "  [2] ATUALIZAR (Pull do GitHub/GHCR)"
     echo -e "  [3] MONITORAR (Logs em tempo real 🟢)"
+    echo -e "  [4] DIAGNOSTICAR (Verificar ambiente 🔍)"
     echo -e "  [0] SAIR"
     echo "--------------------------"
     read -p "➜ Escolha uma opção: " OPTION
@@ -264,6 +309,7 @@ while true; do
         1) action_deploy "install" ;;
         2) action_deploy "update" ;;
         3) action_monitor_logs ;;
+        4) action_diagnose ;;
         0) echo "Saindo..."; exit 0 ;;
         *) echo -e "${RED}Opção inválida!${NC}"; sleep 1 ;;
     esac

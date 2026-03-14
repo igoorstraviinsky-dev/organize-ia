@@ -12,6 +12,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
  * Use apenas em operações de backend seguras (agente, crons).
  * Para operações de usuário, use req.sb (criado no auth middleware).
  */
+console.log(`[Supabase] Conectado em: ${supabaseUrl}`);
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
