@@ -104,11 +104,16 @@ configure_env() {
 
     echo -e "${YELLOW}Salvando configurações...${NC}"
     
-    # .env Global (Raiz) - Usado pelo Docker Build Args
+    # .env Global (Raiz) - Usado pelo Docker Build Args e Docker Compose environment
     cat > .env <<EOF
 VITE_SUPABASE_URL=$SUPABASE_URL
 VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
 VITE_API_URL=http://$CLEAN_DOMAIN:3001
+SUPABASE_URL=$SUPABASE_URL
+SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
+OPENAI_API_KEY=$OPENAI_API_KEY
+WAZAPI_URL=http://host.docker.internal:5000
+WAZAPI_TOKEN=seu_token_aqui
 EOF
 
     # server/.env
