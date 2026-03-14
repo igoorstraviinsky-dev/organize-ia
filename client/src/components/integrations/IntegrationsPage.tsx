@@ -128,7 +128,45 @@ function UazapiCard({ existing }: IntegrationCardProps) {
     }
   }, [existing])
 
-  // Polling periódico para manter o status sincronizado (cada 30s)
+  // Subscrição Realtime para reatividade imediata do status (Online/Offline)
+  useEffect(() => {
+    if (!existing) return
+    let channel: any = null
+
+    const initRealtime = async () => {
+      const { supabase } = await import('../../lib/supabase')
+      channel = supabase
+        .channel(`integration-status-${existing.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'integrations',
+            filter: `id=eq.${existing.id}`
+          },
+          (payload: any) => {
+            const newStatus = payload.new?.status
+            if (newStatus) {
+              setSseStatus(newStatus === 'connected' ? 'connected' : 'error')
+            }
+          }
+        )
+        .subscribe()
+    }
+
+    initRealtime()
+
+    return () => {
+      if (channel) {
+        import('../../lib/supabase').then(({ supabase }) => {
+          supabase.removeChannel(channel)
+        })
+      }
+    }
+  }, [existing])
+
+  // Polling periódico redundante para maior segurança
   useEffect(() => {
     if (!existing) return
     const interval = setInterval(checkSSEStatus, 30000)
