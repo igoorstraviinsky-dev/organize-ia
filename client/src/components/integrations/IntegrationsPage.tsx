@@ -147,8 +147,11 @@ function UazapiCard({ existing }: IntegrationCardProps) {
           },
           (payload: any) => {
             const newStatus = payload.new?.status
-            if (newStatus) {
-              setSseStatus(newStatus === 'connected' ? 'connected' : 'error')
+            if (newStatus === 'connected') {
+              setSseStatus('connected')
+            } else if (newStatus === 'disconnected' || newStatus === 'error') {
+              // Só marcamos erro se não estivermos no meio de um 'connecting' intencional
+              setSseStatus(prev => prev === 'connecting' ? 'connecting' : 'error')
             }
           }
         )
@@ -230,12 +233,15 @@ function UazapiCard({ existing }: IntegrationCardProps) {
       }
 
       if (!connected) {
-        // Se após as tentativas não confirmou, mas o teste de API deu OK antes, 
-        // mantemos como 'connecting' ou avisamos que está aguardando o primeiro evento
+        // Se após as tentativas não confirmou, verificamos se o listener ao menos está 'ativo' (vivo) no servidor
         const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
         const statusData = await statusRes.json()
-        if (statusData.active) {
+        
+        if (statusData.connected) {
           setSseStatus('connected')
+        } else if (statusData.active) {
+          // Está ativo mas aguardando evento de status: damos mais um tempo antes de dar erro
+          setSseStatus('connecting')
         } else {
           setSseStatus('error')
         }

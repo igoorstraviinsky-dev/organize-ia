@@ -160,8 +160,15 @@ export function startSSEListener(integration: IntegrationRow): ConnectionHandle 
             currentData += cleanLine.slice(5).trim();
           } else if (cleanLine === '') {
             if (currentData && currentData !== 'ping' && currentData !== 'keep-alive') {
-              addLog(id, 'info', `Evento recebido: type="${currentEvent || 'N/A'}" | ${currentData.slice(0, 200)}`);
-              await handleSSEEvent(currentEvent, currentData, integration);
+              // Se currentEvent for null, tentamos extrair o tipo direto do JSON (comum na UazAPI)
+              let finalEvent = currentEvent;
+              try {
+                const parsed = JSON.parse(currentData);
+                if (!finalEvent) finalEvent = parsed.type || parsed.event || parsed.EventType || parsed.eventType;
+              } catch {}
+
+              addLog(id, 'info', `Evento recebido: type="${finalEvent || 'N/A'}" | ${currentData.slice(0, 200)}`);
+              await handleSSEEvent(finalEvent, currentData, integration);
             }
             currentEvent = null;
             currentData = '';
@@ -255,10 +262,15 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   
   // Trata eventos de status de conexão (importante para o badge 'Online')
   if (dataType.includes('connection') || dataType.includes('status')) {
-    const state = (data.state || data.status || data.connection || '').toLowerCase();
-    const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => state.includes(s));
+    const rawState = (data.state || data.status || data.connection || data.message || '').toLowerCase();
     
-    addLog(integrationId, isConnected ? 'info' : 'warn', `SSE Status: ${state.toUpperCase()}`);
+    // Sucesso se o estado for um dos conhecidos OU se a mensagem disser "established" ou "connected"
+    const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => rawState.includes(s)) 
+                     || rawState.includes('established') 
+                     || rawState.includes('sucesso');
+    
+    const displayStatus = isConnected ? 'OPEN' : rawState.toUpperCase() || 'DESCONECTADO';
+    addLog(integrationId, isConnected ? 'info' : 'warn', `SSE Status: ${displayStatus}`);
     
     await supabase
       .from('integrations')
