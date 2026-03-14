@@ -447,13 +447,27 @@ function ConversationItem({ conv, active, onClick }: ConversationItemProps) {
 
 function ChatWindow({ phone, onBack }: { phone: string; onBack: () => void }) {
   const { data: messages = [], isLoading } = useChatMessages(phone)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useChatRealtime(phone)
 
+  const { data: sseData } = useSSEStatus()
+  const isConnected = sseData?.connected === true
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior })
+  }
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollToBottom('smooth')
   }, [messages])
+
+  // Rola instantaneamente ao carregar a conversa pela primeira vez
+  useEffect(() => {
+    if (!isLoading && messages.length > 0) {
+      scrollToBottom('auto')
+    }
+  }, [isLoading, phone])
 
   const contactName = messages.find((m) => m.direction === 'in' && m.contact_name)?.contact_name || null
   const displayName = contactName || formatPhone(phone)
@@ -479,11 +493,16 @@ function ChatWindow({ phone, onBack }: { phone: string; onBack: () => void }) {
         <div className="relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl shadow-lg border border-white/10"
           style={{ backgroundColor: avatarColor(phone) }}>
           <span className="text-[13px] font-black text-[#050505] tracking-widest">{initials(contactName, phone)}</span>
-          <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-[#050505] bg-emerald-500 shadow-xl" />
+          <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-[3px] border-[#050505] shadow-xl ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex-1">
           <p className="text-[14px] font-black text-white uppercase tracking-widest truncate">{displayName}</p>
-          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mt-0.5">🟢 Online Local</p>
+          <div className="flex items-center gap-2 mt-0.5">
+             <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`} />
+             <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isConnected ? 'text-emerald-500' : 'text-red-500'}`}>
+               {isConnected ? 'WhatsApp Online' : 'Conexão Suspensa'}
+             </p>
+          </div>
         </div>
         <div className="flex items-center">
           <a href={`https://wa.me/${phone}`} target="_blank" rel="noopener noreferrer"
@@ -522,7 +541,7 @@ function ChatWindow({ phone, onBack }: { phone: string; onBack: () => void }) {
             )
           )
         )}
-        <div ref={bottomRef} className="h-4" />
+        <div ref={messagesEndRef} className="h-4" />
       </div>
 
       <ChatInputBar phone={phone} />

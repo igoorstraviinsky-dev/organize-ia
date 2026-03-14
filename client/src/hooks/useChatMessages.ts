@@ -90,13 +90,17 @@ export function useChatRealtime(phone: string | null) {
 
   useEffect(() => {
     const channel = supabase
-      .channel('chat-realtime')
+      .channel('chat-realtime-v3')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        { event: '*', schema: 'public', table: 'chat_messages' },
         (payload) => {
+          // Sempre invalida a lista de conversas (sidebar)
           queryClient.invalidateQueries({ queryKey: ['conversations'] })
-          if (payload.new?.phone === phone) {
+          
+          // Se afetar a conversa aberta, invalida também as mensagens
+          const affectedPhone = (payload.new as any)?.phone || (payload.old as any)?.phone
+          if (affectedPhone === phone) {
             queryClient.invalidateQueries({ queryKey: ['chat_messages', phone] })
           }
         }
