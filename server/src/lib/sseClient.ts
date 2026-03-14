@@ -28,7 +28,8 @@ const logBuffers = new Map<string, LogEntry[]>();
 // Cache de transcrições por fileSha256
 const transcriptionCache = new Map<string, string>();
 
-function addLog(integrationId: string, level: 'info' | 'warn' | 'error', msg: string) {
+// Export para permitir logs de outros módulos (ex: rotas de status)
+export function addLog(integrationId: string, level: 'info' | 'warn' | 'error', msg: string) {
   if (!logBuffers.has(integrationId)) logBuffers.set(integrationId, []);
   const buf = logBuffers.get(integrationId)!;
   buf.push({ ts: new Date().toISOString(), level, msg });

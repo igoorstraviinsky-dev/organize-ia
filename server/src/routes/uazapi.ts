@@ -11,7 +11,7 @@ import {
   sendImageMessage,
   parseWebhookPayload,
 } from '../lib/uazapi.js';
-import { startSSEListener, stopSSEListener, getSSEStatus, getSSELogs } from '../lib/sseClient.js';
+import { startSSEListener, stopSSEListener, getSSEStatus, getSSELogs, addLog } from '../lib/sseClient.js';
 import type { IntegrationRow, DownloadMediaParams } from '../types/agent.js';
 
 const router = Router();
@@ -55,6 +55,8 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
     const stateStr = state.toLowerCase();
     // Lista expandida de estados considerados "conectados"
     const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => stateStr.includes(s)) || (result.raw?.connected === true);
+
+    addLog(integration.id, isConnected ? 'info' : 'warn', `🔄 Teste Manual: Instância está ${stateStr.toUpperCase()}`);
 
     await req.sb!
       .from('integrations')
