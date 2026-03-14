@@ -262,11 +262,14 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   const dataType = (data.type || data.event || data.EventType || data.eventType || '').toLowerCase();
   
   // Transmite para o frontend em tempo real (Live Mode)
+  console.log(`[SSE:Broadcast] Enviando ${dataType} para o dispatcher (user: ${integration.user_id})`);
   sseDispatcher.broadcast({
     type: 'uazapi_event',
     timestamp: new Date().toISOString(),
     payload: {
       integrationId,
+      userId: integration.user_id,
+      chatId: data.phone || (data.data?.phone) || (data.key?.remoteJid?.split('@')[0]), // Tenta extrair ID do chat
       event: dataType,
       data
     }

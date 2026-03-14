@@ -42,6 +42,8 @@ export interface UazapiSSEEvent extends BaseSSEEvent {
   type: 'uazapi_event';
   payload: {
     integrationId: string;
+    userId?: string;
+    chatId?: string;
     event: string; // connection, messages, chats, history
     data: any;
   };

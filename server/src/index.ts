@@ -63,6 +63,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
  * Endpoint central de eventos SSE para o Dashboard.
  */
 app.get('/api/events', authenticate, (req: Request, res: Response) => {
+  res.setHeader('X-Accel-Buffering', 'no'); // Desativa buffer no Nginx para SSE
   sseDispatcher.addClient(res);
 });
 

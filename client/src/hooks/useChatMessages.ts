@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 export const SERVER_URL = import.meta.env.VITE_API_URL || ''
@@ -145,28 +145,39 @@ export function useInstanceStatus() {
 }
 
 export function useSSEStatus() {
+  const queryClient = useQueryClient()
   const { data, refetch } = useQuery<{ connected: boolean; active: boolean; error?: string }>({
     queryKey: ['uazapi_sse_status'],
     queryFn: () => serverRequest('/sse/status'),
-    refetchInterval: 10000, 
+    refetchInterval: 15000, 
   })
 
   useEffect(() => {
     const handler = (e: any) => {
       const { detail } = e
       if (detail.type === 'uazapi_event' && detail.payload.event.includes('connection')) {
-        refetch()
+        const rawState = (detail.payload.data?.state || detail.payload.data?.status || '').toLowerCase()
+        const isConnected = ['open', 'connected', 'online', 'active', 'authenticated'].some(s => rawState.includes(s))
+                         || rawState.includes('established')
+
+        // Atualiza o cache do React Query instantaneamente
+        queryClient.setQueryData(['uazapi_sse_status'], (old: any) => ({
+          ...old,
+          connected: isConnected,
+          active: true
+        }))
       }
     }
     window.addEventListener('app-sync-event', handler)
     return () => window.removeEventListener('app-sync-event', handler)
-  }, [refetch])
+  }, [queryClient])
 
   return { data }
 }
 
 export function useUazapiLive() {
   const queryClient = useQueryClient()
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -174,14 +185,26 @@ export function useUazapiLive() {
       if (detail.type === 'uazapi_event') {
         const { event, payload } = detail
         if (event === 'messages' || event === 'history') {
-           // Força a atualização da lista se vier mensagem nova pelo SSE
-           queryClient.invalidateQueries({ queryKey: ['conversations'] })
-           queryClient.invalidateQueries({ queryKey: ['chat_messages'] })
+           // Debounce para evitar loops em rajadas (T013)
+           if (timerRef.current) clearTimeout(timerRef.current)
+           
+           timerRef.current = setTimeout(() => {
+             // Invalida a lista de conversas (sidebar)
+             queryClient.invalidateQueries({ queryKey: ['conversations'] })
+             
+             // Invalida mensagens do chat específico se houver chatId
+             if (payload.chatId) {
+               queryClient.invalidateQueries({ queryKey: ['chat_messages', payload.chatId] })
+             }
+           }, 300)
         }
       }
     }
     window.addEventListener('app-sync-event', handler)
-    return () => window.removeEventListener('app-sync-event', handler)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      window.removeEventListener('app-sync-event', handler)
+    }
   }, [queryClient])
 }
 

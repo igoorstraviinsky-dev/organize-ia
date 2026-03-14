@@ -462,11 +462,21 @@ function ChatWindow({ phone, onBack }: { phone: string; onBack: () => void }) {
     scrollToBottom('smooth')
   }, [messages])
 
-  // Rola instantaneamente ao carregar a conversa pela primeira vez
+  // Rola ao carregar a conversa ou quando recebe evento de sincronia
   useEffect(() => {
     if (!isLoading && messages.length > 0) {
       scrollToBottom('auto')
     }
+
+    const handler = (e: any) => {
+      const { detail } = e
+      if (detail.type === 'uazapi_event' && (detail.payload.chatId === phone || detail.payload.phone === phone)) {
+        // Aguarda o React Query atualizar as mensagens para rolar
+        setTimeout(() => scrollToBottom('smooth'), 100)
+      }
+    }
+    window.addEventListener('app-sync-event', handler)
+    return () => window.removeEventListener('app-sync-event', handler)
   }, [isLoading, phone])
 
   const contactName = messages.find((m) => m.direction === 'in' && m.contact_name)?.contact_name || null

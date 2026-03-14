@@ -90,13 +90,42 @@ function TextInput({ id, label, value, onChange, placeholder, hint }: InputProps
   )
 }
 
-// ─── Card UazAPI ──────────────────────────────────────────────────────────────
-
 interface IntegrationCardProps {
   existing?: Integration;
 }
 
+// ─── Card UazAPI (Status Only) ────────────────────────────────────────────────
+function UazapiStatusCard({ existing }: { existing?: Integration }) {
+  const { data: sseData } = useSSEStatus()
+  const liveStatus = sseData?.connected ? 'connected' : (existing?.status || 'disconnected')
 
+  if (!existing && !liveStatus) return null;
+
+  return (
+    <div className="overflow-hidden rounded-[32px] border border-white/5 bg-[#050505] shadow-2xl transition-all">
+      <div className="flex items-center gap-5 px-8 py-6">
+        <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 shadow-xl shadow-purple-600/20">
+          <Zap size={24} className="text-white" strokeWidth={2.5} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h3 className="font-black text-white text-lg tracking-tight">UazAPI GO V2 (Live Mode)</h3>
+            <span className="rounded-xl bg-purple-500/10 px-3 py-1 text-[9px] font-black text-purple-400 border border-purple-500/20 uppercase tracking-[0.2em]">Fluxo SSE Ativo</span>
+          </div>
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Sincronismo em tempo real nativo via Cérebro</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <StatusBadge status={liveStatus} />
+        </div>
+      </div>
+      <div className="border-t border-white/5 bg-white/[0.01] px-8 py-4">
+        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+          Esta conexão é gerenciada via variáveis de ambiente (Auto-Config). O status "Conectado" indica que o fluxo de eventos SSE está operando normalmente para o seu WhatsApp.
+        </p>
+      </div>
+    </div>
+  )
+}
 
 // ─── Card WhatsApp Cloud ──────────────────────────────────────────────────────
 
@@ -672,6 +701,7 @@ export default function IntegrationsPage() {
               <MessageCircle size={14} className="text-purple-500" /> API Mensageria e Chatbots
             </h2>
             <div className="grid gap-6">
+              <UazapiStatusCard existing={integrations.find(i => i.provider === 'uazapi' || i.provider === 'wazapi')} />
               <WhatsAppCloudCard existing={integrations.find(i => i.provider === 'whatsapp_cloud')} />
               <TelegramCard existing={integrations.find(i => i.provider === 'telegram')} />
             </div>

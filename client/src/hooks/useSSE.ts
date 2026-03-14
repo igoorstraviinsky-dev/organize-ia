@@ -51,6 +51,8 @@ export function useSSE(token?: string) {
           return;
         }
         
+        console.log(`[SSE] 📩 Evento recebido: ${data.type}`, data.payload || data);
+        
         // Disparar evento customizado ou callback para o sistema
         window.dispatchEvent(new CustomEvent('app-sync-event', { detail: data }));
       } catch (err) {
