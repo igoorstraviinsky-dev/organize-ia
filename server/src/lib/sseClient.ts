@@ -277,6 +277,7 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
       addLog(integrationId, 'info', `Áudio encaminhado ignorado (não é PTT) — phone=${phone}`);
       return;
     }
+    addLog(integrationId, 'info', `🎙️ Recebido áudio (PTT) de ${phone}. Iniciando transcrição...`);
     processAudioAsync(parsed, integration, integrationId).catch((err) =>
       addLog(integrationId, 'warn', `Erro no processamento de áudio: ${err.message}`)
     );
@@ -284,6 +285,7 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   }
 
   if (parsed.messageType === 'image' && direction === 'in') {
+    addLog(integrationId, 'info', `🖼️ Recebida imagem de ${phone}. Processando...`);
     processImageAsync(parsed, integration, integrationId).catch((err) =>
       addLog(integrationId, 'warn', `Erro no processamento de imagem: ${err.message}`)
     );
@@ -291,6 +293,9 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
   }
 
   if (!phone || !text) return;
+
+  const msgBrief = text.length > 40 ? text.slice(0, 40) + '...' : text;
+  addLog(integrationId, 'info', `${direction === 'in' ? '📩' : '📤'} Mensagem ${direction === 'in' ? 'recebida' : 'enviada'}: ${phone} | "${msgBrief}"`);
 
   const { error: insertError } = await supabase.from('chat_messages').insert({
     integration_id: integration.id,
@@ -309,6 +314,10 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
     return;
   }
 
+  if (direction === 'in') {
+    addLog(integrationId, 'info', `✅ Mensagem salva no chat.`);
+  }
+
   if (direction !== 'in') return;
 
   try {
@@ -320,10 +329,12 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
       .maybeSingle();
 
     if (agentSettings?.openai_api_key || process.env.OPENAI_API_KEY) {
+      addLog(integrationId, 'info', `🤖 Agente AI ativado para responder ${phone}...`);
       const { processMessage } = await import('../agent/openai.js');
       const aiResponse = await processMessage(text, phone);
 
       if (aiResponse) {
+        addLog(integrationId, 'info', `🚀 Enviando resposta da AI via UazAPI...`);
         const result = await sendTextMessage({
           apiUrl: integration.api_url,
           apiToken: integration.api_token,
@@ -341,6 +352,7 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
           message_id: result?.messageid || result?.key?.id || `ai-${Date.now()}`,
           status: 'sent',
         });
+        addLog(integrationId, 'info', `✅ Resposta enviada com sucesso.`);
       }
     }
   } catch (aiErr: any) {
