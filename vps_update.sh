@@ -119,6 +119,8 @@ OPENAI_API_KEY=$OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o
 PORT=3001
 VITE_API_URL=http://$CLEAN_DOMAIN:3001
+# Segredo para o webhook do WhatsApp (UazAPI)
+WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
 EOF
 
     # agent/.env
