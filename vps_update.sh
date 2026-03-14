@@ -127,7 +127,10 @@ SUPABASE_URL=$SUPABASE_URL
 SUPABASE_SERVICE_KEY=$SUPABASE_SERVICE_KEY
 OPENAI_API_KEY=$OPENAI_API_KEY
 OPENAI_MODEL=gpt-4o
-WAZAPI_URL=http://localhost:5000
+# BRAIN_URL aponta para o container 'server' na rede do Docker
+BRAIN_URL=http://server:3001/api/agent/process
+# Se UazAPI/WazAPI estiver rodando na VPS fora do Docker, usamos host.docker.internal
+WAZAPI_URL=http://host.docker.internal:5000
 WAZAPI_TOKEN=seu_token_aqui
 WAZAPI_INSTANCE=organizador
 AGENT_PORT=8005

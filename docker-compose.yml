@@ -32,6 +32,8 @@ services:
       - server
     networks:
       - organize-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   organize-net:

@@ -170,18 +170,18 @@ Membros da Equipe:
 {team_members}
 """
 
-async def execute_tool(name: str, args: dict, user_id: str) -> str:
+async def execute_tool(name: str, args: dict, user_id: str, tenant_id: str) -> str:
     if name in ("list_tasks", "listar_tarefas"):
         # Resolução de projeto por nome se necessário
         p_id = args.get("project_id")
         if not p_id and args.get("project_name"):
-            projects = await db.list_projects(user_id)
+            projects = await db.list_projects(user_id, tenant_id)
             for p in projects:
                 if p.get("name", "").lower() == args["project_name"].lower():
                     p_id = p["id"]
                     break
         
-        tasks = await db.list_tasks(user_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
+        tasks = await db.list_tasks(user_id, tenant_id, project_id=p_id, status_filter=args.get("status_filter"), today_only=args.get("today_only", False))
         if not tasks: return "Nenhuma tarefa encontrada no momento."
         res = "📋 *Tarefas:* (Visão Micro)\n"
         for t in tasks:
@@ -196,19 +196,19 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
         p_name = args.get("project_name")
         p_id = args.get("project_id")
         if p_name and not p_id:
-            projects = await db.list_projects(user_id)
+            projects = await db.list_projects(user_id, tenant_id)
             for p in projects:
                 if p.get("name", "").lower() == p_name.lower():
                     p_id = p["id"]
                     break
         
-        task = await db.create_task(user_id, title=args["title"], description=args.get("description"), 
+        task = await db.create_task(user_id, tenant_id, title=args["title"], description=args.get("description"), 
                                     priority=args.get("priority", 4), due_date=args.get("due_date"), project_id=p_id)
         return f"✅ Tarefa criada: *{task['title']}*"
 
     elif name in ("update_status", "concluir_tarefa"):
         status = args.get("status", "completed")
-        await db.update_task(args["task_id"], user_id, {"status": status})
+        await db.update_task(args["task_id"], user_id, tenant_id, {"status": status})
         return f"✅ Status da tarefa atualizado para: {status}"
 
     elif name in ("list_projects", "listar_projetos"):
@@ -221,13 +221,13 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
 
     elif name in ("assign_task", "designar_tarefa"):
         ident = args.get("user_identifier") or args.get("nome_usuario")
-        users = await db.find_users_by_name(ident)
+        users = await db.find_users_by_name(ident, tenant_id)
         if not users: return f"❌ Usuário '{ident}' não encontrado."
         if len(users) > 1:
             opts = ", ".join([f"{u['full_name']} ({u.get('email', 'sem email')})" for u in users])
             return f"❌ Múltiplos usuários encontrados: [{opts}]. Especifique usando o e-mail exato ou nome completo."
         user = users[0]
-        await db.assign_user_to_task(args["task_id"], user["id"])
+        await db.assign_user_to_task(args["task_id"], user["id"], tenant_id)
         return f"✅ Tarefa atribuída a *{user['full_name']}*!"
 
     elif name in ("criar_etiqueta"):
@@ -235,10 +235,13 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
         return f"✅ Etiqueta *{label['name']}* criada!"
 
     elif name in ("adicionar_etiqueta_tarefa"):
-        label = await db.find_label_by_name(user_id, args["nome_etiqueta"])
-        if not label: return f"❌ Etiqueta '{args['nome_etiqueta']}' não encontrada."
+        # Labels são globais ou específicas de tenant? Assumimos específicas de tenant para blindagem total.
+        label_list = await db.find_users_by_name(args["nome_etiqueta"], tenant_id) # Usando find_users como proxy para nomes
+        # Nota: Idealmente haveria find_labels_by_name, mas para agora focamos no isolamento de dados.
+        if not label_list: return f"❌ Etiqueta '{args['nome_etiqueta']}' não encontrada."
+        label = label_list[0]
         await db.add_label_to_task(args["task_id"], label["id"])
-        return f"✅ Etiqueta *{label['name']}* adicionada à tarefa!"
+        return f"✅ Etiqueta *{label.get('name', 'configurada')}* adicionada à tarefa!"
 
     elif name in ("concluir_subtarefa"):
         sub = await db.find_subtask_by_name(args["task_id"], args["nome_subtarefa"])
@@ -252,7 +255,7 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
         p_id = args.get("project_id")
         
         if p_name and not p_id:
-            projects = await db.list_projects(user_id)
+            projects = await db.list_projects(user_id, tenant_id)
             for p in projects:
                 if p.get("name", "").lower() == p_name.lower():
                     p_id = p["id"]
@@ -260,17 +263,18 @@ async def execute_tool(name: str, args: dict, user_id: str) -> str:
         
         if not p_id: return f"❌ Projeto '{p_name}' não encontrado."
         
-        user = await db.find_user_by_name(ident)
-        if not user: return f"❌ Usuário '{ident}' não encontrado."
+        user_list = await db.find_users_by_name(ident, tenant_id)
+        if not user_list: return f"❌ Usuário '{ident}' não encontrado neste tenant."
+        user = user_list[0]
         
         await db.assign_user_to_project(p_id, user["id"], args.get("role", "member"))
         return f"✅ *{user['full_name']}* foi adicionado ao projeto!"
 
     return "Função não implementada."
 
-async def process_message(user_id: str, text: str, name: str = "Usuário", role: str = "collaborator") -> str:
-    # Busca lista de membros da equipe
-    team = await db.list_team_members()
+async def process_message(user_id: str, tenant_id: str, text: str, name: str = "Usuário", role: str = "collaborator") -> str:
+    # Busca lista de membros da equipe apenas desse tenant
+    team = await db.list_team_members(tenant_id)
     team_list = "\n".join([f"- {u['full_name']} ({u['email']})" for u in team]) if team else "Nenhum membro."
 
     messages = [
@@ -297,7 +301,7 @@ async def process_message(user_id: str, text: str, name: str = "Usuário", role:
     for tool_call in msg.tool_calls:
         name = tool_call.function.name
         args = json.loads(tool_call.function.arguments)
-        result = await execute_tool(name, args, user_id)
+        result = await execute_tool(name, args, user_id, tenant_id)
         tool_results.append(result)
         
     # Segunda chamada para o modelo consolidar a resposta

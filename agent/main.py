@@ -90,29 +90,38 @@ class WebhookHandler(BaseHTTPRequestHandler):
         
         if not phone or not text: return
 
-        # Busca instância para responder
+        # Busca instância para responder e determinar o tenant_id
         instance_name = body.get("instance") or "default"
         config = await db.get_integration_by_instance(instance_name)
-        if not config: return
+        if not config: 
+            print(f"❌ Erro: Integração para instância '{instance_name}' não encontrada.")
+            return
 
-        user_id = await db.get_user_id_by_phone(phone)
+        tenant_id = config.get("tenant_id")
+        if not tenant_id:
+            print(f"❌ Erro: Tenant ID não configurado para a instância '{instance_name}'.")
+            return
+
+        user_id = await db.get_user_id_by_phone(phone, tenant_id)
         if not user_id:
-            await send_whatsapp(phone, "❌ Cadastro não encontrado. Vincule seu número no app!", config)
+            await send_whatsapp(phone, "❌ Cadastro não encontrado neste tenant. Vincule seu número no app!", config)
             return
 
         # Busca perfil para personalizar o prompt
-        profile = await db.get_profile(user_id)
+        profile = await db.get_profile(user_id, tenant_id)
         user_name = profile.get("full_name", "Usuário")
         user_role = profile.get("role", "collaborator")
 
         # O Python agora é apenas o 'Corpo'. Ele envia a mensagem para o 'Cérebro' (Node.js).
-        BRAIN_URL = os.environ.get("BRAIN_URL", "http://localhost:3001/api/agent/process")
+        # Em Docker, localhost NÃO funciona entre containers. Deve usar o nome do serviço 'server'.
+        BRAIN_URL = os.environ.get("BRAIN_URL", "http://server:3001/api/agent/process")
         try:
             async with httpx.AsyncClient() as client:
                 res = await client.post(BRAIN_URL, json={
                     "text": text,
                     "phone": phone,
-                    "user_id": user_id
+                    "user_id": user_id,
+                    "tenant_id": tenant_id
                 }, timeout=30.0)
                 reply = res.json().get("reply", "⚠️ Cérebro não respondeu.")
         except Exception as e:
@@ -140,21 +149,22 @@ class WebhookHandler(BaseHTTPRequestHandler):
     async def handle_execute(self, body):
         """
         Endpoint para o 'Cérebro' (Node.js) comandar o 'Corpo' (Python).
-        Payload: { "tool": "nome_da_tool", "args": {...}, "user_id": "uuid" }
+        Payload: { "tool": "nome_da_tool", "args": {...}, "user_id": "uuid", "tenant_id": "uuid" }
         """
         tool_name = body.get("tool")
         args = body.get("args", {})
         user_id = body.get("user_id")
+        tenant_id = body.get("tenant_id")
 
-        if not tool_name or not user_id:
+        if not tool_name or not user_id or not tenant_id:
             self.send_response(400)
             self.end_headers()
-            self.wfile.write(json.dumps({"error": "tool and user_id required"}).encode())
+            self.wfile.write(json.dumps({"error": "tool, user_id and tenant_id required"}).encode())
             return
 
-        print(f"Executing for Brain: {tool_name} with args {args}")
+        print(f"Executing for Brain (Tenant: {tenant_id}): {tool_name} with args {args}")
         try:
-            result = await agent.execute_tool(tool_name, args, user_id)
+            result = await agent.execute_tool(tool_name, args, user_id, tenant_id)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
