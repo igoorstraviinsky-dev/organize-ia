@@ -82,8 +82,8 @@ export function startSSEListener(integration: IntegrationRow): ConnectionHandle 
     const base = api_url.replace(/\/$/, '');
     const name = instance_name || '';
 
-    // UazapiGO V2 exige token e events na URL
-    const uazCloudQuery = `?token=${encodeURIComponent(api_token)}&events=chats,messages`;
+    // UazapiGO V2 exige token e todos os eventos para Live Mode funcional
+    const uazCloudQuery = `?token=${encodeURIComponent(api_token)}&events=connection,chats,messages,history`;
     
     const paths = [
       `/sse${uazCloudQuery}`,
@@ -252,12 +252,29 @@ async function handleSSEEvent(eventName: string | null, rawData: string, integra
 
   const dataType = (data.type || data.event || data.EventType || data.eventType || '').toLowerCase();
   
-  // Ignora eventos de sistema comuns que não são mensagens
-  if (['connection', 'status', 'ping', 'chats', 'presence', 'contacts'].some(t => dataType.includes(t))) {
-    // Apenas loga como info se for 'connection' ou 'status'
-    if (dataType === 'connection' || dataType === 'status' || dataType.includes('ping')) {
-       addLog(integrationId, 'info', `Handshake/sistema: "${dataType}" — aguardando mensagens...`);
-    }
+  // Trata eventos de status de conexão (importante para o badge 'Online')
+  if (dataType.includes('connection') || dataType.includes('status')) {
+    const state = (data.state || data.status || data.connection || '').toLowerCase();
+    const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => state.includes(s));
+    
+    addLog(integrationId, isConnected ? 'info' : 'warn', `SSE Status: ${state.toUpperCase()}`);
+    
+    await supabase
+      .from('integrations')
+      .update({ status: isConnected ? 'connected' : 'disconnected' })
+      .eq('id', integrationId);
+    return;
+  }
+
+  // Ignora eventos de sistema irrelevantes
+  if (['ping', 'chats', 'presence', 'contacts'].some(t => dataType.includes(t))) {
+    return;
+  }
+
+  // Trata sincronização de Histórico (Bulk Sync)
+  if (dataType.includes('history')) {
+    addLog(integrationId, 'info', `📥 Recebido histórico de mensagens. Iniciando sincronização em massa...`);
+    // Lógica de processamento de histórico será implementada na Task 2.2
     return;
   }
 
