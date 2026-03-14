@@ -5,9 +5,10 @@
 
 ## Phase 0: [URGENTE] Correção Crítica Frontend (Supabase Env)
 
-- [ ] T000: Adicionar `ARG` e `ENV` para `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no `client/Dockerfile`.
-- [ ] T001: Configurar a seção `build -> args` no `docker-compose.yml` para mapear as variáveis do arquivo `.env` para o container do cliente.
-- [ ] T002: Atualizar `vps_update.sh` para solicitar o `VITE_SUPABASE_ANON_KEY` (Chave Pública) e salvá-la no `.env` da raiz e do client.
+- [x] T000: Adicionar `ARG` e `ENV` para `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` no `client/Dockerfile`.
+- [x] T001: Configurar a seção `build -> args` no `docker-compose.yml` para mapear as variáveis do arquivo `.env` para o container do cliente.
+- [x] T002: Atualizar `vps_update.sh` para solicitar o `VITE_SUPABASE_ANON_KEY` (Chave Pública) e salvá-la no `.env` da raiz e do client.
+- [ ] T002.1: Rodar `docker compose build --no-cache client` na VPS para forçar a injeção das variáveis.
 
 ## Phase 1: Infraestrutura e CI/CD (Zero-Build Standard)
 
