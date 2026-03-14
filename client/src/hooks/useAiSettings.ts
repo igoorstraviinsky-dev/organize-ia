@@ -14,7 +14,7 @@ export interface AiSettings {
 }
 
 // O Vite Server atua como proxy via proxy.config, ou batemos direto caso use porta 3001 etc
-const API_URL = `${(import.meta as any).env.VITE_SERVER_URL || 'http://localhost:3001'}/api/ai/settings`
+const API_URL = `${(import.meta as any).env.VITE_API_URL || ''}/api/ai/settings`
 
 export function useAiSettings() {
   return useQuery<AiSettings | null>({

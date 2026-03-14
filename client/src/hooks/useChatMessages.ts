@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+export const SERVER_URL = import.meta.env.VITE_API_URL || ''
 
 export interface ChatMessage {
   id: string

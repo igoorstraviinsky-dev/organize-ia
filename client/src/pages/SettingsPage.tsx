@@ -138,7 +138,7 @@ export default function SettingsPage() {
     setIsTriggering(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch(`${(import.meta as any).env.VITE_API_URL || '/api'}/ai/morning-summary/trigger`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/ai/morning-summary/trigger`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
