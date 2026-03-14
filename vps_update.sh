@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 # ──────────────────────────────────────────────────────────────────────────────
 stravinsky_header() {
     clear
-    echo -e "${BLUE}"
+    echo -e "${RED}"
     echo "  ██████  ████████ ██████   █████  ██    ██ ██ ███    ██ ███████ ██   ██ ██    ██ "
     echo " ██          ██    ██   ██ ██   ██ ██    ██ ██ ████   ██ ██      ██  ██   ██  ██  "
     echo "  █████      ██    ██████  ███████ ██    ██ ██ ██ ██  ██ ███████ █████     ████   "
@@ -80,8 +80,8 @@ check_env_integrity() {
         "VITE_SUPABASE_ANON_KEY" 
         "SUPABASE_SERVICE_KEY" 
         "OPENAI_API_KEY" 
-        "WAZAPI_TOKEN" 
-        "WAZAPI_INSTANCE"
+        "UAZAPI_TOKEN" 
+        "UAZAPI_INSTANCE"
         "VITE_API_URL"
     )
 
@@ -149,8 +149,8 @@ run_setup_wizard() {
         S_ANON_CUR=$(grep "^VITE_SUPABASE_ANON_KEY=" .env | cut -d= -f2-)
         S_SERV_CUR=$(grep "^SUPABASE_SERVICE_KEY=" .env | cut -d= -f2-)
         O_KEY_CUR=$(grep "^OPENAI_API_KEY=" .env | cut -d= -f2-)
-        W_TOK_CUR=$(grep "^WAZAPI_TOKEN=" .env | cut -d= -f2-)
-        W_INS_CUR=$(grep "^WAZAPI_INSTANCE=" .env | cut -d= -f2-)
+        W_TOK_CUR=$(grep "^UAZAPI_TOKEN=" .env | cut -d= -f2-)
+        W_INS_CUR=$(grep "^UAZAPI_INSTANCE=" .env | cut -d= -f2-)
         D_DOM_CUR=$(grep "^VITE_API_URL=" .env | cut -d/ -f3 | cut -d: -f1)
     fi
 
@@ -181,9 +181,9 @@ PORT=3001
 WHATSAPP_WEBHOOK_SECRET=organizador_webhook_secret_2024
 
 # UAZAPI
-WAZAPI_URL=http://host.docker.internal:5000
-WAZAPI_TOKEN=$W_TOK
-WAZAPI_INSTANCE=$W_INS
+UAZAPI_URL=http://host.docker.internal:5000
+UAZAPI_TOKEN=$W_TOK
+UAZAPI_INSTANCE=$W_INS
 
 # AGENT
 BRAIN_URL=http://server:3001/api/agent/process

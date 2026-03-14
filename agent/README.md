@@ -1,6 +1,6 @@
 # Agente WhatsApp — Organizador
 
-Microserviço Python que integra o **Organizador** ao **WhatsApp** usando WazAPI + OpenAI GPT-4o.
+Microserviço Python que integra o **Organizador** ao **WhatsApp** usando UazAPI + OpenAI GPT-4o.
 
 ## Funcionalidades
 
@@ -21,7 +21,7 @@ Microserviço Python que integra o **Organizador** ao **WhatsApp** usando WazAPI
 
 - Python 3.11+
 - Conta OpenAI com créditos
-- Instância WazAPI rodando (Docker ou serviço)
+- Instância UazAPI rodando (Docker ou serviço)
 
 ### 2. Instalar dependências
 
@@ -42,8 +42,8 @@ Valores necessários:
 - `SUPABASE_URL` — URL do projeto Supabase
 - `SUPABASE_SERVICE_KEY` — Service Role Key (Dashboard > Settings > API)
 - `OPENAI_API_KEY` — Chave da OpenAI
-- `WAZAPI_URL` — URL da instância WazAPI
-- `WAZAPI_TOKEN` — Token do WazAPI
+- `UAZAPI_URL` — URL da instância UazAPI
+- `UAZAPI_TOKEN` — Token do UazAPI
 
 ### 4. Aplicar migração no Supabase
 
@@ -58,9 +58,9 @@ python main.py
 
 O agente sobe na porta `8001` (configurável via `AGENT_PORT`).
 
-### 6. Configurar webhook no WazAPI
+### 6. Configurar webhook no UazAPI
 
-No painel do WazAPI, configure o webhook para:
+No painel do UazAPI, configure o webhook para:
 
 ```
 POST http://SEU_SERVIDOR:8001/webhook
@@ -70,7 +70,7 @@ Para testar localmente, use o **ngrok**:
 
 ```bash
 ngrok http 8001
-# Copie a URL https e configure no WazAPI
+# Copie a URL https e configure no UazAPI
 ```
 
 ### 7. Primeiro uso (vinculação)
@@ -97,10 +97,10 @@ GET http://localhost:8001/health
 
 ```
 agent/
-├── main.py              # FastAPI app + webhook WazAPI
+├── main.py              # FastAPI app + webhook UazAPI
 ├── agent.py             # OpenAI Function Calling
 ├── supabase_client.py   # CRUD no Supabase
-├── whatsapp.py          # Envio de mensagens WazAPI
+├── whatsapp.py          # Envio de mensagens UazAPI
 ├── user_registry.py     # Vinculação número ↔ user_id
 ├── requirements.txt
 ├── .env.example
