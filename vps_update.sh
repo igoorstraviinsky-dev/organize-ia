@@ -273,12 +273,28 @@ action_diagnose() {
     echo -e "\n${YELLOW}--- Portas em Uso (Host) ---${NC}"
     netstat -tuln | grep -E '80|3001|8005' || echo "Nenhuma porta padrão em uso no Host (isso é normal se estiver em bridge)"
 
-    echo -e "\n${YELLOW}--- Teste de Conexão Supabase ---${NC}"
+    echo -e "\n${YELLOW}--- Teste de Rede e DNS ---${NC}"
     S_URL=$(grep "^SUPABASE_URL=" .env | cut -d= -f2-)
-    if curl -s --head "$S_URL" | grep "200" > /dev/null; then
-        echo -e "${GREEN}✅ Conexão com Supabase URL OK${NC}"
+    S_HOST=$(echo $S_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||' | cut -d: -f1)
+    
+    if [ -z "$S_HOST" ]; then
+        echo -e "${RED}❌ SUPABASE_URL não configurada ou inválida no .env${NC}"
     else
-        echo -e "${RED}❌ Falha ao alcançar Supabase URL${NC}"
+        echo "➜ Testando resolução DNS para $S_HOST..."
+        if host "$S_HOST" > /dev/null 2>&1 || ping -c 1 "$S_HOST" > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ DNS resolvendo corretamente${NC}"
+        else
+            echo -e "${RED}❌ Falha de DNS: Não foi possível encontrar o IP de $S_HOST${NC}"
+            echo -e "${YELLOW}Dica: Tente adicionar 'nameserver 8.8.8.8' em /etc/resolv.conf${NC}"
+        fi
+        
+        echo "➜ Testando conexão na porta 443..."
+        if curl -s --head --connect-timeout 5 "$S_URL" > /dev/null; then
+            echo -e "${GREEN}✅ Conexão com Supabase OK${NC}"
+        else
+            echo -e "${RED}❌ Falha ao alcançar porta 443 de $S_URL${NC}"
+            echo -e "${YELLOW}Dica: Verifique se o firewall da sua VPS permite tráfego de saída.${NC}"
+        fi
     fi
 
     echo -e "\n${BLUE}Diagnóstico concluído.${NC}"
