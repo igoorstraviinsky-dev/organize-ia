@@ -102,11 +102,12 @@ function UazapiCard({ existing }: IntegrationCardProps) {
   const [open, setOpen] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [sseStatus, setSseStatus] = useState<'connecting' | 'connected' | 'error' | null>(null)
+  const [sseStatus, setSseStatus] = useState<'connecting' | 'connected' | 'error' | 'syncing' | null>(null)
   const [logs, setLogs] = useState<any[]>([])
   const [showLogs, setShowLogs] = useState(false)
   const [loadingLogs, setLoadingLogs] = useState(false)
   const logsEndRef = useRef<HTMLDivElement>(null)
+  const [syncCount, setSyncCount] = useState<number>(0)
 
   const [form, setForm] = useState({
     api_url: existing?.api_url || '',
@@ -244,6 +245,19 @@ function UazapiCard({ existing }: IntegrationCardProps) {
       if (res.ok) {
         const { logs: newLogs } = await res.json()
         setLogs(newLogs || [])
+        
+        // Detecta status nos logs para reatividade imediata na UI
+        const lastLog = newLogs?.[newLogs.length - 1]?.msg || ''
+        if (lastLog.includes('Status: OPEN') || lastLog.includes('Status: CONNECTED')) {
+          setSseStatus('connected')
+        } else if (lastLog.includes('histórico')) {
+          setSseStatus('syncing')
+          const count = lastLog.match(/\d+/)
+          if (count) setSyncCount(parseInt(count[0]))
+        } else if (lastLog.includes('sincronizado')) {
+          setSseStatus('connected')
+        }
+
         setTimeout(() => logsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50)
       }
     } catch {}
@@ -324,16 +338,21 @@ function UazapiCard({ existing }: IntegrationCardProps) {
             {/* Status SSE */}
             {sseStatus && (
               <div className={`flex items-center gap-3 rounded-2xl px-5 py-4 text-xs font-bold uppercase tracking-widest border ${
-                sseStatus === 'connected'
+                sseStatus === 'connected' || sseStatus === 'syncing'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                   : sseStatus === 'connecting'
                   ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                   : 'bg-red-500/10 text-red-400 border-red-500/20'
               }`}>
-                {sseStatus === 'connected' && <CheckCircle2 size={16} strokeWidth={3} className="flex-shrink-0" />}
+                {(sseStatus === 'connected' || sseStatus === 'syncing') && (
+                  sseStatus === 'syncing' 
+                    ? <Loader2 size={16} strokeWidth={3} className="animate-spin flex-shrink-0" />
+                    : <CheckCircle2 size={16} strokeWidth={3} className="flex-shrink-0" />
+                )}
                 {sseStatus === 'connecting' && <Loader2 size={16} strokeWidth={3} className="animate-spin flex-shrink-0" />}
                 {sseStatus === 'error' && <XCircle size={16} strokeWidth={3} className="flex-shrink-0" />}
                 {sseStatus === 'connected' && 'SSE Ativo — recebendo em tempo real'}
+                {sseStatus === 'syncing' && `Sincronizando Histórico... (${syncCount} mensagens)`}
                 {sseStatus === 'connecting' && 'Conectando ao SSE...'}
                 {sseStatus === 'error' && 'Falha SSE. Verifique URL e Token.'}
               </div>
