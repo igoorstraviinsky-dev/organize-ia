@@ -308,31 +308,29 @@ export function parseWebhookPayload(body: any): ParsedSSEMessage | null {
       }
     }
 
-    const uazBody = (body?.chatid || body?.sender) ? body : (body?.data?.chatid || body?.data?.sender) ? body.data : null;
-    if (uazBody) {
-      const chatid = uazBody.chatid || uazBody.sender || '';
+    // Suporte ao formato UazapiGO V2 (EventType / chat)
+    const uazV2 = (body?.EventType && body?.chat) ? body : null;
+    if (uazV2) {
+      const chat = uazV2.chat;
+      const chatid = chat.id || chat.chatid || chat.sender || '';
       const phone = chatid.replace('@s.whatsapp.net', '').replace('@c.us', '').replace(/[^0-9]/g, '');
-      const fromMe = uazBody.fromMe === true || uazBody.fromMe === 'true';
-      const text = uazBody.text || uazBody.body || uazBody.message || '';
-      const messageId = uazBody.messageid || uazBody.id || null;
-      const contactName = uazBody.senderName || uazBody.pushName || null;
-      const ts = uazBody.messageTimestamp || uazBody.timestamp;
-      const timestamp = ts ? new Date(Number(ts) > 9999999999 ? ts : Number(ts) * 1000).toISOString() : new Date().toISOString();
+      const fromMe = chat.fromMe === true || chat.fromMe === 'true';
+      const text = chat.body || chat.text || chat.lastMessage || '';
+      const messageId = chat.messageId || chat.id || chat.lastMessageId || null;
+      const contactName = chat.name || chat.pushName || null;
+      const ts = chat.messageTimestamp || chat.timestamp || uazV2.timestamp;
+      const timestamp = ts ? new Date(Number(ts) * 1000).toISOString() : new Date().toISOString();
 
-      if ((uazBody.type === 'audio' || uazBody.type === 'ptt') && phone) {
-        return {
-          phone, fromMe, text: '', messageId, contactName, timestamp,
-          messageType: 'audio',
-          audioKey: { remoteJid: chatid, fromMe, id: messageId },
-        };
-      }
-      if (phone && text) {
-        return { 
-          phone, fromMe, text, messageId, contactName, timestamp,
-          messageType: 'text'
-        };
+      if (phone && (text || chat.type === 'ptt' || chat.type === 'audio' || chat.type === 'image')) {
+         return {
+            phone, fromMe, text: String(text), messageId, contactName, timestamp,
+            messageType: (chat.type === 'ptt' || chat.type === 'audio') ? 'audio' : (chat.type === 'image' ? 'image' : 'text'),
+            rawMsg: chat
+         };
       }
     }
+
+    const uazBody = (body?.chatid || body?.sender) ? body : (body?.data?.chatid || body?.data?.sender) ? body.data : null;
 
     return null;
   } catch (err: any) {
