@@ -230,7 +230,15 @@ function UazapiCard({ existing }: IntegrationCardProps) {
       }
 
       if (!connected) {
-        setSseStatus('error')
+        // Se após as tentativas não confirmou, mas o teste de API deu OK antes, 
+        // mantemos como 'connecting' ou avisamos que está aguardando o primeiro evento
+        const statusRes = await fetch(`${SERVER_URL}/api/uazapi/sse/status`, { headers })
+        const statusData = await statusRes.json()
+        if (statusData.active) {
+          setSseStatus('connected')
+        } else {
+          setSseStatus('error')
+        }
       }
     } catch {
       setSseStatus('error')

@@ -56,7 +56,9 @@ router.get('/status', authenticate, async (req: Request, res: Response) => {
     // Lista expandida de estados considerados "conectados"
     const isConnected = ['open', 'connected', 'online', 'active', 'ativo', 'authenticated'].some(s => stateStr.includes(s)) || (result.raw?.connected === true);
 
-    addLog(integration.id, isConnected ? 'info' : 'warn', `🔄 Teste Manual: Instância está ${stateStr.toUpperCase()}`);
+    // Mostra apenas o estado simplificado no log para não poluir
+    const cleanState = stateStr.split('{')[0].trim().toUpperCase();
+    addLog(integration.id, isConnected ? 'info' : 'warn', `🔄 Teste Manual: Instância está ${cleanState || (isConnected ? 'CONECTADA' : 'DESCONECTADA')}`);
 
     await req.sb!
       .from('integrations')
