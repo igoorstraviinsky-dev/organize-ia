@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CheckCircle2, Lock, Mail, User, UserPlus } from 'lucide-react'
-import AuthShell from '../components/layout/AuthShell'
+import AuthPanelLayout from '../components/layout/AuthPanelLayout'
 import { supabase } from '../lib/supabase'
 
 export default function Register() {
@@ -34,13 +34,15 @@ export default function Register() {
 
   if (success) {
     return (
-      <AuthShell
-        heroEyebrow="Conta pronta"
-        heroTitle="Seu onboarding agora tem a mesma assinatura visual."
-        heroDescription="O cadastro terminou com um estado de confirmacao mais elegante, coerente com o resto da aplicacao e com destaque claro para o proximo passo."
-        panelEyebrow="Cadastro concluido"
-        panelTitle="Conta criada com sucesso."
-        panelDescription="Enviamos um link de confirmacao para o seu email. Depois da validacao, o acesso estara liberado."
+      <AuthPanelLayout
+        eyebrow="Cadastro concluido"
+        title="Conta criada com sucesso."
+        description="Enviamos um link de confirmacao para o seu email. Depois da confirmacao, sua conta ainda passa pela aprovacao de um administrador antes do acesso."
+        highlights={[
+          { label: 'Status', value: 'Conta criada' },
+          { label: 'Proximo passo', value: 'Validar email' },
+          { label: 'Acesso', value: 'Aguardando aprovacao' },
+        ]}
       >
         <div className="flex h-full flex-col justify-between">
           <div className="rounded-[28px] border border-emerald-400/15 bg-emerald-400/[0.07] p-6">
@@ -49,13 +51,13 @@ export default function Register() {
             </div>
             <h3 className="mt-6 text-2xl text-white">Revise sua caixa de entrada.</h3>
             <p className="mt-3 text-sm leading-7 text-slate-300">
-              Assim que o email for confirmado, voce ja pode entrar e continuar a configuracao do seu espaco de trabalho.
+              Depois de confirmar o email, um administrador ainda precisa aprovar o cadastro para liberar a entrada no workspace.
             </p>
           </div>
 
           <div className="mt-8 space-y-4">
             <div className="rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-4 text-sm leading-7 text-slate-400">
-              Dica: se nao encontrar a mensagem principal, vale revisar spam ou promocoes.
+              Dica: se nao encontrar a mensagem principal, vale revisar spam ou promocoes. Depois disso, aguarde a aprovacao do administrador.
             </div>
 
             <Link
@@ -67,18 +69,31 @@ export default function Register() {
             </Link>
           </div>
         </div>
-      </AuthShell>
+      </AuthPanelLayout>
     )
   }
 
   return (
-    <AuthShell
-      heroEyebrow="Cadastro"
-      heroTitle="Uma entrada mais forte para um produto mais forte."
-      heroDescription="Cadastro e login agora compartilham o mesmo sistema visual: fundo ambientado, superficies de vidro escuro e contraste melhor para reforcar a marca."
-      panelEyebrow="Criar conta"
-      panelTitle="Comece com uma experiencia mais premium."
-      panelDescription="Preencha seus dados e prepare o espaco onde tarefas, projetos e automacoes vao ganhar ritmo."
+    <AuthPanelLayout
+      eyebrow="Criar conta"
+      title="Abra seu espaco de trabalho."
+      description="A tela de cadastro agora segue o layout padrao do site: um card central, leitura direta e a mesma linguagem visual usada no restante do produto."
+      highlights={[
+        { label: 'Cadastro', value: 'Mesmo padrao do site' },
+        { label: 'Fluxo', value: 'Preenchimento direto' },
+        { label: 'Base', value: 'Pronto para organizar' },
+      ]}
+      footer={
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Ja tem conta?{' '}
+          <Link
+            to="/login"
+            className="font-black text-cyan-300 transition-colors hover:text-white"
+          >
+            Fazer login
+          </Link>
+        </p>
+      }
     >
       <div className="flex h-full flex-col">
         <form onSubmit={handleRegister} className="space-y-6">
@@ -162,19 +177,7 @@ export default function Register() {
         <div className="mt-6 rounded-[22px] border border-cyan-400/10 bg-cyan-400/[0.05] px-4 py-4 text-sm leading-7 text-slate-400">
           Seu primeiro contato com o produto ja entra no mesmo padrao visual do dashboard, sem quebra de identidade.
         </div>
-
-        <div className="mt-auto pt-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Ja tem conta?{' '}
-            <Link
-              to="/login"
-              className="font-black text-cyan-300 transition-colors hover:text-white"
-            >
-              Fazer login
-            </Link>
-          </p>
-        </div>
       </div>
-    </AuthShell>
+    </AuthPanelLayout>
   )
 }

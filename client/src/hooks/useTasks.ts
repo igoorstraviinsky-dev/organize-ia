@@ -25,7 +25,7 @@ export interface Task {
     profiles: { full_name: string; email: string; avatar_url: string | null } 
   }>;
   task_labels?: any[]; // Simplified for now
-  subtasks?: Partial<Task>[];
+  subtasks?: Array<{ id: string; title: string; status: string }>;
 }
 
 async function fetchSubtasksMap(taskIds: string[]) {
@@ -313,7 +313,7 @@ export function useUpdateTask() {
           title: 'Tarefa Concluída!',
           message: `Você finalizou "${data.title}"`,
           xp: 50,
-          type: 'xp'
+          type: 'achievement'
         })
       }
 

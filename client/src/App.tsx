@@ -3,9 +3,12 @@ import { useAuthContext } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import PendingApproval from './pages/PendingApproval'
 
 export default function App() {
-  const { session, loading, signOut } = useAuthContext()
+  const { session, loading, signOut, profile } = useAuthContext()
+  const approvalStatus = session ? profile?.approval_status ?? 'approved' : null
+  const requiresApprovalGate = approvalStatus === 'pending' || approvalStatus === 'rejected'
 
   if (loading) {
     return (
@@ -30,17 +33,30 @@ export default function App() {
     <Routes>
       <Route
         path="/login"
-        element={!session ? <Login /> : <Navigate to="/app/today" replace />}
+        element={!session ? <Login /> : <Navigate to={requiresApprovalGate ? '/pending-approval' : '/app/today'} replace />}
       />
       <Route
         path="/register"
-        element={!session ? <Register /> : <Navigate to="/app/today" replace />}
+        element={!session ? <Register /> : <Navigate to={requiresApprovalGate ? '/pending-approval' : '/app/today'} replace />}
+      />
+      <Route
+        path="/pending-approval"
+        element={session ? <PendingApproval /> : <Navigate to="/login" replace />}
       />
       <Route
         path="/app/:view?/:id?"
-        element={session ? <Dashboard onSignOut={signOut} /> : <Navigate to="/login" replace />}
+        element={
+          session ? (
+            requiresApprovalGate ? <Navigate to="/pending-approval" replace /> : <Dashboard onSignOut={signOut} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
       />
-      <Route path="/" element={<Navigate to="/app/today" replace />} />
+      <Route
+        path="/"
+        element={<Navigate to={session ? (requiresApprovalGate ? '/pending-approval' : '/app/today') : '/login'} replace />}
+      />
     </Routes>
   )
 }

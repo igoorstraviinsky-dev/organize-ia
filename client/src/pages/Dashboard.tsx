@@ -376,7 +376,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
             {currentView === "settings" && <SettingsPage />}
             {(currentView === "today" || currentView === "inbox" || currentView === "project") && (
               isBoardMode ? (
-                <KanbanBoard projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId} />
+                <KanbanBoard projectId={currentView === "project" ? currentProjectId : null} />
               ) : (
                 <TaskList
                   projectId={(currentView === "today" || currentView === "inbox") ? null : (currentProjectId as string | null)}
