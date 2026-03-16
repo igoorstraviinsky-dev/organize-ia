@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { buildApiUrl } from '../lib/api'
 
 export interface AiSettings {
   id?: string
@@ -14,7 +15,7 @@ export interface AiSettings {
 }
 
 // O Vite Server atua como proxy via proxy.config, ou batemos direto caso use porta 3001 etc
-const API_URL = `${(import.meta as any).env.VITE_API_URL || ''}/api/ai/settings`
+const API_URL = buildApiUrl('/api/ai/settings')
 
 export function useAiSettings() {
   return useQuery<AiSettings | null>({

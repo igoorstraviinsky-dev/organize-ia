@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { buildApiUrl } from '../lib/api'
 
-const API_URL = ((import.meta as any).env.VITE_API_URL || '') + '/api/config/supabase'
+const API_URL = buildApiUrl('/api/config/supabase')
 
 export interface SupabaseConfig {
   supabase_url: string

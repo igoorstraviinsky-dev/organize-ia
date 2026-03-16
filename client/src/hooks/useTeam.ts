@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { buildApiUrl } from '../lib/api'
 
 export interface Profile {
   id: string;
@@ -117,7 +118,7 @@ export const useTeam = () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not authenticated')
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/team/create`, {
+      const response = await fetch(buildApiUrl('/api/team/create'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +160,7 @@ export const useTeam = () => {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated')
 
-    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/team/status/${userId}`, {
+    const response = await fetch(buildApiUrl(`/api/team/status/${userId}`), {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -190,7 +191,7 @@ export const useTeam = () => {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) throw new Error('Not authenticated')
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/team/delete/${userId}`, {
+        const response = await fetch(buildApiUrl(`/api/team/delete/${userId}`), {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${session.access_token}`

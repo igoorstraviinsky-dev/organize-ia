@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { buildApiUrl, buildBrowserAbsoluteUrl, getApiBaseUrl } from '../lib/api'
 
-export const SERVER_URL = import.meta.env.VITE_API_URL || ''
+export const SERVER_URL = getApiBaseUrl()
 
 export interface ChatMessage {
   id: string
@@ -120,7 +121,7 @@ async function serverRequest(path: string, options: RequestInit = {}) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!user) throw new Error('Não autenticado')
 
-  const res = await fetch(`${SERVER_URL}/api/uazapi${path}`, {
+  const res = await fetch(buildApiUrl(`/api/uazapi${path}`), {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -233,7 +234,7 @@ export function useTestWebhook() {
 }
 
 export function getWebhookUrl(): string {
-  return import.meta.env.VITE_PUBLIC_WEBHOOK_URL || `${SERVER_URL}/api/uazapi/webhook`
+  return import.meta.env.VITE_PUBLIC_WEBHOOK_URL || buildBrowserAbsoluteUrl('/api/uazapi/webhook')
 }
 
 export function useStartSSE() {
@@ -246,7 +247,7 @@ export function useStartSSE() {
       if (!user || cancelled) return
 
       try {
-        await fetch(`${SERVER_URL}/api/uazapi/sse/start`, {
+        await fetch(buildApiUrl('/api/uazapi/sse/start'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -276,7 +277,7 @@ export function useSendAudio() {
       formData.append('to', to)
       formData.append('file', audioBlob, 'audio.ogg')
 
-      const res = await fetch(`${SERVER_URL}/api/uazapi/send-audio`, {
+      const res = await fetch(buildApiUrl('/api/uazapi/send-audio'), {
         method: 'POST',
         headers: {
           'x-user-id': user.id,
@@ -308,7 +309,7 @@ export function useSendImage() {
       if (caption) formData.append('caption', caption)
       formData.append('file', imageFile)
 
-      const res = await fetch(`${SERVER_URL}/api/uazapi/send-image`, {
+      const res = await fetch(buildApiUrl('/api/uazapi/send-image'), {
         method: 'POST',
         headers: {
           'x-user-id': user.id,

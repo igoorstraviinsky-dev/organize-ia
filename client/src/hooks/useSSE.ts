@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { buildApiUrl } from '../lib/api';
 
 /**
  * Hook para conexão SSE resiliente com o servidor.
@@ -21,8 +22,7 @@ export function useSSE(token?: string) {
       eventSourceRef.current.close();
     }
 
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const es = new EventSource(`${apiUrl}/api/events?token=${token}`);
+    const es = new EventSource(buildApiUrl(`/api/events?token=${token}`));
 
     es.onopen = () => {
       console.log('[SSE] ✅ Conectado com sucesso!');
