@@ -1,15 +1,16 @@
 /**
  * Contrato de Eventos SSE (Server-Sent Events)
- * Garante que o Client e o Server falem a mesma língua.
+ * Garante que o Client e o Server falem a mesma lingua.
  */
 
-export type SSEEventType = 
-  | 'heartbeat'    // Manutenção de conexão
-  | 'price_update' // Atualização de metais
-  | 'task_update'  // Mudança em tarefas
-  | 'geo_audit'    // Novo log de auditoria
-  | 'agent_status' // Status do agente IA
-  | 'uazapi_event' // Eventos vindos da UazAPI (Live Mode)
+export type SSEEventType =
+  | 'heartbeat'
+  | 'price_update'
+  | 'task_update'
+  | 'geo_audit'
+  | 'agent_status'
+  | 'uazapi_event'
+  | 'team_update'
 
 export interface BaseSSEEvent {
   type: SSEEventType;
@@ -42,13 +43,22 @@ export interface UazapiSSEEvent extends BaseSSEEvent {
   type: 'uazapi_event';
   payload: {
     integrationId: string;
-    event: string; // connection, messages, chats, history
+    event: string;
     data: any;
   };
 }
 
-export type SSEEvent = 
-  | HeartbeatEvent 
-  | PriceUpdateEvent 
+export interface TeamUpdateEvent extends BaseSSEEvent {
+  type: 'team_update';
+  payload: {
+    userId: string;
+    approval_status: 'pending' | 'approved' | 'rejected';
+  };
+}
+
+export type SSEEvent =
+  | HeartbeatEvent
+  | PriceUpdateEvent
   | TaskUpdateEvent
-  | UazapiSSEEvent;
+  | UazapiSSEEvent
+  | TeamUpdateEvent;

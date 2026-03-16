@@ -63,6 +63,9 @@ app.get('/api/health', (_req: Request, res: Response) => {
  * Endpoint central de eventos SSE para o Dashboard.
  */
 app.get('/api/events', authenticate, (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   sseDispatcher.addClient(res);
 });
 

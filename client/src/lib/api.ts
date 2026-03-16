@@ -52,3 +52,23 @@ export function buildBrowserAbsoluteUrl(path: string) {
 
   return normalizedPath
 }
+
+export function buildEventSourceUrl(path: string, params: Record<string, string> = {}) {
+  const baseUrl = buildBrowserAbsoluteUrl(path)
+  const queryString = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value)
+  ).toString()
+
+  if (typeof window === 'undefined') {
+    return queryString ? `${baseUrl}?${queryString}` : baseUrl
+  }
+
+  const url = new URL(baseUrl, window.location.origin)
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (!value) return
+    url.searchParams.set(key, value)
+  })
+
+  return url.toString()
+}

@@ -11,8 +11,10 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 import { useProjects } from '../hooks/useProjects'
 import { Profile, useTeam } from '../hooks/useTeam'
+import { buildEventSourceUrl } from '../lib/api'
 
 const approvalTheme = {
   approved: {
@@ -39,6 +41,7 @@ const getApprovalStatus = (profile: Profile) =>
   profile.role === 'admin' ? 'approved' : profile.approval_status ?? 'pending'
 
 export default function TeamPage() {
+  const { session } = useAuth()
   const {
     profiles,
     projectMembers,
@@ -54,6 +57,7 @@ export default function TeamPage() {
 
   const { data: projects = [] } = useProjects()
 
+  const [members, setMembers] = useState<Profile[]>([])
   const [isCreating, setIsCreating] = useState(false)
   const [managingUser, setManagingUser] = useState<Profile | null>(null)
   const [phoneInput, setPhoneInput] = useState('')
@@ -65,10 +69,97 @@ export default function TeamPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   useEffect(() => {
+    setMembers(profiles)
+  }, [profiles])
+
+  useEffect(() => {
     if (managingUser) {
       setPhoneInput(managingUser.phone || '')
     }
   }, [managingUser])
+
+  useEffect(() => {
+    if (!managingUser) return
+
+    const updatedMember = members.find((member) => member.id === managingUser.id)
+    if (!updatedMember) return
+
+    if (
+      updatedMember.approval_status !== managingUser.approval_status ||
+      updatedMember.phone !== managingUser.phone ||
+      updatedMember.full_name !== managingUser.full_name ||
+      updatedMember.email !== managingUser.email ||
+      updatedMember.role !== managingUser.role
+    ) {
+      setManagingUser(updatedMember)
+    }
+  }, [members, managingUser])
+
+  useEffect(() => {
+    if (!session?.access_token) return
+
+    let isMounted = true
+    let eventSource: EventSource | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+
+    const connect = () => {
+      if (!isMounted) return
+
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+        reconnectTimeout = null
+      }
+
+      eventSource?.close()
+      eventSource = new EventSource(buildEventSourceUrl('/api/events', { token: session.access_token }))
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data)
+
+          if (payload.type !== 'team_update' || !payload.payload?.userId || !payload.payload?.approval_status) {
+            return
+          }
+
+          setMembers((currentMembers) =>
+            currentMembers.map((member) =>
+              member.id === payload.payload.userId
+                ? { ...member, approval_status: payload.payload.approval_status }
+                : member
+            )
+          )
+
+          setManagingUser((currentUser) =>
+            currentUser?.id === payload.payload.userId
+              ? { ...currentUser, approval_status: payload.payload.approval_status }
+              : currentUser
+          )
+        } catch (sseError) {
+          console.error('[TeamPage SSE] Falha ao processar evento:', sseError)
+        }
+      }
+
+      eventSource.onerror = (sseError) => {
+        console.error('[TeamPage SSE] Erro na conexao:', sseError)
+        eventSource?.close()
+
+        if (!isMounted) return
+
+        reconnectTimeout = setTimeout(connect, 5000)
+      }
+    }
+
+    connect()
+
+    return () => {
+      isMounted = false
+      eventSource?.close()
+
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+    }
+  }, [session?.access_token])
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,9 +209,14 @@ export default function TeamPage() {
 
     try {
       await setApprovalStatus(profile.id, approvalStatus)
-      if (managingUser?.id === profile.id) {
-        setManagingUser({ ...profile, approval_status: approvalStatus })
-      }
+      setMembers((currentMembers) =>
+        currentMembers.map((member) =>
+          member.id === profile.id ? { ...member, approval_status: approvalStatus } : member
+        )
+      )
+      setManagingUser((currentUser) =>
+        currentUser?.id === profile.id ? { ...currentUser, approval_status: approvalStatus } : currentUser
+      )
     } catch (err: any) {
       alert(err?.message || 'Erro ao atualizar aprovacao')
     } finally {
@@ -128,7 +224,7 @@ export default function TeamPage() {
     }
   }
 
-  if (loading && profiles.length === 0) {
+  if (loading && members.length === 0) {
     return (
       <div className="flex justify-center p-8">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
@@ -407,7 +503,7 @@ export default function TeamPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {profiles.map((profile) => {
+              {members.map((profile) => {
                 const isAdmin = profile.role === 'admin'
                 const assignedCount = projectMembers.filter((member) => member.user_id === profile.id).length
                 const approvalStatus = getApprovalStatus(profile)

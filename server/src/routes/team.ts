@@ -1,9 +1,31 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
+import { sseDispatcher } from '../services/SSEDispatcher.js';
 
 const router = Router();
 const APPROVAL_STATUSES = ['pending', 'approved', 'rejected'] as const;
+type ApprovalStatus = typeof APPROVAL_STATUSES[number];
+
+async function persistApprovalStatus(userId: string, approvalStatus: ApprovalStatus) {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ approval_status: approvalStatus })
+      .eq('id', userId);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error('[Team Approval Persistence Error]', {
+      userId,
+      approvalStatus,
+      error,
+    });
+    throw error;
+  }
+}
 
 // POST /api/team/create
 router.post('/create', authenticate, async (req: Request, res: Response) => {
@@ -63,8 +85,13 @@ router.post('/create', authenticate, async (req: Request, res: Response) => {
 
 // PATCH /api/team/status/:id
 router.patch('/status/:id', authenticate, async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const { approval_status } = req.body as { approval_status?: string };
+
+  if (!id) {
+    return res.status(400).json({ error: 'ID do colaborador nao informado.' });
+  }
 
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ error: 'Apenas administradores podem alterar aprovacoes.' });
@@ -95,15 +122,20 @@ router.patch('/status/:id', authenticate, async (req: Request, res: Response) =>
       return res.status(400).json({ error: 'Nao e permitido alterar o status de aprovacao de administradores.' });
     }
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ approval_status })
-      .eq('id', id);
-
-    if (updateError) {
-      console.error('Error updating approval status:', updateError);
+    try {
+      await persistApprovalStatus(id, approval_status as ApprovalStatus);
+    } catch (updateError) {
       return res.status(500).json({ error: 'Falha ao atualizar o status de aprovacao.' });
     }
+
+    sseDispatcher.broadcast({
+      type: 'team_update',
+      timestamp: new Date().toISOString(),
+      payload: {
+        userId: id,
+        approval_status: approval_status as ApprovalStatus,
+      },
+    });
 
     res.json({
       message: 'Status de aprovacao atualizado com sucesso.',
@@ -118,7 +150,12 @@ router.patch('/status/:id', authenticate, async (req: Request, res: Response) =>
 
 // DELETE /api/team/delete/:id
 router.delete('/delete/:id', authenticate, async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+
+  if (!id) {
+    return res.status(400).json({ error: 'ID do colaborador nao informado.' });
+  }
 
   if (req.user?.role !== 'admin') {
     return res.status(403).json({ error: 'Apenas administradores podem remover colaboradores.' });
