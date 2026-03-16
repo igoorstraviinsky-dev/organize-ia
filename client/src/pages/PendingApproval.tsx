@@ -1,10 +1,10 @@
 import React from 'react'
-import { Clock3, LogOut, ShieldCheck, XCircle } from 'lucide-react'
+import { Clock3, Loader2, LogOut, RefreshCw, ShieldCheck, XCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import AuthPanelLayout from '../components/layout/AuthPanelLayout'
 
 export default function PendingApproval() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, refetchProfile, loading } = useAuth()
   const approvalStatus = profile?.approval_status ?? 'pending'
   const isRejected = approvalStatus === 'rejected'
 
@@ -62,6 +62,16 @@ export default function PendingApproval() {
             Esse bloqueio evita que contas novas entrem no workspace antes da validacao manual.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => refetchProfile()}
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-3 rounded-[24px] border border-cyan-400/10 bg-cyan-400/[0.05] px-6 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-cyan-200 transition-all hover:bg-cyan-400/[0.1] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? <Loader2 size={16} strokeWidth={2.2} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={2.2} />}
+          Verificar liberacao
+        </button>
 
         <button
           type="button"

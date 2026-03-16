@@ -101,6 +101,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     enabled: !!session?.user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      if (!session?.user?.id) return false
+
+      const currentProfile = query.state.data as Profile | null | undefined
+      if (!currentProfile) return 10000
+      if (currentProfile.role === 'admin') return false
+
+      return currentProfile.approval_status === 'approved' ? false : 10000
+    },
   })
 
   const signOut = useCallback(async () => {
