@@ -2,7 +2,6 @@ import React from 'react'
 import {
   Calendar,
   CalendarRange,
-  CheckSquare,
   Inbox,
   MessageCircle,
   Power,
@@ -10,6 +9,7 @@ import {
   Tag,
   X,
 } from 'lucide-react'
+import BrandLogo from '../branding/BrandLogo'
 import { useAuth } from '../../hooks/useAuth'
 import { useProjects } from '../../hooks/useProjects'
 
@@ -104,12 +104,8 @@ export default function Sidebar({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(126,87,194,0.12)_0%,transparent_62%),radial-gradient(circle_at_50%_100%,rgba(34,211,238,0.08)_0%,transparent_54%)]" />
 
       <div className="relative z-10 flex flex-col items-center gap-10 border-b border-white/5 px-4 py-12">
-        <div className="royal-purple-gradient flex h-14 w-14 items-center justify-center overflow-hidden rounded-[20px] border border-white/10 shadow-[0_16px_40px_rgba(34,211,238,0.18)] transition-transform duration-500 group hover:scale-110">
-          {user?.profile?.avatar_url ? (
-            <img src={user.profile.avatar_url} alt="Logo" className="h-full w-full object-cover" />
-          ) : (
-            <CheckSquare size={28} className="text-white drop-shadow-lg" strokeWidth={2.5} />
-          )}
+        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,12,20,0.96),rgba(6,8,14,0.98))] p-2 shadow-[0_16px_40px_rgba(34,211,238,0.18)] transition-transform duration-500 hover:scale-110">
+          <BrandLogo variant="mark" className="h-full w-full object-contain" />
         </div>
         <div className="-mt-12 ml-10 h-4 w-4 rounded-full border-2 border-[#0a0a0a] bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.4)]" />
       </div>

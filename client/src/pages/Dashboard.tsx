@@ -19,6 +19,7 @@ import AchievementToast from "../components/gamification/AchievementToast";
 import XPBar from "../components/gamification/XPBar";
 import { useSSE } from '../hooks/useSSE';
 import { useUazapiLive } from '../hooks/useChatMessages';
+import BrandLogo from "../components/branding/BrandLogo";
 
 interface DashboardProps {
   onSignOut: () => void;
@@ -76,13 +77,12 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_bottom,rgba(45,212,191,0.14),transparent_26%)]" />
         <div className="jetted-glass relative flex flex-col items-center gap-6 px-10 py-12 text-center">
-          <div className="relative h-14 w-14">
-            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-400/20"></div>
-            <div className="absolute inset-0 rounded-full border border-white/10"></div>
-            <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-cyan-300/70 border-t-transparent shadow-[0_0_22px_rgba(34,211,238,0.28)]"></div>
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.03] p-3">
+            <div className="absolute inset-0 animate-ping rounded-[26px] bg-cyan-400/10"></div>
+            <BrandLogo variant="mark" className="relative h-full w-full object-contain" />
           </div>
           <div className="space-y-2">
-            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">organize ia</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">taskwise ai</p>
             <p className="text-sm font-semibold tracking-[0.24em] text-slate-300 uppercase">Preparando workspace...</p>
           </div>
         </div>
@@ -376,7 +376,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
             {currentView === "settings" && <SettingsPage />}
             {(currentView === "today" || currentView === "inbox" || currentView === "project") && (
               isBoardMode ? (
-                <KanbanBoard projectId={(currentView === "today" || currentView === "inbox") ? null : currentProjectId} />
+                <KanbanBoard projectId={currentView === "project" ? currentProjectId : null} />
               ) : (
                 <TaskList
                   projectId={(currentView === "today" || currentView === "inbox") ? null : (currentProjectId as string | null)}

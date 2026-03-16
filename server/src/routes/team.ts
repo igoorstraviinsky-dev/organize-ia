@@ -3,6 +3,7 @@ import { supabase, withTenant } from '../lib/supabase.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+const APPROVAL_STATUSES = ['pending', 'approved', 'rejected'] as const;
 
 // POST /api/team/create
 router.post('/create', authenticate, async (req: Request, res: Response) => {
@@ -46,7 +47,8 @@ router.post('/create', authenticate, async (req: Request, res: Response) => {
       const { error: profileError } = await withTenant(supabase, tenantId)
         .from('profiles')
         .update({ 
-          role: 'colaborador',
+          role: 'collaborator',
+          approval_status: 'approved',
           phone: phone || null,
           tenant_id: tenantId // Redundant check, but good for safety
         })
@@ -63,6 +65,63 @@ router.post('/create', authenticate, async (req: Request, res: Response) => {
     }
   } catch (err: any) {
     console.error('Unexpected error in /api/team/create:', err);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// PATCH /api/team/status/:id
+router.patch('/status/:id', authenticate, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { approval_status } = req.body as { approval_status?: string };
+
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Apenas administradores podem alterar aprovacoes.' });
+  }
+
+  if (!approval_status || !APPROVAL_STATUSES.includes(approval_status as typeof APPROVAL_STATUSES[number])) {
+    return res.status(400).json({ error: 'approval_status invalido. Use pending, approved ou rejected.' });
+  }
+
+  if (id === req.user?.id) {
+    return res.status(400).json({ error: 'Voce nao pode alterar o proprio status de aprovacao.' });
+  }
+
+  try {
+    const tenantId = req.user.tenant_id;
+
+    const { data: profile, error: checkError } = await withTenant(supabase, tenantId)
+      .from('profiles')
+      .select('id, role')
+      .eq('id', id)
+      .single();
+
+    const targetProfile = profile as { id: string; role: string | null } | null;
+
+    if (checkError || !targetProfile) {
+      return res.status(404).json({ error: 'Colaborador nao encontrado ou nao pertence a sua organizacao.' });
+    }
+
+    if (targetProfile.role === 'admin') {
+      return res.status(400).json({ error: 'Nao e permitido alterar o status de aprovacao de administradores.' });
+    }
+
+    const { error: updateError } = await withTenant(supabase, tenantId)
+      .from('profiles')
+      .update({ approval_status })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating approval status:', updateError);
+      return res.status(500).json({ error: 'Falha ao atualizar o status de aprovacao.' });
+    }
+
+    res.json({
+      message: 'Status de aprovacao atualizado com sucesso.',
+      user_id: id,
+      approval_status,
+    });
+  } catch (err: any) {
+    console.error('Unexpected error in /api/team/status:', err);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

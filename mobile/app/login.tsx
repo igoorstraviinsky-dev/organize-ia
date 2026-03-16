@@ -1,302 +1,179 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Dimensions, useColorScheme } from 'react-native';
-import { supabase } from '../src/lib/supabase';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Lock, Mail, ChevronRight, Zap } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '../src/constants/Colors';
-import { BlurView } from 'expo-blur';
-
-const { width } = Dimensions.get('window');
+import { ArrowRight, Lock, Mail, Sparkles } from 'lucide-react-native';
+import { ScreenShell } from '../src/components/ScreenShell';
+import { GlassCard } from '../src/components/GlassCard';
+import { BrandLogo } from '../src/components/BrandLogo';
+import { useAppTheme } from '../src/hooks/useAppTheme';
+import { signInWithPassword } from '../src/services/authService';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = Colors[colorScheme];
+  const { colors, layout, typography, isTablet } = useAppTheme();
 
   async function handleLogin() {
     if (!email || !password) {
-      Alert.alert('Erro', 'Preencha todos os campos.');
+      Alert.alert('Campos obrigatórios', 'Preencha e-mail e senha para continuar.');
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await signInWithPassword(email, password);
+    setLoading(false);
 
     if (error) {
-      Alert.alert('Erro', error.message);
-    } else {
-      router.replace('/(tabs)');
+      Alert.alert('Falha no acesso', error.message);
+      return;
     }
-    setLoading(false);
+
+    router.replace('/(tabs)');
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {colorScheme === 'dark' ? (
-        <LinearGradient
-          colors={['#020617', '#1e1b4b', '#020617']}
-          style={StyleSheet.absoluteFill}
-        />
-      ) : (
-        <LinearGradient
-          colors={['#f8fafc', '#e0e7ff', '#f8fafc']}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-      
-      {/* Decorative Blur Spheres */}
-      <View style={[styles.blurSphere, { top: -50, left: -50, backgroundColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)' }]} />
-      <View style={[styles.blurSphere, { bottom: -50, right: -50, backgroundColor: colorScheme === 'dark' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.1)' }]} />
-
-      <SafeAreaView style={{ flex: 1 }}>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-          style={styles.inner}
-        >
-          <View style={styles.header}>
-            <View style={styles.logoWrapper}>
-              <LinearGradient
-                colors={['#6366f1', '#a855f7']}
-                style={styles.logoCircle}
-              >
-                <Zap size={32} color="#fff" />
-              </LinearGradient>
-              <View style={[styles.logoGlow, { backgroundColor: theme.tint }]} />
-            </View>
-            <Text style={[styles.title, { color: theme.text, textShadowColor: colorScheme === 'dark' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)' }]}>ORGANIZADOR</Text>
-            <Text style={[styles.subtitle, { color: theme.subtext }]}>Sua produtividade elevada ao máximo</Text>
+    <ScreenShell scroll>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={[styles.wrap, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+          <View style={styles.hero}>
+            <BrandLogo size={isTablet ? 126 : 102} showWordmark centered />
+            <Text style={[styles.heroTitle, { color: colors.text, fontSize: typography.hero }]}>Produtividade com presença, clareza e ritmo.</Text>
+            <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
+              Entre para acompanhar tarefas, projetos e prioridades em uma interface pensada para caber bem em qualquer celular.
+            </Text>
           </View>
 
-          <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <View style={styles.form}>
-              <View style={styles.inputWrapper}>
-                <Text style={[styles.inputLabel, { color: theme.subtext }]}>E-mail</Text>
-                <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                  <Mail size={18} color={theme.subtext} style={styles.icon} />
-                  <TextInput
-                    style={[styles.input, { color: theme.text }]}
-                    placeholder="Seu e-mail profissional"
-                    placeholderTextColor={colorScheme === 'dark' ? '#475569' : '#94a3b8'}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                  />
-                </View>
+          <GlassCard style={{ padding: 22 }}>
+            <View style={styles.formHeader}>
+              <View style={[styles.badge, { backgroundColor: colors.backgroundTertiary }]}>
+                <Sparkles size={14} color={colors.tint} />
+                <Text style={[styles.badgeText, { color: colors.tint }]}>Acesso seguro</Text>
+              </View>
+              <Text style={[styles.formTitle, { color: colors.text }]}>Entrar na sua central</Text>
+            </View>
+
+            <View style={styles.formBody}>
+              <View style={[styles.inputShell, { borderColor: colors.borderStrong, backgroundColor: colors.backgroundSecondary }]}>
+                <Mail size={18} color={colors.textMuted} />
+                <TextInput
+                  placeholder="Seu e-mail"
+                  placeholderTextColor={colors.textSoft}
+                  style={[styles.input, { color: colors.text }]}
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
               </View>
 
-              <View style={styles.inputWrapper}>
-                <Text style={[styles.inputLabel, { color: theme.subtext }]}>Senha</Text>
-                <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
-                  <Lock size={18} color={theme.subtext} style={styles.icon} />
-                  <TextInput
-                    style={[styles.input, { color: theme.text }]}
-                    placeholder="Sua senha secreta"
-                    placeholderTextColor={colorScheme === 'dark' ? '#475569' : '#94a3b8'}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                  />
-                </View>
+              <View style={[styles.inputShell, { borderColor: colors.borderStrong, backgroundColor: colors.backgroundSecondary }]}>
+                <Lock size={18} color={colors.textMuted} />
+                <TextInput
+                  placeholder="Sua senha"
+                  placeholderTextColor={colors.textSoft}
+                  style={[styles.input, { color: colors.text }]}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
               </View>
 
-              <TouchableOpacity 
-                style={[styles.button, loading && styles.buttonDisabled]} 
-                onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={['#6366f1', '#a855f7']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.buttonGradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <View style={styles.buttonContent}>
-                      <Text style={styles.buttonText}>Entrar no Fluxo</Text>
-                      <ChevronRight size={20} color="#fff" />
-                    </View>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+              <Pressable onPress={handleLogin} style={[styles.button, { backgroundColor: colors.tint }]}>
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>Entrar</Text>
+                    <ArrowRight size={18} color="#fff" />
+                  </>
+                )}
+              </Pressable>
             </View>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: theme.subtext }]}>Novo por aqui?</Text>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={[styles.linkText, { color: theme.tint }]}>Crie sua conta</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+          </GlassCard>
+        </View>
+      </KeyboardAvoidingView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrap: {
     flex: 1,
-    backgroundColor: '#020617',
-  },
-  blurSphere: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.5,
-  },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logoWrapper: {
-    position: 'relative',
-    marginBottom: 24,
-  },
-  logoCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-  },
-  logoGlow: {
-    position: 'absolute',
-    width: 84,
-    height: 84,
-    borderRadius: 28,
-    backgroundColor: '#6366f1',
-    opacity: 0.4,
-    transform: [{ scale: 1.3 }],
-    zIndex: 1,
-  },
-  title: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: '#f8fafc',
-    letterSpacing: 2,
-    textShadowColor: 'rgba(99, 102, 241, 0.5)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    marginTop: 10,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  card: {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    borderRadius: 32,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 20,
-  },
-  form: {
+    paddingTop: 26,
     gap: 24,
   },
-  inputWrapper: {
+  hero: {
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 24,
+  },
+  heroTitle: {
+    fontWeight: '900',
+    textAlign: 'center',
+    letterSpacing: -1,
+    lineHeight: 40,
+    maxWidth: 520,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
+    textAlign: 'center',
+    maxWidth: 520,
+  },
+  formHeader: {
     gap: 10,
   },
-  inputLabel: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '700',
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  inputContainer: {
+  badge: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(2, 6, 23, 0.4)',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 20,
-    height: 64,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
   },
-  icon: {
-    marginRight: 14,
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+  },
+  formBody: {
+    marginTop: 18,
+    gap: 14,
+  },
+  inputShell: {
+    borderWidth: 1,
+    borderRadius: 18,
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 10,
   },
   input: {
     flex: 1,
-    color: '#f8fafc',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '700',
   },
   button: {
-    height: 64,
+    marginTop: 6,
+    minHeight: 58,
     borderRadius: 20,
-    overflow: 'hidden',
-    marginTop: 12,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 8,
-  },
-  buttonGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 40,
-    gap: 8,
-  },
-  footerText: {
-    color: '#64748b',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  linkText: {
-    color: '#818cf8',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '900',
   },
 });
-

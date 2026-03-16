@@ -9,6 +9,7 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   role: 'admin' | 'collaborator' | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
   phone?: string | null;
   theme_color?: string | null;
   created_at?: string;
@@ -24,6 +25,17 @@ export interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const normalizeRole = (role: string | null | undefined): Profile['role'] => {
+  if (role === 'admin') return 'admin'
+  if (role === 'collaborator' || role === 'colaborador') return 'collaborator'
+  return null
+}
+
+const normalizeProfile = (profile: any): Profile => ({
+  ...profile,
+  role: normalizeRole(profile?.role),
+})
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null)
@@ -85,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Could not fetch profile:', error.message)
         return null
       }
-      return data as Profile
+      return normalizeProfile(data)
     },
     enabled: !!session?.user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutos

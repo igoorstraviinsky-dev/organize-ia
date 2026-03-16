@@ -12,6 +12,7 @@
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone       TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url  TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role        TEXT DEFAULT 'collaborator';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pending';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at  TIMESTAMPTZ DEFAULT now();
 
 -- role constraint (adiciona apenas se nao existir)
@@ -24,6 +25,19 @@ BEGIN
   ) THEN
     ALTER TABLE public.profiles
       ADD CONSTRAINT profiles_role_check CHECK (role IN ('admin', 'collaborator'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.constraint_column_usage
+    WHERE table_schema = 'public' AND table_name = 'profiles'
+      AND constraint_name = 'profiles_approval_status_check'
+  ) THEN
+    ALTER TABLE public.profiles
+      ADD CONSTRAINT profiles_approval_status_check
+      CHECK (approval_status IN ('pending', 'approved', 'rejected'));
   END IF;
 END $$;
 
@@ -296,7 +310,10 @@ CREATE POLICY "profiles_update"
     auth.uid() = id
     AND (
       public.is_admin()
-      OR role = (SELECT role FROM public.profiles WHERE id = auth.uid())
+      OR (
+        role = (SELECT role FROM public.profiles WHERE id = auth.uid())
+        AND approval_status = (SELECT approval_status FROM public.profiles WHERE id = auth.uid())
+      )
     )
   );
 
@@ -507,7 +524,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, role)
+  INSERT INTO public.profiles (id, full_name, email, role, approval_status)
   VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
@@ -515,6 +532,10 @@ BEGIN
     CASE
       WHEN NEW.email = 'igoorstraviinsky@gmail.com' THEN 'admin'
       ELSE 'collaborator'
+    END,
+    CASE
+      WHEN NEW.email = 'igoorstraviinsky@gmail.com' THEN 'approved'
+      ELSE 'pending'
     END
   )
   ON CONFLICT (id) DO NOTHING;
@@ -565,12 +586,29 @@ DROP TRIGGER IF EXISTS on_profile_created ON public.profiles;
 -- PARTE 9: CORRIGIR DADOS DE ROLE
 -- ============================================================
 ALTER TABLE public.profiles ALTER COLUMN role SET DEFAULT 'collaborator';
+ALTER TABLE public.profiles ALTER COLUMN approval_status SET DEFAULT 'pending';
 
 UPDATE public.profiles SET role = 'admin'
   WHERE email = 'igoorstraviinsky@gmail.com';
 
 UPDATE public.profiles SET role = 'collaborator'
   WHERE role IS NULL OR role NOT IN ('admin', 'collaborator');
+
+UPDATE public.profiles
+SET approval_status = 'approved'
+WHERE email = 'igoorstraviinsky@gmail.com';
+
+UPDATE public.profiles p
+SET approval_status = CASE
+  WHEN p.role = 'admin' THEN 'approved'
+  WHEN EXISTS (SELECT 1 FROM public.project_members pm WHERE pm.user_id = p.id) THEN 'approved'
+  WHEN EXISTS (SELECT 1 FROM public.tasks t WHERE t.creator_id = p.id) THEN 'approved'
+  WHEN EXISTS (SELECT 1 FROM public.assignments a WHERE a.user_id = p.id) THEN 'approved'
+  WHEN EXISTS (SELECT 1 FROM public.integrations i WHERE i.user_id = p.id) THEN 'approved'
+  ELSE 'pending'
+END
+WHERE p.approval_status IS NULL
+   OR p.approval_status NOT IN ('pending', 'approved', 'rejected');
 
 -- ============================================================
 -- PARTE 10: REALTIME — habilitar publicacao nas tabelas necessarias

@@ -8,6 +8,7 @@ export interface Profile {
   avatar_url?: string | null;
   phone?: string | null;
   role?: string | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
   theme_color?: string | null;
   experience?: number;
   level?: number;
@@ -21,6 +22,24 @@ export interface ProjectMember {
     name: string;
     id: string;
   };
+}
+
+const normalizeRole = (role: string | null | undefined): Profile['role'] => {
+  if (role === 'admin') return 'admin'
+  if (role === 'collaborator' || role === 'colaborador') return 'collaborator'
+  return null
+}
+
+const normalizeProfile = (profile: any): Profile => ({
+  ...profile,
+  role: normalizeRole(profile?.role),
+})
+
+const getApprovalSortValue = (profile: Profile) => {
+  if (profile.role === 'admin') return 2
+  if (profile.approval_status === 'pending' || profile.approval_status == null) return 0
+  if (profile.approval_status === 'rejected') return 1
+  return 2
 }
 
 export const useTeam = () => {
@@ -39,7 +58,11 @@ export const useTeam = () => {
         .order('full_name')
 
       if (error) throw error
-      return (data || []) as Profile[]
+      return ((data || []).map(normalizeProfile) as Profile[]).sort((a, b) => {
+        const approvalDelta = getApprovalSortValue(a) - getApprovalSortValue(b)
+        if (approvalDelta !== 0) return approvalDelta
+        return (a.full_name || a.email || '').localeCompare(b.full_name || b.email || '', 'pt-BR')
+      })
     }
   })
 
@@ -129,6 +152,29 @@ export const useTeam = () => {
     }
   })
 
+  const setApprovalStatus = async (
+    userId: string,
+    approvalStatus: 'pending' | 'approved' | 'rejected'
+  ) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated')
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/team/status/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ approval_status: approvalStatus })
+    })
+
+    const result = await response.json()
+    if (!response.ok) throw new Error(result.error || 'Failed to update approval status')
+
+    queryClient.invalidateQueries({ queryKey: ['team-profiles'] })
+    return result
+  }
+
   return {
     profiles,
     projectMembers,
@@ -138,6 +184,7 @@ export const useTeam = () => {
     unassignFromProject: (projectId: string, userId: string) => unassignMutation.mutateAsync({ projectId, userId }),
     createCollaborator,
     updateCollaborator: (userId: string, updates: Partial<Profile>) => updateCollaboratorMutation.mutateAsync({ userId, updates }),
+    setApprovalStatus,
     deleteCollaborator: async (userId: string) => {
       try {
         const { data: { session } } = await supabase.auth.getSession()

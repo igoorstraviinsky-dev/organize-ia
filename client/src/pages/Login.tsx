@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react'
-import AuthShell from '../components/layout/AuthShell'
+import AuthPanelLayout from '../components/layout/AuthPanelLayout'
 import { supabase } from '../lib/supabase'
 
 export default function Login() {
@@ -24,13 +24,26 @@ export default function Login() {
   }
 
   return (
-    <AuthShell
-      heroEyebrow="Organize IA"
-      heroTitle="O acesso agora conversa com o resto do produto."
-      heroDescription="A tela de entrada foi redesenhada para seguir a mesma atmosfera do painel: mais premium, mais legivel e com um fundo que reforca a identidade visual da aplicacao."
-      panelEyebrow="Painel de acesso"
-      panelTitle="Entre e retome seu fluxo."
-      panelDescription="Seus projetos, tarefas e conversas continuam aqui. Basta autenticar para voltar ao ponto onde parou."
+    <AuthPanelLayout
+      eyebrow="Painel de acesso"
+      title="Entre e retome seu fluxo."
+      description="A entrada agora usa o mesmo clima visual do aplicativo, com contraste limpo e sem a camada de fundo que estava quebrando o padrao."
+      highlights={[
+        { label: 'Visual', value: 'Fundo limpo' },
+        { label: 'Leitura', value: 'Campos em destaque' },
+        { label: 'Acesso', value: 'Retorno rapido' },
+      ]}
+      footer={
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+          Ainda nao tem conta?{' '}
+          <Link
+            to="/register"
+            className="font-black text-cyan-300 transition-colors hover:text-white"
+          >
+            Criar agora
+          </Link>
+        </p>
+      }
     >
       <div className="flex h-full flex-col">
         <form onSubmit={handleLogin} className="space-y-6">
@@ -100,19 +113,7 @@ export default function Login() {
             O novo layout prioriza contraste, leitura e orientacao rapida para voce entrar sem ruido visual.
           </p>
         </div>
-
-        <div className="mt-auto pt-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Ainda nao tem conta?{' '}
-            <Link
-              to="/register"
-              className="font-black text-cyan-300 transition-colors hover:text-white"
-            >
-              Criar agora
-            </Link>
-          </p>
-        </div>
       </div>
-    </AuthShell>
+    </AuthPanelLayout>
   )
 }

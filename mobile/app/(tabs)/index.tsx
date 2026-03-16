@@ -1,353 +1,216 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
-import { supabase } from '../../src/lib/supabase';
-import { Plus, X, Calendar, CalendarRange, Archive } from 'lucide-react-native';
-import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
-import { TaskItem } from '../../src/components/TaskItem';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Archive, CalendarDays, CirclePlus, FolderKanban, Sparkles } from 'lucide-react-native';
+import { ScreenShell } from '../../src/components/ScreenShell';
+import { SectionHeader } from '../../src/components/SectionHeader';
+import { GlassCard } from '../../src/components/GlassCard';
 import { TaskDetailModal } from '../../src/components/TaskDetailModal';
-import { Colors } from '../../src/constants/Colors';
-import { useColorScheme } from 'react-native';
+import { TaskItem } from '../../src/components/TaskItem';
+import { EmptyState } from '../../src/components/EmptyState';
+import { BrandLogo } from '../../src/components/BrandLogo';
+import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
+import { getCurrentUser } from '../../src/services/authService';
+import { createTask, getDashboardStats, getRecentTasks, updateTaskStatus } from '../../src/services/taskService';
+import { DashboardStats, Task } from '../../src/types/models';
 
 export default function DashboardScreen() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = Colors[colorScheme];
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [stats, setStats] = useState({ today: 0, upcoming: 0, inbox: 0 });
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const { colors, layout, typography } = useAppTheme();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({ today: 0, upcoming: 0, inbox: 0 });
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-  // Sincronização em tempo real
-  useRealtimeSync(() => fetchData());
+  useRealtimeSync(() => {
+    fetchData();
+  });
 
   useEffect(() => {
     fetchData();
   }, []);
 
   async function fetchData() {
-    setLoading(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
-
     const today = new Date().toISOString().split('T')[0];
-
-    // Fetch Recent/Inbox tasks
-    const { data: tasksData } = await supabase
-      .from('tasks')
-      .select('*, project:projects(id, name, color)')
-      .is('parent_id', null)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    
-    setTasks(tasksData || []);
-
-    // Calculate stats
-    const { data: allTasks } = await supabase
-      .from('tasks')
-      .select('due_date, status');
-    
-    if (allTasks) {
-      const todayCount = allTasks.filter(t => t.due_date === today && t.status !== 'completed').length;
-      const upcomingCount = allTasks.filter(t => t.due_date && t.due_date > today && t.status !== 'completed').length;
-      const inboxCount = allTasks.filter(t => !t.due_date && t.status !== 'completed').length;
-      setStats({ today: todayCount, upcoming: upcomingCount, inbox: inboxCount });
-    }
-    
-    setLoading(false);
+    const [recentTasks, nextStats] = await Promise.all([getRecentTasks(), getDashboardStats(today)]);
+    setTasks(recentTasks);
+    setStats(nextStats);
   }
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
+  async function toggleTask(task: Task) {
+    const nextStatus = task.status === 'completed' ? 'pending' : 'completed';
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status: nextStatus } : item)));
 
-  const toggleTask = async (task: any) => {
-    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-    setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
-    if (error) setTasks(tasks.map(t => t.id === task.id ? { ...t, status: task.status } : t));
-  };
-
-  const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
-
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
-
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert([{
-        title: newTaskTitle.trim(),
-        creator_id: userData.user.id,
-        status: 'pending'
-      }])
-      .select()
-      .single();
-
-    if (!error && data) {
-      setTasks([data, ...tasks]);
-      setNewTaskTitle('');
-      setModalVisible(false);
-      fetchData(); // Update stats
+    try {
+      await updateTaskStatus(task.id, nextStatus);
+    } catch {
+      setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status: task.status } : item)));
     }
-  };
+  }
 
-  const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [detailVisible, setDetailVisible] = useState(false);
+  async function handleQuickAdd() {
+    if (!newTaskTitle.trim()) {
+      return;
+    }
 
-  const renderTask = ({ item }: { item: any }) => (
-    <TaskItem 
-      task={item} 
-      onToggle={toggleTask} 
-      onPress={(task) => {
-        setSelectedTask(task);
-        setDetailVisible(true);
-      }}
-    />
-  );
+    const user = await getCurrentUser();
+    if (!user) {
+      return;
+    }
+
+    const task = await createTask({ title: newTaskTitle, creatorId: user.id });
+    setTasks((current) => [task, ...current]);
+    setNewTaskTitle('');
+    setShowQuickAdd(false);
+    fetchData();
+  }
+
+  const metrics = [
+    { label: 'Hoje', value: stats.today, icon: <CalendarDays size={18} color={colors.tint} /> },
+    { label: 'Agenda', value: stats.upcoming, icon: <Sparkles size={18} color={colors.tintSecondary} /> },
+    { label: 'Inbox', value: stats.inbox, icon: <Archive size={18} color={colors.success} /> },
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <Text style={styles.title}>Minha Visão</Text>
-        <Text style={styles.subtitle}>Gerencie suas tarefas e prazos</Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Calendar size={20} color="#ef4444" />
-          <Text style={styles.statNumber}>{stats.today}</Text>
-          <Text style={styles.statLabel}>Hoje</Text>
-        </View>
-        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <CalendarRange size={20} color="#f59e0b" />
-          <Text style={styles.statNumber}>{stats.upcoming}</Text>
-          <Text style={styles.statLabel}>Breve</Text>
-        </View>
-        <View style={[styles.statBox, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Archive size={20} color="#6366f1" />
-          <Text style={styles.statNumber}>{stats.inbox}</Text>
-          <Text style={styles.statLabel}>Inbox</Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Tarefas Recentes</Text>
-      
-      <FlatList
-        data={tasks}
-        renderItem={renderTask}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
-        }
-        ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma tarefa recente.</Text>}
-      />
-
-      <TouchableOpacity 
-        style={styles.fab} 
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Plus size={30} color="#fff" />
-      </TouchableOpacity>
-
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={[styles.modalContent, { backgroundColor: theme.background, borderColor: theme.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nova Tarefa</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <X size={24} color="#94a3b8" />
-              </TouchableOpacity>
+    <ScreenShell scroll>
+      <View style={[styles.container, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+        <GlassCard style={{ padding: 22 }}>
+          <View style={styles.heroRow}>
+            <View style={{ flex: 1, gap: 10 }}>
+              <Text style={[styles.kicker, { color: colors.tint }]}>TaskWise AI</Text>
+              <Text style={[styles.heroTitle, { color: colors.text, fontSize: typography.hero }]}>Seu painel diário, leve e preciso.</Text>
+              <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
+                Acompanhe prazos, priorize o que importa e capture novas tarefas em segundos.
+              </Text>
             </View>
+            <BrandLogo size={84} />
+          </View>
+        </GlassCard>
+
+        <View style={styles.metricsRow}>
+          {metrics.map((metric) => (
+            <GlassCard key={metric.label} style={styles.metricCard}>
+              {metric.icon}
+              <Text style={[styles.metricValue, { color: colors.text }]}>{metric.value}</Text>
+              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>{metric.label}</Text>
+            </GlassCard>
+          ))}
+        </View>
+
+        <SectionHeader
+          eyebrow="Ação rápida"
+          title="Adicionar sem perder o ritmo"
+          subtitle="Uma nova tarefa vai direto para seu fluxo."
+          right={
+            <Pressable onPress={() => setShowQuickAdd((value) => !value)} style={[styles.iconButton, { backgroundColor: colors.backgroundTertiary }]}>
+              <CirclePlus size={18} color={colors.tint} />
+            </Pressable>
+          }
+        />
+
+        {showQuickAdd ? (
+          <GlassCard style={{ gap: 12 }}>
             <TextInput
-              style={[styles.input, { backgroundColor: theme.inputBg, borderColor: theme.border, color: theme.text }]}
-              placeholder="O que precisa ser feito?"
-              placeholderTextColor="#64748b"
+              placeholder="Ex.: revisar proposta comercial"
+              placeholderTextColor={colors.textSoft}
+              style={[styles.quickAddInput, { color: colors.text, backgroundColor: colors.backgroundSecondary, borderColor: colors.borderStrong }]}
               value={newTaskTitle}
               onChangeText={setNewTaskTitle}
-              autoFocus
             />
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={handleAddTask}
-            >
-              <Text style={styles.addButtonText}>Criar Tarefa</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+            <Pressable onPress={handleQuickAdd} style={[styles.primaryButton, { backgroundColor: colors.tint }]}>
+              <Text style={styles.primaryButtonText}>Criar tarefa</Text>
+            </Pressable>
+          </GlassCard>
+        ) : null}
 
-      <TaskDetailModal
-        visible={detailVisible}
-        task={selectedTask}
-        onClose={() => setDetailVisible(false)}
-        onToggle={toggleTask}
-      />
-    </SafeAreaView>
+        <SectionHeader eyebrow="Recentes" title="Tarefas em foco" subtitle="As últimas tarefas criadas aparecem aqui." />
+
+        {tasks.length ? (
+          tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} onPress={setSelectedTask} />)
+        ) : (
+          <EmptyState
+            title="Seu painel está limpo"
+            description="Crie a primeira tarefa e comece a organizar seu dia com mais clareza."
+            icon={<FolderKanban size={24} color={colors.tint} />}
+          />
+        )}
+      </View>
+
+      <TaskDetailModal visible={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onToggle={toggleTask} />
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
+    paddingTop: 20,
+    paddingBottom: 150,
   },
-  header: {
-    padding: 20,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#f8fafc',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#94a3b8',
-    marginTop: 4,
-  },
-  statsContainer: {
+  heroRow: {
     flexDirection: 'row',
-    padding: 20,
-    gap: 12,
+    gap: 14,
+    alignItems: 'center',
   },
-  statBox: {
+  kicker: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  heroTitle: {
+    fontWeight: '900',
+    letterSpacing: -1,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 16,
+  },
+  metricCard: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    padding: 15,
+    minWidth: 102,
+    gap: 10,
+  },
+  metricValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -0.8,
+  },
+  metricLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
     borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  statNumber: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#f8fafc',
-    marginTop: 8,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#f8fafc',
-    marginLeft: 20,
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  taskInfo: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  taskText: {
-    color: '#f8fafc',
-    fontSize: 16,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-    color: '#64748b',
-  },
-  projectLabel: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  emptyText: {
-    color: '#94a3b8',
-    textAlign: 'center',
-    marginTop: 40,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: 24,
-    backgroundColor: '#6366f1',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
     justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 25,
-    paddingBottom: 40,
+  quickAddInput: {
+    minHeight: 56,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#334155',
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: '700',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  primaryButton: {
+    minHeight: 54,
+    borderRadius: 18,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#f8fafc',
-  },
-  input: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 15,
-    color: '#f8fafc',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 20,
-  },
-  addButton: {
-    backgroundColor: '#6366f1',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  addButtonText: {
+  primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '900',
   },
 });

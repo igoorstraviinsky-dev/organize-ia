@@ -1,35 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { supabase } from '../src/lib/supabase';
 import { View, ActivityIndicator, useColorScheme } from 'react-native';
 import { Colors } from '../src/constants/Colors';
+import { useSession } from '../src/hooks/useSession';
+import { AnimatedSplash } from '../src/components/AnimatedSplash';
 
 export default function RootLayout() {
-  const [session, setSession] = useState<any>(null);
-  const [initialized, setInitialized] = useState(false);
+  const { session, initialized } = useSession();
+  const [showSplash, setShowSplash] = useState(true);
   const router = useRouter();
   const segments = useSegments();
   const colorScheme = useColorScheme() ?? 'dark';
   const theme = Colors[colorScheme];
 
   useEffect(() => {
-    // Verificar sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setInitialized(true);
-    });
-
-    // Escutar mudanças na autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!initialized) return;
+    if (!initialized) {
+      return;
+    }
 
     const inAuthGroup = segments[0] === '(tabs)';
 
@@ -38,7 +26,11 @@ export default function RootLayout() {
     } else if (session && !inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [session, initialized, segments]);
+  }, [session, initialized, segments, router]);
+
+  if (showSplash) {
+    return <AnimatedSplash onFinish={() => setShowSplash(false)} />;
+  }
 
   if (!initialized) {
     return (
@@ -51,10 +43,12 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ 
-        headerShown: false,
-        contentStyle: { backgroundColor: theme.background }
-      }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: theme.background },
+        }}
+      >
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>

@@ -1,0 +1,35 @@
+<svg width="920" height="260" viewBox="0 0 920 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bubbleGrad" x1="40" y1="22" x2="188" y2="185" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#39E07C"/>
+      <stop offset="1" stop-color="#09A85E"/>
+    </linearGradient>
+    <linearGradient id="checkGrad" x1="66" y1="36" x2="188" y2="172" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#28B5FF"/>
+      <stop offset="1" stop-color="#1779F1"/>
+    </linearGradient>
+    <linearGradient id="taskGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#27D774"/>
+      <stop offset="1" stop-color="#08AB61"/>
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2EBBFF"/>
+      <stop offset="1" stop-color="#1B7CF3"/>
+    </linearGradient>
+    <filter id="shadow" x="18" y="6" width="196" height="208" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#03131B" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M116 18C78.997 18 49 47.982 49 84.969C49 105.832 58.586 124.454 73.585 136.608L64.751 165.118C63.64 168.703 67.558 171.744 70.699 169.731L100.055 150.928C105.04 151.899 110.438 152.4 116 152.4C153.003 152.4 183 122.418 183 85.431C183 48.445 153.003 18 116 18Z" fill="url(#bubbleGrad)"/>
+    <path d="M150.815 37.87C155.761 37.87 157.818 44.206 153.835 47.109C128.733 65.402 113.49 90.49 108.758 124.373C108.092 129.138 102.3 131.331 98.557 128.315L73.325 107.994C69.178 104.653 70.697 97.956 75.915 96.741C78.341 96.175 80.954 96.762 82.903 98.358L101.563 113.647C108.417 86.63 124.39 64.562 146.582 39.432C147.674 38.194 149.248 37.87 150.815 37.87Z" fill="url(#checkGrad)"/>
+    <circle cx="67.233" cy="101.971" r="4.195" fill="#071117"/>
+  </g>
+
+  <g transform="translate(236 48)">
+    <text x="0" y="74" fill="url(#taskGrad)" font-size="78" font-weight="800" font-family="Manrope, Segoe UI, sans-serif" letter-spacing="-2.2">TaskWise</text>
+    <text x="468" y="74" fill="url(#aiGrad)" font-size="78" font-weight="800" font-family="Manrope, Segoe UI, sans-serif" letter-spacing="-2.2">AI</text>
+    <text x="2" y="148" fill="#C8D2E0" font-size="33" font-weight="600" font-family="Manrope, Segoe UI, sans-serif" letter-spacing="-0.6">Sua IA de tarefas no WhatsApp</text>
+  </g>
+</svg>

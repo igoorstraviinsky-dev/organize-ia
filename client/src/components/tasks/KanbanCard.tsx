@@ -206,11 +206,11 @@ export default function KanbanCard({ task, dragListeners, isDraggingOverlay, isP
                 {task.assignments.map((asg) => (
                   <div 
                     key={asg.user_id}
-                    title={asg.profiles?.full_name}
+                    title={asg.profiles?.full_name || 'Sem nome'}
                     className="h-6 w-6 rounded-full border border-white/20 bg-black flex items-center justify-center overflow-hidden transition-all hover:scale-125 hover:z-10 shadow-lg shadow-black/50"
                   >
                     {asg.profiles?.avatar_url ? (
-                      <img src={asg.profiles.avatar_url} alt={asg.profiles.full_name} className="h-full w-full object-cover" />
+                      <img src={asg.profiles.avatar_url} alt={asg.profiles.full_name || 'Avatar'} className="h-full w-full object-cover" />
                     ) : (
                       <span className="text-[10px] font-black text-slate-400">
                         {asg.profiles?.full_name?.charAt(0).toUpperCase()}

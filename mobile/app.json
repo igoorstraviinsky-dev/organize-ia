@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "TaskWise AI",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -37,6 +37,8 @@
       "policy": "appVersion"
     },
     "extra": {
+      "supabaseUrl": "https://jiygqgehptknjdtqdwks.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImppeWdxZ2VocHRrbmpkdHFkd2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2NTAwMzMsImV4cCI6MjA4ODIyNjAzM30.vkLlkkBPoOFAJjF5XhkrjnlDIuxdbLwd0Wb2eqPJnko",
       "eas": {
         "projectId": "c008faba-bc7f-4474-a2ae-2bb30c0d06e0"
       }

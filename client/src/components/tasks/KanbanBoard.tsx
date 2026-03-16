@@ -81,7 +81,7 @@ interface DroppableColumnProps {
   children: React.ReactNode;
   onAddClick: () => void;
   isAdding: boolean;
-  projectId: string;
+  projectId: string | null;
   sectionId: string | null;
   onCloseAdd: () => void;
   isOver: boolean;
@@ -167,12 +167,12 @@ function DroppableColumn({
 }
 
 export interface KanbanBoardProps {
-  projectId: string;
+  projectId: string | null;
 }
 
 export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const { data: tasks = [] } = useTasks(projectId)
-  const { data: sections = [] } = useSections(projectId)
+  const { data: sections = [] } = useSections(projectId || '')
   const createSection = useCreateSection()
   const updateTask = useUpdateTask()
 
@@ -281,7 +281,7 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
 
     const handleAddSection = async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!newSectionName.trim()) return
+      if (!newSectionName.trim() || !projectId) return
       await createSection.mutateAsync({
         name: newSectionName.trim(),
         project_id: projectId,

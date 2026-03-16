@@ -31,7 +31,10 @@ router.post('/register', async (req: Request, res: Response) => {
       // mas garantimos que o role seja 'collaborator' por padrão para novos registros públicos.
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role: 'collaborator' })
+        .update({
+          role: 'collaborator',
+          approval_status: 'pending',
+        })
         .eq('id', authData.user.id);
 
       if (profileError) {
