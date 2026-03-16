@@ -11,10 +11,8 @@ import {
   X,
   XCircle,
 } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
 import { useProjects } from '../hooks/useProjects'
 import { Profile, useTeam } from '../hooks/useTeam'
-import { buildEventSourceUrl } from '../lib/api'
 
 const approvalTheme = {
   approved: {
@@ -41,7 +39,6 @@ const getApprovalStatus = (profile: Profile) =>
   profile.role === 'admin' ? 'approved' : profile.approval_status ?? 'pending'
 
 export default function TeamPage() {
-  const { session } = useAuth()
   const {
     profiles,
     projectMembers,
@@ -96,70 +93,34 @@ export default function TeamPage() {
   }, [members, managingUser])
 
   useEffect(() => {
-    if (!session?.access_token) return
+    const handleTeamUpdate = (event: Event) => {
+      const payload = (event as CustomEvent).detail
 
-    let isMounted = true
-    let eventSource: EventSource | null = null
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-
-    const connect = () => {
-      if (!isMounted) return
-
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout)
-        reconnectTimeout = null
+      if (payload?.type !== 'team_update' || !payload.payload?.userId || !payload.payload?.approval_status) {
+        return
       }
 
-      eventSource?.close()
-      eventSource = new EventSource(buildEventSourceUrl('/api/events', { token: session.access_token }))
+      setMembers((currentMembers) =>
+        currentMembers.map((member) =>
+          member.id === payload.payload.userId
+            ? { ...member, approval_status: payload.payload.approval_status }
+            : member
+        )
+      )
 
-      eventSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data)
-
-          if (payload.type !== 'team_update' || !payload.payload?.userId || !payload.payload?.approval_status) {
-            return
-          }
-
-          setMembers((currentMembers) =>
-            currentMembers.map((member) =>
-              member.id === payload.payload.userId
-                ? { ...member, approval_status: payload.payload.approval_status }
-                : member
-            )
-          )
-
-          setManagingUser((currentUser) =>
-            currentUser?.id === payload.payload.userId
-              ? { ...currentUser, approval_status: payload.payload.approval_status }
-              : currentUser
-          )
-        } catch (sseError) {
-          console.error('[TeamPage SSE] Falha ao processar evento:', sseError)
-        }
-      }
-
-      eventSource.onerror = (sseError) => {
-        console.error('[TeamPage SSE] Erro na conexao:', sseError)
-        eventSource?.close()
-
-        if (!isMounted) return
-
-        reconnectTimeout = setTimeout(connect, 5000)
-      }
+      setManagingUser((currentUser) =>
+        currentUser?.id === payload.payload.userId
+          ? { ...currentUser, approval_status: payload.payload.approval_status }
+          : currentUser
+      )
     }
 
-    connect()
+    window.addEventListener('app-sync-event', handleTeamUpdate)
 
     return () => {
-      isMounted = false
-      eventSource?.close()
-
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout)
-      }
+      window.removeEventListener('app-sync-event', handleTeamUpdate)
     }
-  }, [session?.access_token])
+  }, [])
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()

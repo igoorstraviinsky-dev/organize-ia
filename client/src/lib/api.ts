@@ -54,16 +54,17 @@ export function buildBrowserAbsoluteUrl(path: string) {
 }
 
 export function buildEventSourceUrl(path: string, params: Record<string, string> = {}) {
-  const baseUrl = buildBrowserAbsoluteUrl(path)
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
   const queryString = new URLSearchParams(
     Object.entries(params).filter(([, value]) => value)
   ).toString()
 
   if (typeof window === 'undefined') {
+    const baseUrl = buildBrowserAbsoluteUrl(path)
     return queryString ? `${baseUrl}?${queryString}` : baseUrl
   }
 
-  const url = new URL(baseUrl, window.location.origin)
+  const url = new URL(normalizedPath, window.location.origin)
 
   Object.entries(params).forEach(([key, value]) => {
     if (!value) return
