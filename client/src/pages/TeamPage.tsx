@@ -35,7 +35,8 @@ const approvalTheme = {
   },
 } as const
 
-const getApprovalStatus = (profile: Profile) => profile.approval_status ?? 'approved'
+const getApprovalStatus = (profile: Profile) =>
+  profile.role === 'admin' ? 'approved' : profile.approval_status ?? 'pending'
 
 export default function TeamPage() {
   const {

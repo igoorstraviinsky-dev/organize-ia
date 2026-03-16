@@ -35,6 +35,13 @@ const normalizeProfile = (profile: any): Profile => ({
   role: normalizeRole(profile?.role),
 })
 
+const getApprovalSortValue = (profile: Profile) => {
+  if (profile.role === 'admin') return 2
+  if (profile.approval_status === 'pending' || profile.approval_status == null) return 0
+  if (profile.approval_status === 'rejected') return 1
+  return 2
+}
+
 export const useTeam = () => {
   const queryClient = useQueryClient()
 
@@ -51,7 +58,11 @@ export const useTeam = () => {
         .order('full_name')
 
       if (error) throw error
-      return (data || []).map(normalizeProfile) as Profile[]
+      return ((data || []).map(normalizeProfile) as Profile[]).sort((a, b) => {
+        const approvalDelta = getApprovalSortValue(a) - getApprovalSortValue(b)
+        if (approvalDelta !== 0) return approvalDelta
+        return (a.full_name || a.email || '').localeCompare(b.full_name || b.email || '', 'pt-BR')
+      })
     }
   })
 
