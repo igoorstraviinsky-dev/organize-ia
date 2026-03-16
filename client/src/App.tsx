@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthContext } from './contexts/AuthContext'
 import AuthPanelLayout from './components/layout/AuthPanelLayout'
+import BrandLogo from './components/branding/BrandLogo'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
@@ -28,13 +29,12 @@ export default function App() {
         ]}
       >
         <div className="flex flex-col items-center gap-6 py-4 text-center">
-          <div className="relative h-14 w-14">
-            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-400/20" />
-            <div className="absolute inset-0 rounded-full border border-white/10" />
-            <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-cyan-300/70 border-t-transparent shadow-[0_0_22px_rgba(34,211,238,0.28)]" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-[26px] border border-white/10 bg-white/[0.03] p-3">
+            <div className="absolute inset-0 animate-ping rounded-[26px] bg-cyan-400/10" />
+            <BrandLogo variant="mark" className="relative h-full w-full object-contain" />
           </div>
           <div className="space-y-2">
-            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">organize ia</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">taskwise ai</p>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-300">
               Sincronizando experiencia...
             </p>

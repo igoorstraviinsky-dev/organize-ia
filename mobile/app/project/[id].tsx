@@ -1,159 +1,136 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, SafeAreaView, StatusBar, RefreshControl, useColorScheme, ActivityIndicator } from 'react-native';
-import { supabase } from '../../src/lib/supabase';
-import { ArrowLeft, Plus } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ArrowLeft, FolderKanban } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { TaskItem } from '../../src/components/TaskItem';
+import { ScreenShell } from '../../src/components/ScreenShell';
+import { GlassCard } from '../../src/components/GlassCard';
+import { SectionHeader } from '../../src/components/SectionHeader';
+import { EmptyState } from '../../src/components/EmptyState';
 import { TaskDetailModal } from '../../src/components/TaskDetailModal';
-import { Colors } from '../../src/constants/Colors';
+import { TaskItem } from '../../src/components/TaskItem';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
 import { useRealtimeSync } from '../../src/hooks/useRealtimeSync';
+import { getProjectById } from '../../src/services/projectService';
+import { getTasksByProject, updateTaskStatus } from '../../src/services/taskService';
+import { Project, Task } from '../../src/types/models';
 
 export default function ProjectDetailsScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = Colors[colorScheme];
+  const { colors, layout, typography } = useAppTheme();
+  const [project, setProject] = useState<Project | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const [project, setProject] = useState<any>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [detailVisible, setDetailVisible] = useState(false);
-
-  useRealtimeSync(() => fetchData());
+  useRealtimeSync(() => {
+    fetchData();
+  });
 
   useEffect(() => {
     fetchData();
   }, [id]);
 
   async function fetchData() {
-    if (!id) return;
-    setLoading(true);
+    if (!id) {
+      return;
+    }
 
-    // Fetch project info
-    const { data: projectData } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (projectData) setProject(projectData);
-
-    // Fetch project tasks
-    const { data: tasksData } = await supabase
-      .from('tasks')
-      .select('*, project:projects(id, name, color)')
-      .eq('project_id', id)
-      .order('created_at', { ascending: false });
-    
-    setTasks(tasksData || []);
-    setLoading(false);
+    const projectId = Array.isArray(id) ? id[0] : id;
+    const [projectData, taskData] = await Promise.all([getProjectById(projectId), getTasksByProject(projectId)]);
+    setProject(projectData);
+    setTasks(taskData);
   }
 
-  const toggleTask = async (task: any) => {
-    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-    setTasks(tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-    const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
-    if (error) fetchData();
-  };
+  async function toggleTask(task: Task) {
+    const nextStatus = task.status === 'completed' ? 'pending' : 'completed';
+    setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status: nextStatus } : item)));
 
-  const renderTask = ({ item }: { item: any }) => (
-    <TaskItem 
-      task={item} 
-      onToggle={toggleTask} 
-      onPress={(task) => {
-        setSelectedTask(task);
-        setDetailVisible(true);
-      }}
-    />
-  );
+    try {
+      await updateTaskStatus(task.id, nextStatus);
+    } catch {
+      setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, status: task.status } : item)));
+    }
+  }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle="light-content" />
-      
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ArrowLeft size={24} color={theme.text} />
-        </TouchableOpacity>
-        <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: theme.text }]} numberOfLines={1}>
-            {project?.name || 'Projeto'}
+    <ScreenShell scroll>
+      <View style={[styles.container, { maxWidth: layout.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+        <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.backgroundTertiary }]}>
+          <ArrowLeft size={18} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>Voltar</Text>
+        </Pressable>
+
+        <GlassCard style={{ gap: 12 }}>
+          <View style={[styles.projectChip, { backgroundColor: project?.color ? `${project.color}20` : colors.backgroundTertiary }]}>
+            <FolderKanban size={18} color={project?.color || colors.tint} />
+            <Text style={[styles.projectChipText, { color: project?.color || colors.tint }]}>Projeto ativo</Text>
+          </View>
+          <Text style={[styles.heroTitle, { color: colors.text, fontSize: typography.hero }]}>{project?.name || 'Projeto'}</Text>
+          <Text style={[styles.heroSubtitle, { color: colors.textMuted }]}>
+            Todas as tarefas ligadas a esta frente de trabalho aparecem aqui com leitura clara e espaço confortável.
           </Text>
-          <View style={[styles.projectIndicator, { backgroundColor: project?.color || theme.tint }]} />
-        </View>
+        </GlassCard>
+
+        <SectionHeader eyebrow="Entrega" title={`${tasks.length} tarefa${tasks.length === 1 ? '' : 's'}`} subtitle="Toque em uma tarefa para abrir os detalhes." />
+
+        {tasks.length ? (
+          tasks.map((task) => <TaskItem key={task.id} task={task} onToggle={toggleTask} onPress={setSelectedTask} />)
+        ) : (
+          <EmptyState
+            title="Sem tarefas neste projeto"
+            description="Quando as tarefas forem associadas a este projeto, elas vão aparecer aqui com a nova leitura visual."
+            icon={<FolderKanban size={24} color={project?.color || colors.tint} />}
+          />
+        )}
       </View>
 
-      <FlatList
-        data={tasks}
-        renderItem={renderTask}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={fetchData} tintColor={theme.tint} />
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: theme.subtext }]}>Este projeto ainda não tem tarefas.</Text>
-            </View>
-          ) : (
-            <ActivityIndicator color={theme.tint} style={{ marginTop: 40 }} />
-          )
-        }
-      />
-
-      <TaskDetailModal
-        visible={detailVisible}
-        task={selectedTask}
-        onClose={() => setDetailVisible(false)}
-        onToggle={toggleTask}
-      />
-    </SafeAreaView>
+      <TaskDetailModal visible={!!selectedTask} task={selectedTask} onClose={() => setSelectedTask(null)} onToggle={toggleTask} />
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  header: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingTop: 20,
+    paddingBottom: 150,
   },
   backButton: {
-    padding: 8,
-  },
-  titleContainer: {
-    flex: 1,
+    alignSelf: 'flex-start',
+    minHeight: 42,
+    borderRadius: 16,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 14,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  backText: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  projectIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  list: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  emptyContainer: {
+  projectChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    gap: 8,
     alignItems: 'center',
-    marginTop: 60,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
-  emptyText: {
-    fontSize: 16,
-    textAlign: 'center',
+  projectChipText: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  heroTitle: {
+    fontWeight: '900',
+    letterSpacing: -1,
+    lineHeight: 40,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 22,
   },
 });

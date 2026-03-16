@@ -1,69 +1,131 @@
+import { ReactNode } from 'react';
 import { Tabs } from 'expo-router';
 import { Layout, Calendar, CalendarRange, Hash, Settings } from 'lucide-react-native';
+import { Platform, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Platform, View, useColorScheme } from 'react-native';
-import { Colors } from '../../src/constants/Colors';
+import { useAppTheme } from '../../src/hooks/useAppTheme';
+
+function TabIcon({
+  color,
+  label,
+  focused,
+  children,
+  activeBg,
+}: {
+  color: string;
+  label: string;
+  focused: boolean;
+  children: ReactNode;
+  activeBg: string;
+}) {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+      <View
+        style={{
+          minWidth: 46,
+          height: 34,
+          borderRadius: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: focused ? activeBg : 'transparent',
+        }}
+      >
+        {children}
+      </View>
+      <Text style={{ color, fontSize: 11, fontWeight: focused ? '800' : '700' }}>{label}</Text>
+    </View>
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme() ?? 'dark';
-  const theme = Colors[colorScheme];
+  const { colors, layout } = useAppTheme();
+  const blurTint = colors.background === '#f4f7f2' ? 'light' : 'dark';
 
   return (
-    <Tabs screenOptions={{
-      headerShown: false,
-      tabBarStyle: {
-        backgroundColor: theme.background,
-        borderTopWidth: 1,
-        borderTopColor: theme.border,
-        height: Platform.OS === 'ios' ? 88 : 68,
-        paddingBottom: Platform.OS === 'ios' ? 30 : 12,
-        paddingTop: 12,
-        position: 'absolute',
-      },
-      tabBarActiveTintColor: theme.tint,
-      tabBarInactiveTintColor: theme.tabIconDefault,
-      tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: '600',
-        marginTop: 4,
-      },
-    }}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.tint,
+        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          position: 'absolute',
+          left: layout.horizontalPadding,
+          right: layout.horizontalPadding,
+          bottom: Platform.OS === 'ios' ? 26 : 18,
+          height: layout.tabBarHeight,
+          borderTopWidth: 0,
+          backgroundColor: colors.surface,
+          borderRadius: 28,
+          paddingHorizontal: 8,
+          paddingTop: 10,
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: 14 },
+          shadowOpacity: 0.16,
+          shadowRadius: 20,
+          elevation: 12,
+        },
+        tabBarBackground: () => <BlurView tint={blurTint} intensity={40} style={{ flex: 1, borderRadius: 28 }} />,
+        tabBarItemStyle: {
+          borderRadius: 20,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
-          tabBarIcon: ({ color, size }) => <Layout size={22} color={color} />,
+          title: 'Visão',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} label="Visão" focused={focused} activeBg={colors.backgroundTertiary}>
+              <Layout size={20} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="today"
         options={{
           title: 'Hoje',
-          tabBarIcon: ({ color, size }) => <Calendar size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} label="Hoje" focused={focused} activeBg={colors.backgroundTertiary}>
+              <Calendar size={20} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="upcoming"
         options={{
-          title: 'Breve',
-          tabBarIcon: ({ color, size }) => <CalendarRange size={22} color={color} />,
+          title: 'Agenda',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} label="Agenda" focused={focused} activeBg={colors.backgroundTertiary}>
+              <CalendarRange size={20} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="projects"
         options={{
           title: 'Projetos',
-          tabBarIcon: ({ color, size }) => <Hash size={22} color={color} />,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} label="Projetos" focused={focused} activeBg={colors.backgroundTertiary}>
+              <Hash size={20} color={color} />
+            </TabIcon>
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Ajustes',
-          tabBarIcon: ({ color, size }) => <Settings size={22} color={color} />,
+          title: 'Conta',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon color={color} label="Conta" focused={focused} activeBg={colors.backgroundTertiary}>
+              <Settings size={20} color={color} />
+            </TabIcon>
+          ),
         }}
       />
     </Tabs>
   );
 }
-

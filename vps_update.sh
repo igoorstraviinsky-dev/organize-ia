@@ -215,6 +215,7 @@ EOF
 # ──────────────────────────────────────────────────────────────────────────────
 action_deploy() {
     local mode=$1
+    local should_restart=0
     if [ "$mode" == "install" ]; then
         echo -e "${BLUE}Iniciando Instalação Completa...${NC}"
         run_setup_wizard
@@ -222,6 +223,7 @@ action_deploy() {
         echo -e "${BLUE}Iniciando Atualização (Pull do GHCR)...${NC}"
         git pull origin main
         check_env_integrity
+        should_restart=1
     fi
 
     echo -e "${YELLOW}Sincronizando imagens e containers...${NC}"
@@ -234,6 +236,11 @@ action_deploy() {
     fi
 
     echo -e "${GREEN}🚀 Operação concluída com sucesso!${NC}"
+    if [ $should_restart -eq 1 ]; then
+        echo -e "${YELLOW}Reiniciando containers Docker para aplicar a atualizacao...${NC}"
+        docker compose restart
+    fi
+
     read -p "Pressione ENTER para voltar ao menu..."
 }
 

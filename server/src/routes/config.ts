@@ -53,12 +53,15 @@ function parseEnv(filePath: string): Record<string, string> {
  * GET /api/config/supabase
  */
 router.get('/supabase', authenticate, (req: Request, res: Response) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Apenas administradores podem visualizar configuracoes do Supabase.' });
+  }
+
   const serverEnv = parseEnv(SERVER_ENV_PATH);
   const clientEnv = parseEnv(CLIENT_ENV_PATH);
   
   res.json({
     supabase_url: serverEnv.SUPABASE_URL || clientEnv.VITE_SUPABASE_URL || '',
-    supabase_service_key: serverEnv.SUPABASE_SERVICE_KEY || '',
     supabase_anon_key: clientEnv.VITE_SUPABASE_ANON_KEY || ''
   });
 });
@@ -67,6 +70,10 @@ router.get('/supabase', authenticate, (req: Request, res: Response) => {
  * POST /api/config/supabase
  */
 router.post('/supabase', authenticate, (req: Request, res: Response) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Apenas administradores podem atualizar configuracoes do Supabase.' });
+  }
+
   const { supabase_url, supabase_anon_key, supabase_service_key } = req.body;
 
   try {

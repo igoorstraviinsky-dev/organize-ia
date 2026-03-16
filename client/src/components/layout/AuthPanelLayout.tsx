@@ -1,5 +1,6 @@
 import React from 'react'
-import { CheckSquare, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
+import BrandLogo from '../branding/BrandLogo'
 
 interface Highlight {
   label: string
@@ -42,14 +43,8 @@ export default function AuthPanelLayout({
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="royal-purple-gradient flex h-14 w-14 items-center justify-center rounded-[20px] shadow-[0_18px_40px_rgba(124,58,237,0.28)]">
-              <CheckSquare size={26} className="text-white" strokeWidth={1.9} />
-            </div>
-
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
-                organize ia
-              </p>
+              <BrandLogo variant="full" className="h-auto w-[210px] max-w-full" />
               <span className="mt-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-slate-200">
                 {eyebrow}
               </span>
