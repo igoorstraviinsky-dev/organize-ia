@@ -9,13 +9,18 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#020617]">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative h-12 w-12">
-            <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20"></div>
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent shadow-[0_0_15px_rgba(139,92,246,0.5)]"></div>
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_bottom,rgba(45,212,191,0.14),transparent_26%)]" />
+        <div className="jetted-glass relative flex flex-col items-center gap-6 px-10 py-12 text-center">
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-400/20"></div>
+            <div className="absolute inset-0 rounded-full border border-white/10"></div>
+            <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-cyan-300/70 border-t-transparent shadow-[0_0_22px_rgba(34,211,238,0.28)]"></div>
           </div>
-          <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">Sincronizando...</p>
+          <div className="space-y-2">
+            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">organize ia</p>
+            <p className="text-sm font-semibold tracking-[0.24em] text-slate-300 uppercase">Sincronizando experiencia...</p>
+          </div>
         </div>
       </div>
     )

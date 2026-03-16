@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, Lock, Mail, User, UserPlus } from 'lucide-react'
+import AuthShell from '../components/layout/AuthShell'
 import { supabase } from '../lib/supabase'
-import { CheckSquare, UserPlus, Mail, Lock, User } from 'lucide-react'
 
 export default function Register() {
   const [fullName, setFullName] = useState('')
@@ -27,133 +28,153 @@ export default function Register() {
     } else {
       setSuccess(true)
     }
+
     setLoading(false)
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 font-sans relative overflow-hidden">
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full" />
-        <div className="w-full max-w-md relative z-10 text-center">
-          <div className="premium-card bg-white rounded-[32px] border border-slate-100 p-12 shadow-2xl shadow-slate-200/50">
-            <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-500 shadow-lg shadow-emerald-500/10">
-              <CheckSquare size={40} strokeWidth={2.5} />
+      <AuthShell
+        heroEyebrow="Conta pronta"
+        heroTitle="Seu onboarding agora tem a mesma assinatura visual."
+        heroDescription="O cadastro terminou com um estado de confirmacao mais elegante, coerente com o resto da aplicacao e com destaque claro para o proximo passo."
+        panelEyebrow="Cadastro concluido"
+        panelTitle="Conta criada com sucesso."
+        panelDescription="Enviamos um link de confirmacao para o seu email. Depois da validacao, o acesso estara liberado."
+      >
+        <div className="flex h-full flex-col justify-between">
+          <div className="rounded-[28px] border border-emerald-400/15 bg-emerald-400/[0.07] p-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-emerald-300/15 text-emerald-300 shadow-[0_18px_45px_rgba(16,185,129,0.12)]">
+              <CheckCircle2 size={30} strokeWidth={2.1} />
             </div>
-            <h2 className="text-2xl font-black text-slate-800 font-display uppercase italic tracking-tight">Conta criada!</h2>
-            <p className="mt-4 text-slate-400 text-sm font-semibold leading-relaxed">
-              Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada.
+            <h3 className="mt-6 text-2xl text-white">Revise sua caixa de entrada.</h3>
+            <p className="mt-3 text-sm leading-7 text-slate-300">
+              Assim que o email for confirmado, voce ja pode entrar e continuar a configuracao do seu espaco de trabalho.
             </p>
+          </div>
+
+          <div className="mt-8 space-y-4">
+            <div className="rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-4 text-sm leading-7 text-slate-400">
+              Dica: se nao encontrar a mensagem principal, vale revisar spam ou promocoes.
+            </div>
+
             <Link
               to="/login"
-              className="mt-10 inline-flex items-center justify-center gap-3 rounded-2xl bg-[#17112E] px-10 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-[#17112E]/20 hover:bg-[#8E44AD] hover:scale-[1.05] transition-all"
+              className="royal-purple-gradient flex w-full items-center justify-center gap-3 rounded-[24px] px-6 py-5 text-[11px] font-black uppercase tracking-[0.34em] text-white shadow-[0_24px_60px_rgba(34,211,238,0.18)] transition-all hover:scale-[1.01] hover:shadow-[0_28px_70px_rgba(139,92,246,0.28)]"
             >
-              Ir para Login
-              <CheckSquare size={16} strokeWidth={3} />
+              Ir para login
+              <ArrowRight size={16} strokeWidth={2.6} />
             </Link>
           </div>
         </div>
-      </div>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 font-sans relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand-purple/5 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-navy/5 blur-[120px] rounded-full" />
-
-      <div className="w-full max-w-md relative z-10">
-        <div className="premium-card bg-white rounded-[32px] border border-slate-100 p-12 shadow-2xl shadow-slate-200/50">
-          <div className="mb-12 text-center">
-            <div 
-              className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-xl shadow-brand-purple/20"
-              style={{ background: 'linear-gradient(to bottom right, #17112E, #8E44AD)' }}
-            >
-              <CheckSquare size={32} className="text-white" strokeWidth={2.5} />
+    <AuthShell
+      heroEyebrow="Cadastro"
+      heroTitle="Uma entrada mais forte para um produto mais forte."
+      heroDescription="Cadastro e login agora compartilham o mesmo sistema visual: fundo ambientado, superficies de vidro escuro e contraste melhor para reforcar a marca."
+      panelEyebrow="Criar conta"
+      panelTitle="Comece com uma experiencia mais premium."
+      panelDescription="Preencha seus dados e prepare o espaco onde tarefas, projetos e automacoes vao ganhar ritmo."
+    >
+      <div className="flex h-full flex-col">
+        <form onSubmit={handleRegister} className="space-y-6">
+          {error && (
+            <div className="rounded-[22px] border border-rose-500/20 bg-rose-500/10 px-4 py-4 text-sm font-semibold text-rose-200 backdrop-blur-md">
+              {error}
             </div>
-            <h1 className="text-2xl font-black tracking-tight font-display uppercase italic" style={{ color: '#17112E' }}>Organizador</h1>
-            <p className="mt-2 text-slate-400 text-xs font-black uppercase tracking-widest">Crie sua conta agora</p>
+          )}
+
+          <div className="space-y-3">
+            <label className="ml-1 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Nome completo
+            </label>
+            <div className="group relative">
+              <input
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="dark-neo-recessed w-full px-14 py-5 text-sm font-semibold text-white outline-none transition-all placeholder:text-slate-600 focus:border-cyan-400/30 focus:ring-2 focus:ring-cyan-400/15"
+                placeholder="Seu nome"
+              />
+              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-300">
+                <User size={18} strokeWidth={1.8} />
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-6">
-            {error && (
-              <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-xs font-bold text-red-500 animate-in fade-in slide-in-from-top-2 duration-300 text-center">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nome completo</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-purple transition-colors">
-                  <User size={18} strokeWidth={2.5} />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-12 py-4 text-sm font-bold text-slate-800 outline-none focus:border-brand-purple focus:bg-white focus:ring-4 focus:ring-brand-purple/5 transition-all placeholder:text-slate-300"
-                  placeholder="Seu nome completo"
-                />
+          <div className="space-y-3">
+            <label className="ml-1 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Email
+            </label>
+            <div className="group relative">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="dark-neo-recessed w-full px-14 py-5 text-sm font-semibold text-white outline-none transition-all placeholder:text-slate-600 focus:border-cyan-400/30 focus:ring-2 focus:ring-cyan-400/15"
+                placeholder="voce@empresa.com"
+              />
+              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-300">
+                <Mail size={18} strokeWidth={1.8} />
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-purple transition-colors">
-                  <Mail size={18} strokeWidth={2.5} />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-12 py-4 text-sm font-bold text-slate-800 outline-none focus:border-brand-purple focus:bg-white focus:ring-4 focus:ring-brand-purple/5 transition-all placeholder:text-slate-300"
-                  placeholder="seu@email.com"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Senha</label>
-              <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-purple transition-colors">
-                  <Lock size={18} strokeWidth={2.5} />
-                </div>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 px-12 py-4 text-sm font-bold text-slate-800 outline-none focus:border-brand-purple focus:bg-white focus:ring-4 focus:ring-brand-purple/5 transition-all placeholder:text-slate-300"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-[#17112E] p-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-brand-navy/20 transition-all hover:bg-[#8E44AD] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-            >
-              <UserPlus size={18} className="relative z-10" strokeWidth={3} />
-              <span className="relative z-10">{loading ? 'Criando...' : 'Criar conta'}</span>
-            </button>
-          </form>
-
-          <div className="mt-12 text-center">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Já tem conta?{' '}
-              <Link to="/login" className="font-black text-brand-purple hover:text-brand-navy transition-colors">
-                Fazer login
-              </Link>
-            </p>
           </div>
+
+          <div className="space-y-3">
+            <label className="ml-1 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">
+              Senha
+            </label>
+            <div className="group relative">
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="dark-neo-recessed w-full px-14 py-5 text-sm font-semibold text-white outline-none transition-all placeholder:text-slate-600 focus:border-cyan-400/30 focus:ring-2 focus:ring-cyan-400/15"
+                placeholder="Minimo de 6 caracteres"
+              />
+              <div className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-cyan-300">
+                <Lock size={18} strokeWidth={1.8} />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="royal-purple-gradient group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-[24px] px-6 py-5 text-[11px] font-black uppercase tracking-[0.34em] text-white shadow-[0_24px_60px_rgba(34,211,238,0.18)] transition-all hover:scale-[1.01] hover:shadow-[0_28px_70px_rgba(139,92,246,0.28)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <span className="relative z-10 flex items-center gap-3">
+              {loading ? 'Criando conta...' : 'Criar conta'}
+              {!loading && <UserPlus size={16} strokeWidth={2.6} />}
+            </span>
+          </button>
+        </form>
+
+        <div className="mt-6 rounded-[22px] border border-cyan-400/10 bg-cyan-400/[0.05] px-4 py-4 text-sm leading-7 text-slate-400">
+          Seu primeiro contato com o produto ja entra no mesmo padrao visual do dashboard, sem quebra de identidade.
+        </div>
+
+        <div className="mt-auto pt-8 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Ja tem conta?{' '}
+            <Link
+              to="/login"
+              className="font-black text-cyan-300 transition-colors hover:text-white"
+            >
+              Fazer login
+            </Link>
+          </p>
         </div>
       </div>
-    </div>
+    </AuthShell>
   )
 }

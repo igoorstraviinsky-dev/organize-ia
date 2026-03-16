@@ -73,13 +73,18 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#020617]">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative h-12 w-12">
-            <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20"></div>
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-purple-500 border-t-transparent shadow-[0_0_15px_rgba(139,92,246,0.5)]"></div>
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_bottom,rgba(45,212,191,0.14),transparent_26%)]" />
+        <div className="jetted-glass relative flex flex-col items-center gap-6 px-10 py-12 text-center">
+          <div className="relative h-14 w-14">
+            <div className="absolute inset-0 animate-ping rounded-full bg-cyan-400/20"></div>
+            <div className="absolute inset-0 rounded-full border border-white/10"></div>
+            <div className="h-14 w-14 animate-spin rounded-full border-[3px] border-cyan-300/70 border-t-transparent shadow-[0_0_22px_rgba(34,211,238,0.28)]"></div>
           </div>
-          <p className="text-sm font-bold tracking-widest text-slate-400 uppercase">Sincronizando...</p>
+          <div className="space-y-2">
+            <p className="text-[11px] font-black uppercase tracking-[0.36em] text-slate-500">organize ia</p>
+            <p className="text-sm font-semibold tracking-[0.24em] text-slate-300 uppercase">Preparando workspace...</p>
+          </div>
         </div>
       </div>
     );
@@ -270,8 +275,9 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
   const isBoardMode = viewMode === "board" && showViewToggle;
 
   return (
-    <div className="flex h-screen bg-[#050505] text-[#e2e8f0] font-sans relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+    <div className="relative flex h-screen overflow-hidden bg-transparent font-sans text-[#e2e8f0]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_22%),radial-gradient(circle_at_bottom,rgba(45,212,191,0.08),transparent_26%)]" />
+      <div className="absolute inset-0 opacity-[0.06] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
       <Sidebar
         currentView={currentView}
@@ -302,8 +308,8 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
           />
         )}
       </AnimatePresence>
-      <main className="flex-1 overflow-y-auto p-4 md:p-12 flex flex-col relative md:pl-44 transition-all duration-700">
-        <div className="flex-1 jetted-glass flex flex-col bg-[#0a0a0a]/40 border-white/10 min-h-[calc(100vh-2rem)] md:min-h-0 shadow-[0_0_80px_rgba(0,0,0,0.8),0_0_20px_rgba(255,255,255,0.02)]">
+      <main className="relative flex flex-1 flex-col overflow-y-auto p-4 transition-all duration-700 md:pl-44 md:p-10">
+        <div className="jetted-glass flex min-h-[calc(100vh-2rem)] flex-1 flex-col border-white/10 bg-white/[0.03] shadow-[0_0_100px_rgba(0,0,0,0.42)] md:min-h-0">
           {currentView === 'project' && (() => {
             const proj = (projects as Project[]).find(p => p.id === currentProjectId);
             return proj?.theme_gradient ? (
@@ -315,7 +321,7 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
               </div>
             ) : null;
           })()}
-          <div className="flex items-center justify-between border-b border-white/5 bg-transparent px-12 py-10 relative">
+          <div className="relative flex items-center justify-between border-b border-white/5 bg-transparent px-8 py-8 md:px-12 md:py-10">
             {currentView === 'project' && (() => {
               const proj = (projects as Project[]).find(p => p.id === currentProjectId);
               return proj?.theme_gradient ? (
