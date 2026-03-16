@@ -48,14 +48,8 @@ export default function Dashboard({ onSignOut }: DashboardProps) {
   useSSE(session?.access_token || ''); // Mantém conexão viva para eventos reais se logado
   useUazapiLive(); // Escuta eventos da UazAPI via EventSource
 
-  const currentView = view || "inbox";
+  const currentView = view || "today";
   const currentProjectId = id || null;
-
-  useEffect(() => {
-    if (view === undefined) {
-      navigate(`/app/today`, { replace: true });
-    }
-  }, [view, navigate]);
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();

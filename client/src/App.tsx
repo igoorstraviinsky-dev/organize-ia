@@ -67,6 +67,16 @@ export default function App() {
         }
       />
       <Route
+        path="/app"
+        element={
+          session ? (
+            <Navigate to={requiresApprovalGate ? '/pending-approval' : '/app/today'} replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
         path="/app/:view?/:id?"
         element={
           session ? (

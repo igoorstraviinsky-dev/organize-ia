@@ -5,13 +5,17 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('[Auth Middleware] SUPABASE_URL ou SUPABASE_SERVICE_KEY não configurados.');
+  console.error('[Auth Middleware] SUPABASE_URL ou SUPABASE_SERVICE_KEY nao configurados.');
 }
+
+const normalizeRole = (role: string | null | undefined): 'admin' | 'colaborador' => {
+  return role === 'admin' ? 'admin' : 'colaborador';
+};
 
 /**
  * Middleware para validar o JWT do Supabase e extrair o user_id.
- * Também cria um cliente Supabase autenticado para a requisição (req.sb),
- * que respeita as políticas RLS do banco de dados.
+ * Tambem cria um cliente Supabase autenticado para a requisicao (req.sb),
+ * que respeita as politicas RLS do banco de dados.
  */
 export const authenticate = async (
   req: Request,
@@ -28,12 +32,11 @@ export const authenticate = async (
     queryToken;
 
   if (!token) {
-    res.status(401).json({ error: 'Acesso negado: Token de autenticação ausente.' });
+    res.status(401).json({ error: 'Acesso negado: token de autenticacao ausente.' });
     return;
   }
 
   try {
-    // Cliente temporário com service_role apenas para validar o token
     const adminClient = createClient(supabaseUrl!, supabaseServiceKey!);
 
     const {
@@ -42,19 +45,23 @@ export const authenticate = async (
     } = await adminClient.auth.getUser(token);
 
     if (error || !user) {
-      res.status(401).json({ error: 'Sessão inválida ou expirada.' });
+      res.status(401).json({ error: 'Sessao invalida ou expirada.' });
       return;
     }
 
-    // Identidade real do usuário (extraída do JWT) mapeada para AuthUser
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
     req.user = {
       id: user.id,
       email: user.email || '',
-      tenant_id: user.user_metadata?.tenant_id || user.id, // Mantém compatibilidade usando o ID como tenant_id se não houver B2B formal
-      role: (user.user_metadata?.role as 'admin' | 'colaborador') || 'colaborador'
+      tenant_id: user.user_metadata?.tenant_id || user.id,
+      role: normalizeRole((profile as { role?: string | null } | null)?.role || (user.user_metadata?.role as string | undefined)),
     };
 
-    // Cliente Supabase específico para esta requisição (respeita RLS)
     req.sb = createClient(supabaseUrl!, supabaseServiceKey!, {
       global: {
         headers: {
@@ -67,6 +74,6 @@ export const authenticate = async (
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error('[Auth Middleware Error]', errorMessage);
-    res.status(500).json({ error: 'Erro interno ao validar autenticação.' });
+    res.status(500).json({ error: 'Erro interno ao validar autenticacao.' });
   }
 };
