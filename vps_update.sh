@@ -472,15 +472,36 @@ clone_repository_if_needed() {
 
 setup_agent() {
   cd "$INSTALL_DIR/agent"
+  local agent_python="$INSTALL_DIR/agent/venv/bin/python"
+
   if [ -f "setup.sh" ]; then
     bash setup.sh
   else
     python3 -m venv venv
-    source venv/bin/activate
-    pip install --upgrade pip --quiet
-    pip install -r requirements.txt --quiet
-    deactivate
+    "$agent_python" -m pip install --upgrade pip --quiet
+    "$agent_python" -m pip install -r requirements.txt --quiet
   fi
+
+  if [ ! -x "$agent_python" ]; then
+    log_warn "Interpretador do agente não encontrado. Recriando o ambiente virtual..."
+    rm -rf venv
+    python3 -m venv venv
+    "$agent_python" -m pip install --upgrade pip --quiet
+    "$agent_python" -m pip install -r requirements.txt --quiet
+  fi
+
+  if ! "$agent_python" -c "import dotenv, httpx, openai, supabase" >/dev/null 2>&1; then
+    log_warn "Dependências do agente incompletas. Recriando venv e reinstalando requirements..."
+    rm -rf venv
+    python3 -m venv venv
+    "$agent_python" -m pip install --upgrade pip --quiet
+    "$agent_python" -m pip install -r requirements.txt --quiet
+  fi
+
+  if ! "$agent_python" -c "import dotenv, httpx, openai, supabase" >/dev/null 2>&1; then
+    log_fail "Falha ao configurar o agente Python. O módulo 'dotenv' e outras dependências ainda não estão disponíveis."
+  fi
+
   log_ok "Agente Python configurado."
 }
 
