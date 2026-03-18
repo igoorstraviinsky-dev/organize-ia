@@ -59,6 +59,35 @@ get_env_value() {
   grep -m1 "^${key}=" "$file" | cut -d= -f2- || true
 }
 
+upsert_env_value() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+  local tmp_file
+
+  if [ ! -f "$file" ]; then
+    touch "$file"
+  fi
+
+  tmp_file="$(mktemp)"
+  awk -v key="$key" -v value="$value" '
+    BEGIN { updated = 0 }
+    $0 ~ "^" key "=" {
+      print key "=" value
+      updated = 1
+      next
+    }
+    { print }
+    END {
+      if (!updated) {
+        print key "=" value
+      }
+    }
+  ' "$file" > "$tmp_file"
+
+  mv "$tmp_file" "$file"
+}
+
 append_env_if_missing() {
   local file="$1"
   local key="$2"
@@ -70,6 +99,72 @@ append_env_if_missing() {
 
   if ! grep -q "^${key}=" "$file"; then
     echo "${key}=${value}" >> "$file"
+  fi
+}
+
+is_placeholder_value() {
+  local value="$1"
+
+  case "$value" in
+    ""|"your-project.supabase.co"|"https://your-project.supabase.co"|"your-service-role-key"|"sk-your-openai-key"|"sk-..."|"your-anon-key"|"your-whatsapp-access-token"|"your-custom-verify-token"|"your-phone-number-id"|"seu_token_aqui"|"gere_um_token_seguro_aqui"|"https://xxxxxxxxxxxx.supabase.co"|"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." )
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+prompt_env_value_if_missing() {
+  local file="$1"
+  local key="$2"
+  local prompt_text="$3"
+  local default_value="$4"
+  local secret="$5"
+  local current_value
+  local input_value
+
+  current_value="$(get_env_value "$file" "$key")"
+
+  if [ -n "$current_value" ] && ! is_placeholder_value "$current_value"; then
+    return 0
+  fi
+
+  if [ "$secret" = "secret" ]; then
+    if [ -n "$default_value" ]; then
+      read -rsp "  ${prompt_text} [valor atual oculto, Enter para manter]: " input_value
+      echo ""
+      input_value=${input_value:-$default_value}
+    else
+      read -rsp "  ${prompt_text}: " input_value
+      echo ""
+    fi
+  else
+    if [ -n "$default_value" ]; then
+      read -rp "  ${prompt_text} [$default_value]: " input_value
+      input_value=${input_value:-$default_value}
+    else
+      read -rp "  ${prompt_text}: " input_value
+    fi
+  fi
+
+  if [ -z "$input_value" ]; then
+    log_fail "Variável obrigatória não informada: ${key}"
+  fi
+
+  upsert_env_value "$file" "$key" "$input_value"
+}
+
+require_non_empty_env() {
+  local file="$1"
+  local key="$2"
+
+  if [ ! -f "$file" ]; then
+    log_fail "Arquivo de ambiente não encontrado: $file"
+  fi
+
+  if ! grep -q "^${key}=.\+" "$file"; then
+    log_fail "Variável obrigatória ausente ou vazia: ${key} em $file"
   fi
 }
 
@@ -273,6 +368,13 @@ EOF
   append_env_if_missing "$ENV_SERVER" "OPENAI_MODEL" "gpt-4o"
   append_env_if_missing "$ENV_SERVER" "PORT" "$API_PORT"
 
+  echo -e "\n\e[1;33mValidando variáveis obrigatórias do backend:\e[0m"
+  prompt_env_value_if_missing "$ENV_SERVER" "SUPABASE_URL" "SUPABASE_URL" "$(get_env_value "$ENV_SERVER" "SUPABASE_URL")"
+  prompt_env_value_if_missing "$ENV_SERVER" "SUPABASE_SERVICE_KEY" "SUPABASE_SERVICE_KEY" "$(get_env_value "$ENV_SERVER" "SUPABASE_SERVICE_KEY")" "secret"
+  prompt_env_value_if_missing "$ENV_SERVER" "OPENAI_API_KEY" "OPENAI_API_KEY" "$(get_env_value "$ENV_SERVER" "OPENAI_API_KEY")" "secret"
+  prompt_env_value_if_missing "$ENV_SERVER" "OPENAI_MODEL" "OPENAI_MODEL" "$(get_env_value "$ENV_SERVER" "OPENAI_MODEL")"
+  prompt_env_value_if_missing "$ENV_SERVER" "PORT" "PORT" "$API_PORT"
+
   if [ -f "$ENV_CLIENT" ]; then
     log_ok ".env do client já existe. Mantendo configuração atual."
   else
@@ -298,10 +400,9 @@ EOF
 
   append_env_if_missing "$ENV_CLIENT" "VITE_SUPABASE_URL" "$(get_env_value "$ENV_SERVER" "SUPABASE_URL")"
   append_env_if_missing "$ENV_CLIENT" "VITE_SERVER_URL" ""
-
-  if ! grep -q "^VITE_SUPABASE_ANON_KEY=" "$ENV_CLIENT"; then
-    log_warn "VITE_SUPABASE_ANON_KEY ausente no client/.env. O frontend pode não autenticar."
-  fi
+  echo -e "\n\e[1;33mValidando variáveis obrigatórias do frontend:\e[0m"
+  prompt_env_value_if_missing "$ENV_CLIENT" "VITE_SUPABASE_URL" "VITE_SUPABASE_URL" "$(get_env_value "$ENV_SERVER" "SUPABASE_URL")"
+  prompt_env_value_if_missing "$ENV_CLIENT" "VITE_SUPABASE_ANON_KEY" "VITE_SUPABASE_ANON_KEY" "$(get_env_value "$ENV_CLIENT" "VITE_SUPABASE_ANON_KEY")" "secret"
 
   if [ -f "$ENV_AGENT" ]; then
     log_ok ".env do agente já existe. Mantendo configuração atual."
@@ -325,9 +426,37 @@ EOF
     log_ok "agent/.env criado."
   fi
 
+  upsert_env_value "$ENV_AGENT" "SUPABASE_URL" "$(get_env_value "$ENV_SERVER" "SUPABASE_URL")"
+  upsert_env_value "$ENV_AGENT" "SUPABASE_SERVICE_KEY" "$(get_env_value "$ENV_SERVER" "SUPABASE_SERVICE_KEY")"
+  upsert_env_value "$ENV_AGENT" "OPENAI_API_KEY" "$(get_env_value "$ENV_SERVER" "OPENAI_API_KEY")"
+  upsert_env_value "$ENV_AGENT" "OPENAI_MODEL" "$(get_env_value "$ENV_SERVER" "OPENAI_MODEL")"
+  upsert_env_value "$ENV_AGENT" "PORT" "$(get_env_value "$ENV_SERVER" "PORT")"
   append_env_if_missing "$ENV_AGENT" "AGENT_PORT" "$AGENT_PORT"
   append_env_if_missing "$ENV_AGENT" "BRAIN_URL" "http://localhost:$API_PORT/api/agent/process"
+
+  echo -e "\n\e[1;33mValidando variáveis obrigatórias do agente:\e[0m"
+  prompt_env_value_if_missing "$ENV_AGENT" "AGENT_PORT" "AGENT_PORT" "$AGENT_PORT"
+  prompt_env_value_if_missing "$ENV_AGENT" "BRAIN_URL" "BRAIN_URL" "http://localhost:$API_PORT/api/agent/process"
   echo ""
+}
+
+validate_env_files() {
+  local ENV_SERVER="$INSTALL_DIR/server/.env"
+  local ENV_CLIENT="$INSTALL_DIR/client/.env"
+  local ENV_AGENT="$INSTALL_DIR/agent/.env"
+
+  require_non_empty_env "$ENV_SERVER" "SUPABASE_URL"
+  require_non_empty_env "$ENV_SERVER" "SUPABASE_SERVICE_KEY"
+  require_non_empty_env "$ENV_SERVER" "OPENAI_API_KEY"
+  require_non_empty_env "$ENV_SERVER" "PORT"
+
+  require_non_empty_env "$ENV_CLIENT" "VITE_SUPABASE_URL"
+  require_non_empty_env "$ENV_CLIENT" "VITE_SUPABASE_ANON_KEY"
+
+  require_non_empty_env "$ENV_AGENT" "SUPABASE_URL"
+  require_non_empty_env "$ENV_AGENT" "SUPABASE_SERVICE_KEY"
+  require_non_empty_env "$ENV_AGENT" "AGENT_PORT"
+  require_non_empty_env "$ENV_AGENT" "BRAIN_URL"
 }
 
 clone_repository_if_needed() {
@@ -393,6 +522,7 @@ run_install() {
 
   log_step 3 $TOTAL "🔑 Configurando variáveis de ambiente..."
   configure_env
+  validate_env_files
 
   log_step 4 $TOTAL "🧠 Instalando dependências do Backend (Node.js)..."
   cd "$INSTALL_DIR/server" && npm install --silent
@@ -447,6 +577,7 @@ run_update() {
 
   log_step 3 $TOTAL "🔑 Verificando arquivos de ambiente..."
   configure_env
+  validate_env_files
 
   log_step 4 $TOTAL "🧠 Atualizando dependências e buildando..."
   cd "$INSTALL_DIR/server" && npm install --silent && log_ok "Backend: dependências atualizadas."
