@@ -7,7 +7,7 @@
 
 # Configurações
 REPO_URL="https://github.com/igoorstraviinsky-dev/organize-ia.git"
-INSTALL_DIR="/var/www/organizador"
+INSTALL_DIR="/root/organize-ia"
 BRANCH="main"
 NODE_VERSION_MIN="18"
 PYTHON_VERSION_MIN="3.10"
