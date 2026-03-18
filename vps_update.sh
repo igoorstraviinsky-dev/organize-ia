@@ -7,7 +7,7 @@
 
 # Configurações
 REPO_URL="https://github.com/igoorstraviinsky-dev/organize-ia.git"
-INSTALL_DIR="/root/organize-ia"
+INSTALL_DIR="/var/www/organizador"
 BRANCH="main"
 NODE_VERSION_MIN="18"
 PYTHON_VERSION_MIN="3.10"
@@ -36,6 +36,49 @@ log_step() { echo -e "\e[1;34m[$1/$2]\e[0m $3"; }
 log_ok()   { echo -e "\e[1;32m  ✅ $1\e[0m"; }
 log_warn() { echo -e "\e[1;33m  ⚠️  $1\e[0m"; }
 log_fail() { echo -e "\e[1;31m  ❌ $1\e[0m"; exit 1; }
+
+configure_nginx() {
+  cat > /etc/nginx/sites-available/organizador <<NGINXCONF
+server {
+    listen 80;
+    server_name _;
+
+    root $INSTALL_DIR/client/dist;
+    index index.html;
+
+    # API Backend
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # Agente Python
+    # A barra final remove o prefixo /agent/ antes de encaminhar para o agente.
+    location /agent/ {
+        proxy_pass http://localhost:8005/;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # SPA fallback
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+NGINXCONF
+
+  ln -sf /etc/nginx/sites-available/organizador /etc/nginx/sites-enabled/organizador
+  rm -f /etc/nginx/sites-enabled/default
+  nginx -t && systemctl reload nginx
+}
 
 # ──────────────────────────────────────────────
 # VERIFICAR PRÉ-REQUISITOS DO SISTEMA
@@ -208,42 +251,7 @@ run_install() {
 
   # 6. Configurar Nginx (servir o client buildado)
   log_step 6 $TOTAL "🌐 Configurando Nginx para o frontend..."
-  cat > /etc/nginx/sites-available/organizador <<'NGINXCONF'
-server {
-    listen 80;
-    server_name _;
-
-    root /var/www/organizador/client/dist;
-    index index.html;
-
-    # API Backend
-    location /api/ {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Agente Python
-    location /agent/ {
-        proxy_pass http://localhost:8005;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-    }
-
-    # SPA fallback
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-NGINXCONF
-
-  # Ativar site e reiniciar Nginx
-  ln -sf /etc/nginx/sites-available/organizador /etc/nginx/sites-enabled/organizador
-  rm -f /etc/nginx/sites-enabled/default
-  nginx -t && systemctl reload nginx
+  configure_nginx
   log_ok "Nginx configurado e recarregado."
 
   # 7. Iniciar processos com PM2
@@ -268,12 +276,16 @@ NGINXCONF
 # ATUALIZAÇÃO (CÓDIGO JÁ INSTALADO)
 # ──────────────────────────────────────────────
 run_update() {
-  local TOTAL=5
+  local TOTAL=6
 
   stravinsky_animation
   echo -e "\e[1;33m  MODO: ATUALIZAÇÃO\e[0m"
   echo "--------------------------------------------------------------------------------"
   echo ""
+
+  if [ ! -d "$INSTALL_DIR/.git" ]; then
+    log_fail "Instalação não encontrada em $INSTALL_DIR. Rode primeiro a opção 1."
+  fi
 
   # 1. Puxar código mais novo do GitHub
   log_step 1 $TOTAL "📥 Puxando novidades do GitHub (branch: $BRANCH)..."
@@ -309,10 +321,15 @@ run_update() {
   deactivate
   log_ok "Agente Python: dependências atualizadas."
 
-  # 5. Reiniciar tudo com PM2 injetando novos .env
-  log_step 5 $TOTAL "🔄 Reiniciando serviços e limpando logs..."
+  # 5. Reaplicar proxy Nginx
+  log_step 5 $TOTAL "🌐 Atualizando proxy Nginx..."
+  configure_nginx
+  log_ok "Proxy Nginx reaplicado com sucesso."
+
+  # 6. Reiniciar tudo com PM2 injetando novos .env
+  log_step 6 $TOTAL "🔄 Reiniciando serviços e limpando logs..."
   cd "$INSTALL_DIR"
-  pm2 restart all --update-env
+  pm2 startOrRestart ecosystem.config.js --env production --update-env
   pm2 flush
   pm2 save --force
   log_ok "Serviços reiniciados com êxito."
@@ -321,6 +338,23 @@ run_update() {
   echo -e "\e[1;32m  ✅ SISTEMA ATUALIZADO E RODANDO LIMPO!\e[0m"
   echo "--------------------------------------------------------------------------------"
   pm2 list
+}
+
+run_proxy_update() {
+  local TOTAL=1
+
+  stravinsky_animation
+  echo -e "\e[1;36m  MODO: ATUALIZAÇÃO DO PROXY NGINX\e[0m"
+  echo "--------------------------------------------------------------------------------"
+  echo ""
+
+  log_step 1 $TOTAL "🌐 Reaplicando configuração do Nginx..."
+  configure_nginx
+  log_ok "Proxy Nginx atualizado e recarregado."
+
+  stravinsky_animation
+  echo -e "\e[1;32m  ✅ PROXY NGINX ATUALIZADO COM SUCESSO!\e[0m"
+  echo "--------------------------------------------------------------------------------"
 }
 
 # ──────────────────────────────────────────────
@@ -335,6 +369,7 @@ echo -e "  O que você deseja fazer?"
 echo ""
 echo -e "  \e[1;32m[1]\e[0m Instalação completa \e[2m(primeira vez no servidor)\e[0m"
 echo -e "  \e[1;33m[2]\e[0m Atualização \e[2m(puxar novidades do GitHub e reiniciar)\e[0m"
+echo -e "  \e[1;36m[3]\e[0m Atualizar proxy Nginx \e[2m(reaplicar configuração do proxy)\e[0m"
 echo -e "  \e[1;31m[0]\e[0m Sair"
 echo ""
 read -rp "  ➜ Sua escolha: " CHOICE
@@ -346,12 +381,15 @@ case "$CHOICE" in
   2)
     run_update
     ;;
+  3)
+    run_proxy_update
+    ;;
   0)
     echo -e "\n\e[1;33m  Saindo...\e[0m\n"
     exit 0
     ;;
   *)
-    echo -e "\n\e[1;31m  Opção inválida. Execute novamente e escolha 1 ou 2.\e[0m\n"
+    echo -e "\n\e[1;31m  Opção inválida. Execute novamente e escolha 1, 2 ou 3.\e[0m\n"
     exit 1
     ;;
 esac

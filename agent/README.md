@@ -56,20 +56,26 @@ cd agent/
 python main.py
 ```
 
-O agente sobe na porta `8001` (configurável via `AGENT_PORT`).
+O agente sobe na porta `8005` por padrão (configurável via `AGENT_PORT`).
 
 ### 6. Configurar webhook no WazAPI
 
-No painel do WazAPI, configure o webhook para:
+No painel do WazAPI, em produção com Nginx, configure o webhook para:
 
 ```
-POST http://SEU_SERVIDOR:8001/webhook
+POST http://SEU_SERVIDOR/agent/webhook
+```
+
+Se você quiser testar direto na porta do agente, sem Nginx, use:
+
+```
+POST http://SEU_SERVIDOR:8005/webhook
 ```
 
 Para testar localmente, use o **ngrok**:
 
 ```bash
-ngrok http 8001
+ngrok http 8005
 # Copie a URL https e configure no WazAPI
 ```
 
@@ -90,7 +96,7 @@ Adicione ao `package.json` raiz um script para iniciar tudo:
 ## Verificar saúde do agente
 
 ```
-GET http://localhost:8001/health
+GET http://localhost:8005/health
 ```
 
 ## Estrutura
